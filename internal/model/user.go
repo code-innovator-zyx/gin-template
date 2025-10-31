@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
 	"github.com/code-innovator-zyx/gin-template/internal/model/rbac"
 	"golang.org/x/crypto/bcrypt"
 	"time"

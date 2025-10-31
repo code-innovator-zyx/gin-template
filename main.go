@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/code-innovator-zyx/gin-template/core"
-	"github.com/code-innovator-zyx/gin-template/internal/router"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
+	"github.com/code-innovator-zyx/gin-template/internal/handler"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -32,9 +32,8 @@ func main() {
 	core.Init()
 
 	// 初始化路由
-	r := router.Init()
+	r := handler.Init()
 
-	// 配置HTTP服务器
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", core.Config.Server.Port),
 		Handler:      r,
@@ -42,8 +41,7 @@ func main() {
 		WriteTimeout: core.Config.Server.WriteTimeout,
 		IdleTimeout:  core.Config.Server.IdleTimeout,
 	}
-
-	// 启动HTTP服务器
+	
 	go func() {
 		logrus.Infof("服务器启动成功，监听端口: %d", core.Config.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -55,23 +53,14 @@ func main() {
 	gracefulShutdown(srv)
 }
 
-// gracefulShutdown 处理优雅关闭服务器
+// gracefulShutdown
 func gracefulShutdown(srv *http.Server) {
-	// 创建一个接收信号的通道
 	quit := make(chan os.Signal, 1)
-	
-	// 监听中断信号和终止信号
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	
-	// 阻塞直到接收到信号
 	sig := <-quit
 	logrus.Infof("接收到系统信号: %v, 正在关闭服务器...", sig)
-
-	// 创建一个带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
-	// 尝试优雅关闭服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		logrus.Errorf("服务器关闭异常: %v", err)
 		logrus.Info("强制关闭服务器")

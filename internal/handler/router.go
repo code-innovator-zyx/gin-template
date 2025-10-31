@@ -1,8 +1,9 @@
-package router
+package handler
 
 import (
+	v1 "github.com/code-innovator-zyx/gin-template/internal/handler/v1"
 	"github.com/code-innovator-zyx/gin-template/internal/middleware"
-	"github.com/code-innovator-zyx/gin-template/internal/router/v1"
+
 	"github.com/gin-gonic/gin"
 )
 

@@ -1,7 +1,7 @@
 package rbac
 
 import (
-	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
 	"github.com/code-innovator-zyx/gin-template/internal/model/rbac"
 	"github.com/code-innovator-zyx/gin-template/pkg/response"
 	"github.com/gin-gonic/gin"

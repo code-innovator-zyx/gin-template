@@ -2,7 +2,8 @@ package utils
 
 import (
 	"errors"
-	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
+
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"

@@ -2,7 +2,8 @@ package service
 
 import (
 	"errors"
-	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
+
 	"github.com/code-innovator-zyx/gin-template/internal/model"
 	"github.com/code-innovator-zyx/gin-template/pkg/utils"
 	"golang.org/x/crypto/bcrypt"

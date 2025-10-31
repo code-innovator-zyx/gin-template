@@ -1,7 +1,7 @@
 package rbac
 
 import (
-	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/core"
 	"time"
 
 	"gorm.io/gorm"
@@ -42,6 +42,6 @@ func CheckPermission(userID uint, path string, method string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	return count > 0, nil
 }

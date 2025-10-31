@@ -18,29 +18,33 @@
 
 ```
 .
-├── api/                # API 接口定义
-│   └── v1/             # API 版本 1
-│       ├── health.go   # 健康检查接口
-│       └── user/       # 用户相关接口
-├── config/             # 配置文件和配置管理
-│   ├── app.yaml        # 应用配置文件
-│   └── config.go       # 配置加载和管理
-├── core/               # 核心组件
-│   ├── global.go       # 全局变量
-│   └── initialize.go   # 应用初始化
 ├── docs/               # API 文档
 │   ├── v1_docs.go      # Swagger 文档定义
 │   ├── v1_swagger.json # Swagger JSON 文件
 │   └── v1_swagger.yaml # Swagger YAML 文件
 ├── internal/           # 内部包
+│   ├── config/         # 配置文件和配置管理
+│   │   ├── app.yaml    # 应用配置文件
+│   │   └── config.go   # 配置加载和管理
+│   ├── core/           # 核心组件
+│   │   ├── global.go   # 全局变量
+│   │   └── initialize.go # 应用初始化
+│   ├── handler/        # 请求处理器
+│   │   ├── router.go   # 路由配置
+│   │   └── v1/         # 版本1 API处理器
+│   ├── logic/          # 业务逻辑
+│   │   └── v1/         # 版本1 业务逻辑
 │   ├── middleware/     # 中间件
 │   │   ├── cors.go     # 跨域中间件
-│   │   └── jwt.go      # JWT 认证中间件
+│   │   ├── jwt.go      # JWT 认证中间件
+│   │   └── permission.go # 权限中间件
 │   ├── model/          # 数据模型
+│   │   ├── rbac/       # RBAC模型
 │   │   └── user.go     # 用户模型
 │   ├── orm/            # ORM 配置
 │   │   └── gorm.go     # GORM 配置
-│   └── service/        # 业务逻辑
+│   └── service/        # 业务服务
+│       ├── rbac_service.go # RBAC服务
 │       └── user_service.go # 用户服务
 ├── pkg/                # 公共包
 │   ├── logger/         # 日志工具

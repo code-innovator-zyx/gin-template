@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"github.com/code-innovator-zyx/gin-template/config"
+	"github.com/code-innovator-zyx/gin-template/internal/config"
 	"gorm.io/gorm"
 	"log"
 )
