@@ -89,9 +89,9 @@ go mod tidy
 
 3. 配置数据库
 ```shell
-mv config/app.yaml.template config/app.yaml
+mv app.yaml.template app.yaml
 ```
-修改 `config/app.yaml`  文件中的数据库配置：
+修改 `app.yaml`  文件中的数据库配置：
 
 ```yaml
 database:
