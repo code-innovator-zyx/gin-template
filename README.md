@@ -160,21 +160,6 @@ http://localhost:8080/swagger/index.html
 2. 在模型中定义表结构和关联关系
 3. 在应用初始化时注册模型
 
-## 工程化优化建议
-
-以下是进一步完善项目的建议：
-
-1. **单元测试覆盖**：为核心业务逻辑和工具函数添加单元测试
-2. **CI/CD 集成**：添加 GitHub Actions 或 GitLab CI 配置
-3. **容器化部署**：添加 Dockerfile 和 docker-compose.yml
-4. **数据库迁移**：集成数据库迁移工具，如 golang-migrate
-5. **缓存层**：添加 Redis 缓存支持
-6. **限流和熔断**：实现 API 限流和服务熔断机制
-7. **监控集成**：添加 Prometheus 指标收集
-8. **分布式追踪**：集成 OpenTelemetry 或 Jaeger
-9. **国际化支持**：添加多语言支持
-10. **更完善的错误处理**：实现统一的错误码系统
-
 ## 贡献指南
 
 欢迎提交 Issue 和 Pull Request 来完善这个模板。
