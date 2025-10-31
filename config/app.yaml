@@ -1,0 +1,31 @@
+# 应用信息
+app:
+  name: template
+  env: prod
+  version: 1.0
+  enable_swagger: true
+
+server:
+  # 监听端口号（1~65535）
+  port: 8080
+  # 读取超时，支持带单位的时间
+  read_timeout: 10s
+  # 写入超时
+  write_timeout: 10s
+  # 空闲超时
+  idle_timeout: 30s
+
+
+# 日志配置
+logger:
+  # 是否打印调用者（文件名、行号）
+  report_caller: true
+  # 是否美化输出（带缩进和颜色）
+  pretty_print: false
+  # 日志级别 (0~6)
+  # 0 Panic, 1 Fatal, 2 Error, 3 Warn, 4 Info, 5 Debug, 6 Trace
+  level: 4
+  # 是否启用文件输出
+  enable_file: true
+  # 日志文件路径（enable_file=true 时必填）
+  file_path: ./logs
