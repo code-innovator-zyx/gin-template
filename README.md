@@ -45,12 +45,15 @@
 │       ├── rbac_service.go # RBAC服务
 │       └── user_service.go # 用户服务
 ├── pkg/                # 公共包
+│   ├── cache/          # 缓存 配置
+│   │   └── redis.go    # redis 配置
 │   ├── logger/         # 日志工具
 │   │   └── logger.go   # 日志配置
 │   ├── response/       # 响应工具
 │   │   └── response.go # 统一响应格式
 │   ├── orm/            # ORM 配置
 │   │   └── gorm.go     # GORM 配置
+
 │   └── utils/          # 通用工具
 │       └── jwt.go      # JWT 工具
 

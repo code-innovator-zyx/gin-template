@@ -3,8 +3,8 @@ package middleware
 import (
 	"strings"
 
-	"github.com/code-innovator-zyx/gin-template/pkg/response"
-	"github.com/code-innovator-zyx/gin-template/pkg/utils"
+	"gin-template/pkg/response"
+	"gin-template/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 

@@ -1,8 +1,8 @@
 package rbac
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/logic/v1/rbac"
-	"github.com/code-innovator-zyx/gin-template/internal/middleware"
+	"gin-template/internal/logic/v1/rbac"
+	"gin-template/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 

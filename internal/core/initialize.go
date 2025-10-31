@@ -1,9 +1,9 @@
 package core
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/config"
-	"github.com/code-innovator-zyx/gin-template/pkg/logger"
-	"github.com/code-innovator-zyx/gin-template/pkg/orm"
+	"gin-template/internal/config"
+	"gin-template/pkg/logger"
+	"gin-template/pkg/orm"
 	"log"
 )
 

@@ -1,4 +1,4 @@
-module github.com/code-innovator-zyx/gin-template
+module gin-template
 
 go 1.24.0
 

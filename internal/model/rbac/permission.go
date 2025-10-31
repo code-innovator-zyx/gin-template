@@ -1,7 +1,7 @@
 package rbac
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/core"
+	"gin-template/internal/core"
 	"time"
 
 	"gorm.io/gorm"

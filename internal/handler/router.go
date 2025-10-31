@@ -1,8 +1,8 @@
 package handler
 
 import (
-	v1 "github.com/code-innovator-zyx/gin-template/internal/handler/v1"
-	"github.com/code-innovator-zyx/gin-template/internal/middleware"
+	v1 "gin-template/internal/handler/v1"
+	"gin-template/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )

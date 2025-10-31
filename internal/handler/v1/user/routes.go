@@ -1,8 +1,8 @@
 package user
 
 import (
-	userApi "github.com/code-innovator-zyx/gin-template/internal/logic/v1/user"
-	"github.com/code-innovator-zyx/gin-template/internal/middleware"
+	userApi "gin-template/internal/logic/v1/user"
+	"gin-template/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 

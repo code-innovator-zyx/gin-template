@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/code-innovator-zyx/gin-template/pkg/response"
+	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

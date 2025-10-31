@@ -2,10 +2,10 @@ package service
 
 import (
 	"errors"
-	"github.com/code-innovator-zyx/gin-template/internal/core"
+	"gin-template/internal/core"
 
-	"github.com/code-innovator-zyx/gin-template/internal/model"
-	"github.com/code-innovator-zyx/gin-template/pkg/utils"
+	"gin-template/internal/model"
+	"gin-template/pkg/utils"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

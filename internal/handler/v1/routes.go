@@ -1,11 +1,11 @@
 package v1
 
 import (
-	_ "github.com/code-innovator-zyx/gin-template/docs"
-	"github.com/code-innovator-zyx/gin-template/internal/core"
-	"github.com/code-innovator-zyx/gin-template/internal/handler/v1/rbac"
-	"github.com/code-innovator-zyx/gin-template/internal/handler/v1/user"
-	v1 "github.com/code-innovator-zyx/gin-template/internal/logic/v1"
+	_ "gin-template/docs"
+	"gin-template/internal/core"
+	"gin-template/internal/handler/v1/rbac"
+	"gin-template/internal/handler/v1/user"
+	v1 "gin-template/internal/logic/v1"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"

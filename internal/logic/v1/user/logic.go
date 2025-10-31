@@ -1,9 +1,9 @@
 package user
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/model"
-	"github.com/code-innovator-zyx/gin-template/internal/service"
-	"github.com/code-innovator-zyx/gin-template/pkg/response"
+	"gin-template/internal/model"
+	"gin-template/internal/service"
+	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

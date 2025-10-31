@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/model/rbac"
-	"github.com/code-innovator-zyx/gin-template/pkg/response"
+	"gin-template/internal/model/rbac"
+	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

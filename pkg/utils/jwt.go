@@ -2,7 +2,7 @@ package utils
 
 import (
 	"errors"
-	"github.com/code-innovator-zyx/gin-template/internal/core"
+	"gin-template/internal/core"
 
 	"time"
 

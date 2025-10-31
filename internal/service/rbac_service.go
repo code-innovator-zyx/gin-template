@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/code-innovator-zyx/gin-template/internal/core"
-	"github.com/code-innovator-zyx/gin-template/internal/model/rbac"
+	"gin-template/internal/core"
+	"gin-template/internal/model/rbac"
 )
 
 // HasPermission 检查用户是否有权限访问指定路径和方法

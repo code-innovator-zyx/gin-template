@@ -364,7 +364,7 @@
      package v1
      
      import (
-         "github.com/code-innovator-zyx/gin-template/pkg/testutil"
+         "gin-template/pkg/testutil"
          "github.com/stretchr/testify/assert"
          "net/http"
          "testing"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/code-innovator-zyx/gin-template/internal/core"
-	"github.com/code-innovator-zyx/gin-template/internal/handler"
+	"gin-template/internal/core"
+	"gin-template/internal/handler"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -41,7 +41,7 @@ func main() {
 		WriteTimeout: core.Config.Server.WriteTimeout,
 		IdleTimeout:  core.Config.Server.IdleTimeout,
 	}
-	
+
 	go func() {
 		logrus.Infof("服务器启动成功，监听端口: %d", core.Config.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

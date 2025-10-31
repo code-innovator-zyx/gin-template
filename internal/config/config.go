@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
-	"github.com/code-innovator-zyx/gin-template/pkg/logger"
-	"github.com/code-innovator-zyx/gin-template/pkg/orm"
+	"gin-template/pkg/logger"
+	"gin-template/pkg/orm"
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"time"
