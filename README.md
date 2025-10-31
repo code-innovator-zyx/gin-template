@@ -41,8 +41,6 @@
 │   ├── model/          # 数据模型
 │   │   ├── rbac/       # RBAC模型
 │   │   └── user.go     # 用户模型
-│   ├── orm/            # ORM 配置
-│   │   └── gorm.go     # GORM 配置
 │   └── service/        # 业务服务
 │       ├── rbac_service.go # RBAC服务
 │       └── user_service.go # 用户服务
@@ -51,8 +49,11 @@
 │   │   └── logger.go   # 日志配置
 │   ├── response/       # 响应工具
 │   │   └── response.go # 统一响应格式
+│   ├── orm/            # ORM 配置
+│   │   └── gorm.go     # GORM 配置
 │   └── utils/          # 通用工具
 │       └── jwt.go      # JWT 工具
+
 ├── router/             # 路由配置
 │   ├── router.go       # 主路由
 │   └── v1/             # 版本 1 路由
