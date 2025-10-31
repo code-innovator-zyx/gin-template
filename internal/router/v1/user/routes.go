@@ -1,7 +1,7 @@
 package user
 
 import (
-	userApi "github.com/code-innovator-zyx/gin-template/api/v1/user"
+	userApi "github.com/code-innovator-zyx/gin-template/internal/api/v1/user"
 	"github.com/code-innovator-zyx/gin-template/internal/middleware"
 	"github.com/gin-gonic/gin"
 )

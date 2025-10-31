@@ -18,6 +18,10 @@ definitions:
       nickname:
         example: John Doe
         type: string
+      roles:
+        items:
+          $ref: '#/definitions/rbac.Role'
+        type: array
       status:
         example: 1
         type: integer
@@ -27,6 +31,79 @@ definitions:
       username:
         example: johndoe
         type: string
+    type: object
+  rbac.Permission:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      method:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  rbac.Role:
+    description: 角色信息模型
+    properties:
+      created_at:
+        type: string
+      description:
+        example: 系统管理员
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: admin
+        type: string
+      updated_at:
+        type: string
+    type: object
+  rbac.RoleMenu:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      menu_id:
+        type: integer
+      role_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  rbac.RolePermission:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      permission_id:
+        type: integer
+      role_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  rbac.UserRole:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      role_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
     type: object
   response.Response:
     properties:
@@ -83,28 +160,474 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
-  /health:
+  /rbac/permissions:
     get:
       consumes:
       - application/json
-      description: 用于检查API服务是否正常运行
+      description: 获取系统中所有权限的列表
       produces:
       - application/json
       responses:
         "200":
-          description: 返回服务状态
+          description: 成功获取权限列表
           schema:
             allOf:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  additionalProperties:
-                    type: string
-                  type: object
+                  items:
+                    $ref: '#/definitions/rbac.Permission'
+                  type: array
               type: object
-      summary: 健康检查接口
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取权限列表
       tags:
-      - 系统
+      - RBAC-权限管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的系统权限
+      parameters:
+      - description: 权限信息
+        in: body
+        name: permission
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.Permission'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功创建权限
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Permission'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 创建权限
+      tags:
+      - RBAC-权限管理
+  /rbac/role-menus:
+    post:
+      consumes:
+      - application/json
+      description: 为指定角色分配菜单
+      parameters:
+      - description: 角色菜单信息
+        in: body
+        name: roleMenu
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RoleMenu'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功分配菜单
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.RoleMenu'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 分配菜单给角色
+      tags:
+      - RBAC-角色菜单管理
+  /rbac/role-permissions:
+    post:
+      consumes:
+      - application/json
+      description: 为指定角色分配权限
+      parameters:
+      - description: 角色权限信息
+        in: body
+        name: rolePermission
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RolePermission'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功分配权限
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.RolePermission'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 分配权限给角色
+      tags:
+      - RBAC-角色权限管理
+  /rbac/roles:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统中所有角色的列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取角色列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/rbac.Role'
+                  type: array
+              type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取角色列表
+      tags:
+      - RBAC-角色管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的系统角色
+      parameters:
+      - description: 角色信息
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.Role'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功创建角色
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Role'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 创建角色
+      tags:
+      - RBAC-角色管理
+  /rbac/roles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除角色
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 成功删除角色
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的角色ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 删除角色
+      tags:
+      - RBAC-角色管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取角色详细信息
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取角色详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Role'
+              type: object
+        "400":
+          description: 无效的角色ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取角色详情
+      tags:
+      - RBAC-角色管理
+    put:
+      consumes:
+      - application/json
+      description: 根据ID更新角色信息
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 角色信息
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.Role'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功更新角色
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Role'
+              type: object
+        "400":
+          description: 无效的角色ID或请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 更新角色
+      tags:
+      - RBAC-角色管理
+  /rbac/roles/{role_id}/menus/{menu_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 从指定角色移除指定菜单
+      parameters:
+      - description: 角色ID
+        in: path
+        name: role_id
+        required: true
+        type: integer
+      - description: 菜单ID
+        in: path
+        name: menu_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 成功移除菜单
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的角色ID或菜单ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 从角色移除菜单
+      tags:
+      - RBAC-角色菜单管理
+  /rbac/roles/{role_id}/permissions/{permission_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 从指定角色移除指定权限
+      parameters:
+      - description: 角色ID
+        in: path
+        name: role_id
+        required: true
+        type: integer
+      - description: 权限ID
+        in: path
+        name: permission_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 成功移除权限
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的角色ID或权限ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 从角色移除权限
+      tags:
+      - RBAC-角色权限管理
+  /rbac/user-roles:
+    post:
+      consumes:
+      - application/json
+      description: 为指定用户分配角色
+      parameters:
+      - description: 用户角色信息
+        in: body
+        name: userRole
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UserRole'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功分配角色
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.UserRole'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 分配角色给用户
+      tags:
+      - RBAC-用户角色管理
+  /rbac/users/{id}/roles:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定用户的所有角色
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取用户角色
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/rbac.UserRole'
+                  type: array
+              type: object
+        "400":
+          description: 无效的用户ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取用户角色
+      tags:
+      - RBAC-用户角色管理
+  /rbac/users/{user_id}/roles/{role_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 从指定用户移除指定角色
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: 角色ID
+        in: path
+        name: role_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 成功移除角色
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的用户ID或角色ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 从用户移除角色
+      tags:
+      - RBAC-用户角色管理
   /user/login:
     post:
       consumes:

@@ -73,3 +73,17 @@ func NotFound(c *gin.Context, message string) {
 func InternalServerError(c *gin.Context, message string) {
 	FailWithStatus(c, http.StatusInternalServerError, 500, message)
 }
+
+// Created 201创建成功响应
+func Created(c *gin.Context, data interface{}) {
+	c.JSON(http.StatusCreated, Response{
+		Code:    0,
+		Message: "success",
+		Data:    data,
+	})
+}
+
+// NoContent 204无内容响应
+func NoContent(c *gin.Context) {
+	c.Status(http.StatusNoContent)
+}

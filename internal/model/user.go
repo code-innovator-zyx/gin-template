@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/code-innovator-zyx/gin-template/core"
+	"github.com/code-innovator-zyx/gin-template/internal/model/rbac"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 
@@ -17,7 +18,8 @@ type User struct {
 	Nickname  string         `gorm:"size:50" json:"nickname" example:"John Doe" description:"昵称"`
 	Email     string         `gorm:"size:100;uniqueIndex" json:"email" example:"john@example.com" description:"邮箱"`
 	Avatar    string         `gorm:"size:255" json:"avatar" example:"https://example.com/avatar.jpg" description:"头像URL"`
-	Status    int            `gorm:"default:1" json:"status" example:"1" description:"状态 1:正常 0:禁用"` 
+	Status    int            `gorm:"default:1" json:"status" example:"1" description:"状态 1:正常 0:禁用"`
+	Roles     []rbac.Role    `gorm:"many2many:user_roles;" json:"roles" description:"用户角色"`
 	CreatedAt time.Time      `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
 	UpdatedAt time.Time      `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-" description:"删除时间"`

@@ -31,5 +31,6 @@ func Init() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// 初始化模型
 	}
 }

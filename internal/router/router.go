@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/code-innovator-zyx/gin-template/internal/middleware"
-	v1 "github.com/code-innovator-zyx/gin-template/router/v1"
+	"github.com/code-innovator-zyx/gin-template/internal/router/v1"
 	"github.com/gin-gonic/gin"
 )
 
