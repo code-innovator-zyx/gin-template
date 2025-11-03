@@ -29,5 +29,11 @@ func Init() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// 执行所有已注册的迁移函数
+		for _, fn := range migrateFuncs {
+			if err = fn(db); err != nil {
+				log.Fatalf("数据库迁移失败: %v", err)
+			}
+		}
 	}
 }

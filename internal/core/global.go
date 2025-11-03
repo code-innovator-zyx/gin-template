@@ -3,8 +3,9 @@ package core
 import (
 	"context"
 	"gin-template/internal/config"
-	"gorm.io/gorm"
 	"log"
+
+	"gorm.io/gorm"
 )
 
 /*
@@ -14,8 +15,9 @@ import (
 * @Package:
  */
 var (
-	Config *config.AppConfig
-	db     *gorm.DB
+	Config       *config.AppConfig
+	db           *gorm.DB
+	migrateFuncs []func(*gorm.DB) error // 存储所有迁移函数
 )
 
 // MustNewDb 获取全局数据库连接
@@ -31,4 +33,9 @@ func MustNewDbWithContext(ctx context.Context) *gorm.DB {
 		log.Fatal("数据库未初始化")
 	}
 	return db.Session(&gorm.Session{}).WithContext(ctx)
+}
+
+// RegisterMigrate 注册数据库迁移函数
+func RegisterMigrate(fn func(*gorm.DB) error) {
+	migrateFuncs = append(migrateFuncs, fn)
 }
