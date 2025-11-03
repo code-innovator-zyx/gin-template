@@ -3,6 +3,7 @@ package v1
 import (
 	_ "gin-template/docs"
 	"gin-template/internal/core"
+
 	"gin-template/internal/handler/v1/rbac"
 	v1 "gin-template/internal/logic/v1"
 

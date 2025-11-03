@@ -4,7 +4,6 @@ import (
 	"errors"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
-
 	"gin-template/pkg/utils"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

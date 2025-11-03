@@ -3,20 +3,17 @@ package rbac
 import (
 	"gin-template/internal/core"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // Role 角色模型
 // @Description 角色信息模型
 type Role struct {
-	ID          uint           `gorm:"primarykey" json:"id" example:"1" description:"角色ID"`
-	Name        string         `gorm:"size:50;not null;uniqueIndex:idx_role_name" json:"name" example:"admin" description:"角色名称"`
-	Description string         `gorm:"size:200;index:idx_role_desc" json:"description" example:"系统管理员" description:"角色描述"`
-	Permissions []Permission   `gorm:"many2many:role_permissions;" json:"permissions" description:"角色权限"`
-	CreatedAt   time.Time      `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
-	UpdatedAt   time.Time      `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-" description:"删除时间"`
+	ID          uint         `gorm:"primarykey" json:"id" example:"1" description:"角色ID"`
+	Name        string       `gorm:"size:50;not null;uniqueIndex:idx_role_name" json:"name" example:"admin" description:"角色名称"`
+	Description string       `gorm:"size:200;index:idx_role_desc" json:"description" example:"系统管理员" description:"角色描述"`
+	Permissions []Permission `gorm:"many2many:role_permissions;" json:"permissions" description:"角色权限"`
+	CreatedAt   time.Time    `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
+	UpdatedAt   time.Time    `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
 }
 
 // TableName 设置表名

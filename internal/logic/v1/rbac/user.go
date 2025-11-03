@@ -17,7 +17,7 @@ import (
 // @Success 200 {object} response.Response{data=rbac.User} "注册成功返回用户信息"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/user/register [post]
+// @Router /user/register [post]
 func Register(c *gin.Context) {
 	var req UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,7 +50,7 @@ func Register(c *gin.Context) {
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "用户名或密码错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/user/login [post]
+// @Router /user/login [post]
 func Login(c *gin.Context) {
 	var req UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,7 +77,7 @@ func Login(c *gin.Context) {
 // @Success 200 {object} response.Response{data=rbac.User} "成功返回用户信息"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/user/profile [get]
+// @Router /user/profile [get]
 func GetProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
 	user, err := service.UserService.GetByID(userID)

@@ -3,20 +3,17 @@ package rbac
 import (
 	"gin-template/internal/core"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // Permission 权限组模型 (用户自己管理，哪些接口需要权限，自己去管理，这样更方便，可以随时取消)
 type Permission struct {
-	ID        uint           `gorm:"primarykey" json:"id" example:"1" description:"权限ID"`
-	Name      string         `gorm:"size:50;not null;uniqueIndex:idx_perm_name" json:"name" example:"用户管理" description:"权限资源组中文名"`
-	Code      string         `gorm:"size:50;not null;uniqueIndex:idx_perm_code" json:"code" example:"user:manage" description:"权限编码"`
-	Resources []Resource     `gorm:"foreignKey:PermissionID" json:"resources" description:"权限组绑定的资源(一对多)"`
-	Roles     []Role         `gorm:"many2many:role_permissions;" json:"roles" description:"拥有该权限的角色"`
-	CreatedAt time.Time      `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
-	UpdatedAt time.Time      `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-" description:"删除时间"`
+	ID        uint       `gorm:"primarykey" json:"id" example:"1" description:"权限ID"`
+	Name      string     `gorm:"size:50;not null;uniqueIndex:idx_perm_name" json:"name" example:"用户管理" description:"权限资源组中文名"`
+	Code      string     `gorm:"size:50;not null;uniqueIndex:idx_perm_code" json:"code" example:"user:manage" description:"权限编码"`
+	Resources []Resource `gorm:"foreignKey:PermissionID" json:"resources" description:"权限组绑定的资源(一对多)"`
+	Roles     []Role     `gorm:"many2many:role_permissions;" json:"roles" description:"拥有该权限的角色"`
+	CreatedAt time.Time  `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
+	UpdatedAt time.Time  `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
 }
 
 // TableName 设置表名

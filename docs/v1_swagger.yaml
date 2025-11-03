@@ -2,38 +2,55 @@ basePath: /api/v1
 definitions:
   rbac.Permission:
     properties:
-      createdAt:
+      code:
+        example: user:manage
+        type: string
+      created_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
       id:
+        example: 1
         type: integer
       name:
-        description: 权限资源组中文名
+        example: 用户管理
         type: string
       resources:
-        description: 权限组绑定的资源 一对多
         items:
           $ref: '#/definitions/rbac.Resource'
         type: array
-      updatedAt:
+      roles:
+        items:
+          $ref: '#/definitions/rbac.Role'
+        type: array
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
     type: object
   rbac.Resource:
     properties:
-      createdAt:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
       description:
-        description: 接口中文描述
+        example: 获取用户列表
         type: string
       id:
+        example: 1
         type: integer
       is_managed:
-        description: 是否被权限组管理
+        example: false
         type: boolean
       method:
+        example: GET
         type: string
       path:
+        example: /api/users
         type: string
-      updatedAt:
+      permission_id:
+        example: 0
+        type: integer
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
     type: object
   rbac.Role:
@@ -166,7 +183,7 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
-  /rbac/permissions:
+  /permissions:
     get:
       consumes:
       - application/json
@@ -192,7 +209,7 @@ paths:
       summary: 获取权限列表
       tags:
       - RBAC-权限管理
-  /rbac/resources:
+  /resources:
     get:
       consumes:
       - application/json
@@ -218,7 +235,7 @@ paths:
       summary: 获取资源列表
       tags:
       - RBAC-资源管理
-  /rbac/role-permissions:
+  /role-permissions:
     post:
       consumes:
       - application/json
@@ -253,7 +270,7 @@ paths:
       summary: 分配权限给角色
       tags:
       - RBAC-角色权限管理
-  /rbac/roles:
+  /roles:
     get:
       consumes:
       - application/json
@@ -313,7 +330,7 @@ paths:
       summary: 创建角色
       tags:
       - RBAC-角色管理
-  /rbac/roles/{id}:
+  /roles/{id}:
     delete:
       consumes:
       - application/json
@@ -418,7 +435,7 @@ paths:
       summary: 更新角色
       tags:
       - RBAC-角色管理
-  /rbac/roles/{role_id}/permissions/{permission_id}:
+  /roles/{role_id}/permissions/{permission_id}:
     delete:
       consumes:
       - application/json
@@ -452,7 +469,7 @@ paths:
       summary: 从角色移除权限
       tags:
       - RBAC-角色权限管理
-  /rbac/user-roles:
+  /user-roles:
     post:
       consumes:
       - application/json
@@ -487,7 +504,7 @@ paths:
       summary: 分配角色给用户
       tags:
       - RBAC-用户角色管理
-  /rbac/user/login:
+  /user/login:
     post:
       consumes:
       - application/json
@@ -528,7 +545,7 @@ paths:
       summary: 用户登录
       tags:
       - RBAC-用户管理
-  /rbac/user/profile:
+  /user/profile:
     get:
       consumes:
       - application/json
@@ -558,7 +575,7 @@ paths:
       summary: 获取用户个人资料
       tags:
       - RBAC-用户管理
-  /rbac/user/register:
+  /user/register:
     post:
       consumes:
       - application/json
@@ -593,7 +610,7 @@ paths:
       summary: 用户注册
       tags:
       - RBAC-用户管理
-  /rbac/users/{id}/roles:
+  /users/{id}/roles:
     get:
       consumes:
       - application/json
@@ -629,7 +646,7 @@ paths:
       summary: 获取用户角色
       tags:
       - RBAC-用户角色管理
-  /rbac/users/{user_id}/roles/{role_id}:
+  /users/{user_id}/roles/{role_id}:
     delete:
       consumes:
       - application/json

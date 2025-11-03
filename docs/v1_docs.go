@@ -24,7 +24,7 @@ const docTemplatev1 = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/rbac/permissions": {
+        "/permissions": {
             "get": {
                 "description": "获取系统中所有权限的列表",
                 "consumes": [
@@ -68,7 +68,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/resources": {
+        "/resources": {
             "get": {
                 "description": "获取系统中所有资源的列表",
                 "consumes": [
@@ -112,7 +112,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/role-permissions": {
+        "/role-permissions": {
             "post": {
                 "description": "为指定角色分配权限",
                 "consumes": [
@@ -170,7 +170,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/roles": {
+        "/roles": {
             "get": {
                 "description": "获取系统中所有角色的列表",
                 "consumes": [
@@ -270,7 +270,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/roles/{id}": {
+        "/roles/{id}": {
             "get": {
                 "description": "根据ID获取角色详细信息",
                 "consumes": [
@@ -437,7 +437,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/roles/{role_id}/permissions/{permission_id}": {
+        "/roles/{role_id}/permissions/{permission_id}": {
             "delete": {
                 "description": "从指定角色移除指定权限",
                 "consumes": [
@@ -488,7 +488,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/user-roles": {
+        "/user-roles": {
             "post": {
                 "description": "为指定用户分配角色",
                 "consumes": [
@@ -546,7 +546,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/user/login": {
+        "/user/login": {
             "post": {
                 "description": "用户登录并获取JWT令牌",
                 "consumes": [
@@ -613,7 +613,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/user/profile": {
+        "/user/profile": {
             "get": {
                 "security": [
                     {
@@ -665,7 +665,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/user/register": {
+        "/user/register": {
             "post": {
                 "description": "创建新用户账号",
                 "consumes": [
@@ -723,7 +723,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/users/{id}/roles": {
+        "/users/{id}/roles": {
             "get": {
                 "description": "获取指定用户的所有角色",
                 "consumes": [
@@ -782,7 +782,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/rbac/users/{user_id}/roles/{role_id}": {
+        "/users/{user_id}/roles/{role_id}": {
             "delete": {
                 "description": "从指定用户移除指定角色",
                 "consumes": [
@@ -838,53 +838,74 @@ const docTemplatev1 = `{
         "rbac.Permission": {
             "type": "object",
             "properties": {
-                "createdAt": {
-                    "type": "string"
+                "code": {
+                    "type": "string",
+                    "example": "user:manage"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
-                    "description": "权限资源组中文名",
-                    "type": "string"
+                    "type": "string",
+                    "example": "用户管理"
                 },
                 "resources": {
-                    "description": "权限组绑定的资源 一对多",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rbac.Resource"
                     }
                 },
-                "updatedAt": {
-                    "type": "string"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Role"
+                    }
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
                 }
             }
         },
         "rbac.Resource": {
             "type": "object",
             "properties": {
-                "createdAt": {
-                    "type": "string"
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
                 },
                 "description": {
-                    "description": "接口中文描述",
-                    "type": "string"
+                    "type": "string",
+                    "example": "获取用户列表"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "is_managed": {
-                    "description": "是否被权限组管理",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": false
                 },
                 "method": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "GET"
                 },
                 "path": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "/api/users"
                 },
-                "updatedAt": {
-                    "type": "string"
+                "permission_id": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
                 }
             }
         },

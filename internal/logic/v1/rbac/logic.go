@@ -17,7 +17,7 @@ import (
 // @Produce json
 // @Success 200 {object} response.Response{data=[]rbac.Role} "成功获取角色列表"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles [get]
+// @Router /roles [get]
 func GetRoles(c *gin.Context) {
 	var roles []rbac.Role
 	if err := core.MustNewDb().Find(&roles).Error; err != nil {
@@ -37,7 +37,7 @@ func GetRoles(c *gin.Context) {
 // @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles [post]
+// @Router /roles [post]
 func CreateRole(c *gin.Context) {
 	var role rbac.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
@@ -65,7 +65,7 @@ func CreateRole(c *gin.Context) {
 // @Success 200 {object} response.Response{data=rbac.Role} "成功获取角色详情"
 // @Failure 400 {object} response.Response "无效的角色ID"
 // @Failure 404 {object} response.Response "角色不存在"
-// @Router /rbac/roles/{id} [get]
+// @Router /roles/{id} [get]
 func GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -92,7 +92,7 @@ func GetRole(c *gin.Context) {
 // @Failure 400 {object} response.Response "无效的角色ID或请求参数错误"
 // @Failure 404 {object} response.Response "角色不存在"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles/{id} [put]
+// @Router /roles/{id} [put]
 func UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -125,7 +125,7 @@ func UpdateRole(c *gin.Context) {
 // @Success 204 {object} response.Response "成功删除角色"
 // @Failure 400 {object} response.Response "无效的角色ID"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles/{id} [delete]
+// @Router /roles/{id} [delete]
 func DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -147,7 +147,7 @@ func DeleteRole(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} response.Response{data=[]rbac.Permission} "成功获取权限列表"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/permissions [get]
+// @Router /permissions [get]
 func GetPermissions(c *gin.Context) {
 	var permissions []rbac.Permission
 	if err := core.MustNewDb().Find(&permissions).Error; err != nil {
@@ -167,7 +167,7 @@ func GetPermissions(c *gin.Context) {
 // @Success 201 {object} response.Response{data=rbac.Permission} "成功创建权限"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/permissions [post]
+// @Router /permissions [post]
 
 func CreatePermission(c *gin.Context) {
 	var permission rbac.Permission
@@ -190,7 +190,7 @@ func CreatePermission(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} response.Response{data=[]rbac.Resource} "成功获取资源列表"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/resources [get]
+// @Router /resources [get]
 func GetResources(c *gin.Context) {
 	var resources []rbac.Resource
 	if err := core.MustNewDb().Find(&resources).Error; err != nil {
@@ -210,7 +210,7 @@ func GetResources(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]rbac.UserRole} "成功获取用户角色"
 // @Failure 400 {object} response.Response "无效的用户ID"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/users/{id}/roles [get]
+// @Router /users/{id}/roles [get]
 func GetUserRoles(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -237,7 +237,7 @@ func GetUserRoles(c *gin.Context) {
 // @Success 201 {object} response.Response{data=rbac.UserRole} "成功分配角色"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/user-roles [post]
+// @Router /user-roles [post]
 func AssignRoleToUser(c *gin.Context) {
 	var userRole rbac.UserRole
 	if err := c.ShouldBindJSON(&userRole); err != nil {
@@ -264,7 +264,7 @@ func AssignRoleToUser(c *gin.Context) {
 // @Success 204 {object} response.Response "成功移除角色"
 // @Failure 400 {object} response.Response "无效的用户ID或角色ID"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/users/{user_id}/roles/{role_id} [delete]
+// @Router /users/{user_id}/roles/{role_id} [delete]
 func RemoveRoleFromUser(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("user_id"), 10, 32)
 	if err != nil {
@@ -296,7 +296,7 @@ func RemoveRoleFromUser(c *gin.Context) {
 // @Success 201 {object} response.Response{data=rbac.RolePermission} "成功分配权限"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/role-permissions [post]
+// @Router /role-permissions [post]
 func AssignPermissionToRole(c *gin.Context) {
 	var rolePermission rbac.RolePermission
 	if err := c.ShouldBindJSON(&rolePermission); err != nil {
@@ -323,7 +323,7 @@ func AssignPermissionToRole(c *gin.Context) {
 // @Success 204 {object} response.Response "成功移除权限"
 // @Failure 400 {object} response.Response "无效的角色ID或权限ID"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles/{role_id}/permissions/{permission_id} [delete]
+// @Router /roles/{role_id}/permissions/{permission_id} [delete]
 func RemovePermissionFromRole(c *gin.Context) {
 	roleID, err := strconv.ParseUint(c.Param("role_id"), 10, 32)
 	if err != nil {
