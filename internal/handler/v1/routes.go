@@ -4,7 +4,6 @@ import (
 	_ "gin-template/docs"
 	"gin-template/internal/core"
 	"gin-template/internal/handler/v1/rbac"
-	"gin-template/internal/handler/v1/user"
 	v1 "gin-template/internal/logic/v1"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +31,7 @@ func RegisterRoutes(r *gin.Engine) {
 
 	// 注册各个模块的路由
 	registerHealthRoutes(apiV1)
-	user.RegisterUserRoutes(apiV1)
+	// 用户管理已整合到RBAC系统中
 	rbac.RegisterRBACRoutes(apiV1)
 	if core.Config.App.EnableSwagger {
 		r.GET("/swagger/v1/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.InstanceName("v1")))

@@ -168,6 +168,7 @@ func GetPermissions(c *gin.Context) {
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /rbac/permissions [post]
+
 func CreatePermission(c *gin.Context) {
 	var permission rbac.Permission
 	if err := c.ShouldBindJSON(&permission); err != nil {
@@ -179,6 +180,24 @@ func CreatePermission(c *gin.Context) {
 		return
 	}
 	response.Created(c, permission)
+}
+
+// GetResources godoc
+// @Summary 获取资源列表
+// @Description 获取系统中所有资源的列表
+// @Tags RBAC-资源管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=[]rbac.Resource} "成功获取资源列表"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /rbac/resources [get]
+func GetResources(c *gin.Context) {
+	var resources []rbac.Resource
+	if err := core.MustNewDb().Find(&resources).Error; err != nil {
+		response.InternalServerError(c, "获取资源列表失败")
+		return
+	}
+	response.Success(c, resources)
 }
 
 // GetUserRoles godoc
@@ -320,65 +339,6 @@ func RemovePermissionFromRole(c *gin.Context) {
 
 	if err := core.MustNewDb().Where("role_id = ? AND permission_id = ?", roleID, permissionID).Delete(&rbac.RolePermission{}).Error; err != nil {
 		response.InternalServerError(c, "移除权限失败")
-		return
-	}
-
-	response.NoContent(c)
-}
-
-// AssignMenuToRole godoc
-// @Summary 分配菜单给角色
-// @Description 为指定角色分配菜单
-// @Tags RBAC-角色菜单管理
-// @Accept json
-// @Produce json
-// @Param roleMenu body rbac.RoleMenu true "角色菜单信息"
-// @Success 201 {object} response.Response{data=rbac.RoleMenu} "成功分配菜单"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/role-menus [post]
-func AssignMenuToRole(c *gin.Context) {
-	var roleMenu rbac.RoleMenu
-	if err := c.ShouldBindJSON(&roleMenu); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	if err := core.MustNewDb().Create(&roleMenu).Error; err != nil {
-		response.InternalServerError(c, "分配菜单失败")
-		return
-	}
-
-	response.Created(c, roleMenu)
-}
-
-// RemoveMenuFromRole godoc
-// @Summary 从角色移除菜单
-// @Description 从指定角色移除指定菜单
-// @Tags RBAC-角色菜单管理
-// @Accept json
-// @Produce json
-// @Param role_id path int true "角色ID"
-// @Param menu_id path int true "菜单ID"
-// @Success 204 {object} response.Response "成功移除菜单"
-// @Failure 400 {object} response.Response "无效的角色ID或菜单ID"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /rbac/roles/{role_id}/menus/{menu_id} [delete]
-func RemoveMenuFromRole(c *gin.Context) {
-	roleID, err := strconv.ParseUint(c.Param("role_id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "无效的角色ID")
-		return
-	}
-
-	menuID, err := strconv.ParseUint(c.Param("menu_id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "无效的菜单ID")
-		return
-	}
-
-	if err := core.MustNewDb().Where("role_id = ? AND menu_id = ?", roleID, menuID).Delete(&rbac.RoleMenu{}).Error; err != nil {
-		response.InternalServerError(c, "移除菜单失败")
 		return
 	}
 

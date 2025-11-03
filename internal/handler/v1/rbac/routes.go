@@ -8,36 +8,50 @@ import (
 
 // RegisterRBACRoutes 注册RBAC相关路由
 func RegisterRBACRoutes(api *gin.RouterGroup) {
-	// RBAC相关路由
-	rbacGroup := api.Group("/rbac")
+	// 用户模块
+	userGroup := api.Group("/user")
 	{
-		// 需要JWT认证的路由
-		authGroup := rbacGroup.Group("/")
-		authGroup.Use(middleware.JWT())
+		// 公共接口
+		userGroup.POST("/register", rbac.Register)
+		userGroup.POST("/login", rbac.Login)
+
+		// 需要认证
+		authUserGroup := userGroup.Group("/")
+		authUserGroup.Use(middleware.JWT())
 		{
-			// 角色管理
-			authGroup.GET("/roles", rbac.GetRoles)
-			authGroup.POST("/roles", rbac.CreateRole)
-			authGroup.GET("/roles/:id", rbac.GetRole)
-			authGroup.PUT("/roles/:id", rbac.UpdateRole)
-			authGroup.DELETE("/roles/:id", rbac.DeleteRole)
-
-			// 权限管理
-			authGroup.GET("/permissions", rbac.GetPermissions)
-			authGroup.POST("/permissions", rbac.CreatePermission)
-
-			// 用户角色管理
-			authGroup.GET("/users/:id/roles", rbac.GetUserRoles)
-			authGroup.POST("/users/:id/roles", rbac.AssignRoleToUser)
-			authGroup.DELETE("/users/:id/roles/:role_id", rbac.RemoveRoleFromUser)
-
-			// 角色权限管理
-			authGroup.POST("/roles/:id/permissions", rbac.AssignPermissionToRole)
-			authGroup.DELETE("/roles/:id/permissions/:permission_id", rbac.RemovePermissionFromRole)
-
-			// 角色菜单管理
-			authGroup.POST("/roles/:id/menus", rbac.AssignMenuToRole)
-			authGroup.DELETE("/roles/:id/menus/:menu_id", rbac.RemoveMenuFromRole)
+			authUserGroup.GET("/profile", rbac.GetProfile)
+			authUserGroup.GET("/:id/roles", rbac.GetUserRoles)
+			authUserGroup.POST("/:id/roles", rbac.AssignRoleToUser)
+			authUserGroup.DELETE("/:id/roles/:role_id", rbac.RemoveRoleFromUser)
 		}
+	}
+	// 角色模块
+	roleGroup := api.Group("/roles")
+	roleGroup.Use(middleware.JWT())
+	{
+		roleGroup.GET("", rbac.GetRoles)
+		roleGroup.POST("", rbac.CreateRole)
+		roleGroup.GET("/:id", rbac.GetRole)
+		roleGroup.PUT("/:id", rbac.UpdateRole)
+		roleGroup.DELETE("/:id", rbac.DeleteRole)
+
+		// 角色-权限绑定
+		roleGroup.POST("/:id/permissions", rbac.AssignPermissionToRole)
+		roleGroup.DELETE("/:id/permissions/:permission_id", rbac.RemovePermissionFromRole)
+	}
+
+	// 权限模块
+	permissionGroup := api.Group("/permissions")
+	permissionGroup.Use(middleware.JWT())
+	{
+		permissionGroup.GET("", rbac.GetPermissions)
+		permissionGroup.POST("", rbac.CreatePermission)
+	}
+
+	// 资源模块（可选，看你是否要加）
+	resourceGroup := api.Group("/resources")
+	resourceGroup.Use(middleware.JWT())
+	{
+		resourceGroup.GET("", rbac.GetResources)
 	}
 }

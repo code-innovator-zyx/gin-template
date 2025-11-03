@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/handler"
+	_ "gin-template/internal/model"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"

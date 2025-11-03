@@ -1,58 +1,46 @@
 basePath: /api/v1
 definitions:
-  model.User:
-    description: 用户信息模型
-    properties:
-      avatar:
-        example: https://example.com/avatar.jpg
-        type: string
-      created_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
-      email:
-        example: john@example.com
-        type: string
-      id:
-        example: 1
-        type: integer
-      nickname:
-        example: John Doe
-        type: string
-      roles:
-        items:
-          $ref: '#/definitions/rbac.Role'
-        type: array
-      status:
-        example: 1
-        type: integer
-      updated_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
-      username:
-        example: johndoe
-        type: string
-    type: object
   rbac.Permission:
     properties:
-      created_at:
-        type: string
-      description:
+      createdAt:
         type: string
       id:
         type: integer
-      method:
-        type: string
       name:
+        description: 权限资源组中文名
+        type: string
+      resources:
+        description: 权限组绑定的资源 一对多
+        items:
+          $ref: '#/definitions/rbac.Resource'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  rbac.Resource:
+    properties:
+      createdAt:
+        type: string
+      description:
+        description: 接口中文描述
+        type: string
+      id:
+        type: integer
+      is_managed:
+        description: 是否被权限组管理
+        type: boolean
+      method:
         type: string
       path:
         type: string
-      updated_at:
+      updatedAt:
         type: string
     type: object
   rbac.Role:
     description: 角色信息模型
     properties:
       created_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
       description:
         example: 系统管理员
@@ -63,20 +51,12 @@ definitions:
       name:
         example: admin
         type: string
+      permissions:
+        items:
+          $ref: '#/definitions/rbac.Permission'
+        type: array
       updated_at:
-        type: string
-    type: object
-  rbac.RoleMenu:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: integer
-      menu_id:
-        type: integer
-      role_id:
-        type: integer
-      updated_at:
+        example: "2023-01-01T00:00:00Z"
         type: string
     type: object
   rbac.RolePermission:
@@ -91,6 +71,63 @@ definitions:
         type: integer
       updated_at:
         type: string
+    type: object
+  rbac.User:
+    description: 用户信息模型
+    properties:
+      avatar:
+        example: https://example.com/avatar.jpg
+        type: string
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      roles:
+        items:
+          $ref: '#/definitions/rbac.Role'
+        type: array
+      status:
+        example: 1
+        type: integer
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+  rbac.UserLoginRequest:
+    properties:
+      password:
+        example: password123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  rbac.UserRegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    required:
+    - email
+    - password
+    - username
     type: object
   rbac.UserRole:
     properties:
@@ -115,37 +152,6 @@ definitions:
       message:
         description: 提示信息
         type: string
-    type: object
-  user.LoginRequest:
-    properties:
-      password:
-        example: password123
-        type: string
-      username:
-        example: johndoe
-        type: string
-    required:
-    - password
-    - username
-    type: object
-  user.RegisterRequest:
-    properties:
-      email:
-        example: john@example.com
-        type: string
-      nickname:
-        example: John Doe
-        type: string
-      password:
-        example: password123
-        type: string
-      username:
-        example: johndoe
-        type: string
-    required:
-    - email
-    - password
-    - username
     type: object
 info:
   contact:
@@ -186,75 +192,32 @@ paths:
       summary: 获取权限列表
       tags:
       - RBAC-权限管理
-    post:
+  /rbac/resources:
+    get:
       consumes:
       - application/json
-      description: 创建新的系统权限
-      parameters:
-      - description: 权限信息
-        in: body
-        name: permission
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.Permission'
+      description: 获取系统中所有资源的列表
       produces:
       - application/json
       responses:
-        "201":
-          description: 成功创建权限
+        "200":
+          description: 成功获取资源列表
           schema:
             allOf:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/rbac.Permission'
+                  items:
+                    $ref: '#/definitions/rbac.Resource'
+                  type: array
               type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
-      summary: 创建权限
+      summary: 获取资源列表
       tags:
-      - RBAC-权限管理
-  /rbac/role-menus:
-    post:
-      consumes:
-      - application/json
-      description: 为指定角色分配菜单
-      parameters:
-      - description: 角色菜单信息
-        in: body
-        name: roleMenu
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.RoleMenu'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 成功分配菜单
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.RoleMenu'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 分配菜单给角色
-      tags:
-      - RBAC-角色菜单管理
+      - RBAC-资源管理
   /rbac/role-permissions:
     post:
       consumes:
@@ -455,40 +418,6 @@ paths:
       summary: 更新角色
       tags:
       - RBAC-角色管理
-  /rbac/roles/{role_id}/menus/{menu_id}:
-    delete:
-      consumes:
-      - application/json
-      description: 从指定角色移除指定菜单
-      parameters:
-      - description: 角色ID
-        in: path
-        name: role_id
-        required: true
-        type: integer
-      - description: 菜单ID
-        in: path
-        name: menu_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: 成功移除菜单
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 无效的角色ID或菜单ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 从角色移除菜单
-      tags:
-      - RBAC-角色菜单管理
   /rbac/roles/{role_id}/permissions/{permission_id}:
     delete:
       consumes:
@@ -558,6 +487,112 @@ paths:
       summary: 分配角色给用户
       tags:
       - RBAC-用户角色管理
+  /rbac/user/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录并获取JWT令牌
+      parameters:
+      - description: 用户登录信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功返回token
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 用户名或密码错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户登录
+      tags:
+      - RBAC-用户管理
+  /rbac/user/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的个人资料
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回用户信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.User'
+              type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户个人资料
+      tags:
+      - RBAC-用户管理
+  /rbac/user/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号
+      parameters:
+      - description: 用户注册信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功返回用户信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.User'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户注册
+      tags:
+      - RBAC-用户管理
   /rbac/users/{id}/roles:
     get:
       consumes:
@@ -628,110 +663,4 @@ paths:
       summary: 从用户移除角色
       tags:
       - RBAC-用户角色管理
-  /user/login:
-    post:
-      consumes:
-      - application/json
-      description: 用户登录并获取JWT令牌
-      parameters:
-      - description: 用户登录信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/user.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 登录成功返回token
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  additionalProperties:
-                    type: string
-                  type: object
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 用户名或密码错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 用户登录
-      tags:
-      - 用户
-  /user/profile:
-    get:
-      consumes:
-      - application/json
-      description: 获取当前登录用户的个人资料
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功返回用户信息
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.User'
-              type: object
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取用户个人资料
-      tags:
-      - 用户
-  /user/register:
-    post:
-      consumes:
-      - application/json
-      description: 创建新用户账号
-      parameters:
-      - description: 用户注册信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/user.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 注册成功返回用户信息
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.User'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 用户注册
-      tags:
-      - 用户
 swagger: "2.0"

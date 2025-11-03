@@ -16,5 +16,8 @@ func Init() *gin.Engine {
 	// 注册API路由
 	v1.RegisterRoutes(r)
 
+	// 注册所有路由到资源表
+	middleware.RegisterRoutes(r)
+
 	return r
 }

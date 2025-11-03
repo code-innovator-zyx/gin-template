@@ -3,6 +3,7 @@ package model
 import (
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -13,15 +14,15 @@ func init() {
 // autoMigrate 自动迁移数据库表结构
 func autoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
-		&User{},
+		&rbac.User{},
 		&rbac.Role{},
 		&rbac.Permission{},
-		&rbac.Menu{},
 		&rbac.UserRole{},
 		&rbac.RolePermission{},
-		&rbac.RoleMenu{},
+		&rbac.Resource{},
 	); err != nil {
 		return err
 	}
+	logrus.Info("success migration")
 	return nil
 }

@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"gin-template/internal/core"
+	"gin-template/internal/model/rbac"
 
-	"gin-template/internal/model"
 	"gin-template/pkg/utils"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -17,10 +17,10 @@ type userService struct{}
 var UserService = new(userService)
 
 // Create 创建用户
-func (s *userService) Create(user *model.User) error {
+func (s *userService) Create(user *rbac.User) error {
 	// 检查用户名是否已存在
 	var count int64
-	if err := core.MustNewDb().Model(&model.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
+	if err := core.MustNewDb().Model(&rbac.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
@@ -29,7 +29,7 @@ func (s *userService) Create(user *model.User) error {
 
 	// 检查邮箱是否已存在
 	if user.Email != "" {
-		if err := core.MustNewDb().Model(&model.User{}).Where("email = ?", user.Email).Count(&count).Error; err != nil {
+		if err := core.MustNewDb().Model(&rbac.User{}).Where("email = ?", user.Email).Count(&count).Error; err != nil {
 			return err
 		}
 		if count > 0 {
@@ -42,8 +42,8 @@ func (s *userService) Create(user *model.User) error {
 }
 
 // GetByID 根据ID获取用户
-func (s *userService) GetByID(id uint) (*model.User, error) {
-	var user model.User
+func (s *userService) GetByID(id uint) (*rbac.User, error) {
+	var user rbac.User
 	if err := core.MustNewDb().First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
@@ -54,8 +54,8 @@ func (s *userService) GetByID(id uint) (*model.User, error) {
 }
 
 // GetByUsername 根据用户名获取用户
-func (s *userService) GetByUsername(username string) (*model.User, error) {
-	var user model.User
+func (s *userService) GetByUsername(username string) (*rbac.User, error) {
+	var user rbac.User
 	if err := core.MustNewDb().Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
@@ -87,11 +87,11 @@ func (s *userService) Login(username, password string) (string, error) {
 }
 
 // Update 更新用户信息
-func (s *userService) Update(user *model.User) error {
+func (s *userService) Update(user *rbac.User) error {
 	return core.MustNewDb().Save(user).Error
 }
 
 // Delete 删除用户
 func (s *userService) Delete(id uint) error {
-	return core.MustNewDb().Delete(&model.User{}, id).Error
+	return core.MustNewDb().Delete(&rbac.User{}, id).Error
 }

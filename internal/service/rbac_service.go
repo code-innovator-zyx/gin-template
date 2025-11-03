@@ -58,8 +58,3 @@ func AssignMenuToRole(roleID uint, menuID uint) error {
 func RemoveMenuFromRole(roleID uint, menuID uint) error {
 	return core.MustNewDb().Exec("DELETE FROM role_menus WHERE role_id = ? AND menu_id = ?", roleID, menuID).Error
 }
-
-// GetUserMenus 获取用户菜单列表
-func GetUserMenus(userID uint) ([]rbac.Menu, error) {
-	return rbac.GetUserMenus(userID)
-}

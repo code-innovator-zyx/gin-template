@@ -11,10 +11,11 @@ import (
 // @Description 角色信息模型
 type Role struct {
 	ID          uint           `gorm:"primarykey" json:"id" example:"1" description:"角色ID"`
-	Name        string         `gorm:"size:50;not null;unique" json:"name" example:"admin" description:"角色名称"`
-	Description string         `gorm:"size:200" json:"description" example:"系统管理员" description:"角色描述"`
-	CreatedAt   time.Time      `json:"created_at" description:"创建时间"`
-	UpdatedAt   time.Time      `json:"updated_at" description:"更新时间"`
+	Name        string         `gorm:"size:50;not null;uniqueIndex:idx_role_name" json:"name" example:"admin" description:"角色名称"`
+	Description string         `gorm:"size:200;index:idx_role_desc" json:"description" example:"系统管理员" description:"角色描述"`
+	Permissions []Permission   `gorm:"many2many:role_permissions;" json:"permissions" description:"角色权限"`
+	CreatedAt   time.Time      `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
+	UpdatedAt   time.Time      `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-" description:"删除时间"`
 }
 
@@ -55,5 +56,45 @@ func UpdateRole(role *Role) error {
 
 // DeleteRole 删除角色
 func DeleteRole(id uint) error {
-	return core.MustNewDb().Delete(&Role{}, id).Error
+	tx := core.MustNewDb().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除角色
+	if err := tx.Delete(&Role{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 删除角色关联
+	if err := tx.Exec("DELETE FROM user_roles WHERE role_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Exec("DELETE FROM role_permissions WHERE role_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// GetRoles 获取角色列表
+func GetRoles(page, pageSize int) ([]Role, int64, error) {
+	var roles []Role
+	var total int64
+
+	db := core.MustNewDb().Model(&Role{})
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := db.Offset((page - 1) * pageSize).Limit(pageSize).Find(&roles).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return roles, total, nil
 }
