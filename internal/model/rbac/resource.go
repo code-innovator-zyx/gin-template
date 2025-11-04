@@ -10,8 +10,8 @@ import (
 // Resource 资源模型 服务启动的时候会自动更新该表
 type Resource struct {
 	ID           uint      `gorm:"primarykey" json:"id" example:"1" description:"资源ID"`
-	Path         string    `gorm:"size:200;not null;index:idx_resource_path" json:"path" example:"/api/users" description:"资源路径"`
-	Method       string    `gorm:"size:10;not null;index:idx_resource_method" json:"method" example:"GET" description:"HTTP方法"`
+	Path         string    `gorm:"size:200;not null;uniqueIndex:idx_path_method" json:"path" example:"/api/users" description:"资源路径"`
+	Method       string    `gorm:"size:10;not null;uniqueIndex:idx_path_method" json:"method" example:"GET" description:"HTTP方法"`
 	Description  string    `gorm:"size:200" json:"description" example:"获取用户列表" description:"接口中文描述"`
 	IsManaged    bool      `gorm:"default:false;index:idx_resource_managed" json:"is_managed" example:"false" description:"是否被权限组管理"`
 	PermissionID *uint     `gorm:"index:idx_resource_permission" json:"permission_id" example:"0" description:"所属权限ID"`

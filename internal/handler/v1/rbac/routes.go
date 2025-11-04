@@ -3,6 +3,7 @@ package rbac
 import (
 	"gin-template/internal/logic/v1/rbac"
 	"gin-template/internal/middleware"
+	"gin-template/internal/routegroup"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		userGroup.POST("/login", rbac.Login)
 
 		// 需要认证
-		authUserGroup := userGroup.Group("/")
+		authUserGroup := routegroup.NewAuthRouterGroup(userGroup.Group("/"))
 		authUserGroup.Use(middleware.JWT())
 		{
 			authUserGroup.GET("/profile", rbac.GetProfile)
@@ -26,7 +27,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		}
 	}
 	// 角色模块
-	roleGroup := api.Group("/roles")
+	roleGroup := routegroup.NewAuthRouterGroup(api.Group("/roles"))
 	roleGroup.Use(middleware.JWT())
 	{
 		roleGroup.GET("", rbac.GetRoles)
@@ -41,15 +42,15 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	}
 
 	// 权限模块
-	permissionGroup := api.Group("/permissions")
+	permissionGroup := routegroup.NewAuthRouterGroup(api.Group("/permissions"))
 	permissionGroup.Use(middleware.JWT())
 	{
 		permissionGroup.GET("", rbac.GetPermissions)
 		permissionGroup.POST("", rbac.CreatePermission)
 	}
 
-	// 资源模块（可选，看你是否要加）
-	resourceGroup := api.Group("/resources")
+	// 资源模块
+	resourceGroup := routegroup.NewAuthRouterGroup(api.Group("/resources"))
 	resourceGroup.Use(middleware.JWT())
 	{
 		resourceGroup.GET("", rbac.GetResources)
