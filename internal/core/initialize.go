@@ -2,6 +2,7 @@ package core
 
 import (
 	"gin-template/internal/config"
+	"gin-template/pkg/cache"
 	"gin-template/pkg/logger"
 	"gin-template/pkg/orm"
 	"log"
@@ -23,7 +24,7 @@ func Init() {
 	}
 	// 初始化日志
 	logger.Init(Config.Logger)
-	// 初始化数据库 .......
+	// 初始化数据库
 	if Config.Database != nil {
 		db, err = orm.Init(*Config.Database)
 		if err != nil {
@@ -34,6 +35,12 @@ func Init() {
 			if err = fn(db); err != nil {
 				log.Fatalf("数据库迁移失败: %v", err)
 			}
+		}
+	}
+	// 初始化Redis（可选）
+	if Config.Redis != nil {
+		if err = cache.Init(*Config.Redis); err != nil {
+			log.Printf("Redis初始化失败（非致命错误）: %v", err)
 		}
 	}
 }

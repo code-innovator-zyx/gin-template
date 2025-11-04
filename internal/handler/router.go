@@ -9,10 +9,13 @@ import (
 )
 
 func Init() *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
 
-	// 跨域中间件
-	r.Use(middleware.Cors())
+	// 添加中间件（按顺序）
+	r.Use(middleware.Recovery())     // panic恢复
+	r.Use(middleware.RequestID())    // 请求ID追踪
+	r.Use(middleware.Logger())       // 日志记录
+	r.Use(middleware.Cors())         // 跨域处理
 
 	// 注册API路由
 	v1.RegisterRoutes(r)

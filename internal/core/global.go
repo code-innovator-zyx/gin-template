@@ -28,6 +28,11 @@ func MustNewDb() *gorm.DB {
 	return db.Session(&gorm.Session{})
 }
 
+// GetDb 获取数据库连接（不panic）
+func GetDb() *gorm.DB {
+	return db
+}
+
 func MustNewDbWithContext(ctx context.Context) *gorm.DB {
 	if db == nil {
 		log.Fatal("数据库未初始化")

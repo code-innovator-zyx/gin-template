@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"gin-template/internal/model/rbac"
+	"gin-template/internal/service"
 	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 
-// PermissionMiddleware 权限验证中间件
+// PermissionMiddleware 权限验证中间件（带缓存优化）
 func PermissionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取当前用户ID
@@ -21,8 +21,8 @@ func PermissionMiddleware() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		method := c.Request.Method
 
-		// 检查用户是否有权限访问
-		hasPermission, err := rbac.CheckPermission(userID.(uint), path, method)
+		// 使用带缓存的权限检查
+		hasPermission, err := service.HasPermissionWithCache(c.Request.Context(), userID.(uint), path, method)
 		if err != nil {
 			response.InternalServerError(c, "权限检查失败")
 			c.Abort()

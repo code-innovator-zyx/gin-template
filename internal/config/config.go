@@ -14,8 +14,9 @@ type AppConfig struct {
 	Server Server        `mapstructure:"server" validate:"required"`
 	Logger logger.Config `mapstructure:"logger" validate:"required"`
 	// 选填的配置
-	Database *orm.Config `mapstructure:"database" validate:"omitempty"`
-	Jwt      *Jwt        `mapstructure:"jwt" validate:"omitempty"`
+	Database *orm.Config   `mapstructure:"database" validate:"omitempty"`
+	Jwt      *Jwt          `mapstructure:"jwt" validate:"omitempty"`
+	Redis    *RedisConfig  `mapstructure:"redis" validate:"omitempty"`
 }
 
 func (a AppConfig) validate() error {
@@ -45,6 +46,15 @@ type Jwt struct {
 	Expire int    `mapstructure:"expire" validate:"required,min=60"` // 至少 60 秒
 }
 
+// RedisConfig Redis配置
+type RedisConfig struct {
+	Host     string `mapstructure:"host" validate:"required"`
+	Port     int    `mapstructure:"port" validate:"required,min=1,max=65535"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db" validate:"min=0"`
+	PoolSize int    `mapstructure:"pool_size" validate:"omitempty,min=1"`
+}
+
 // Init 初始化配置
 func Init() (*AppConfig, error) {
 	// 初始化Viper
@@ -52,6 +62,10 @@ func Init() (*AppConfig, error) {
 	viper.SetConfigType("yaml")    // 配置文件类型
 	viper.AddConfigPath("config/") // 配置文件路径
 	viper.AddConfigPath("./")      // 也可以在当前目录查找
+
+	// 支持从环境变量读取配置
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("APP") // 环境变量前缀
 
 	var config AppConfig
 	if err := viper.ReadInConfig(); err != nil {

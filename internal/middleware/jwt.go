@@ -5,6 +5,7 @@ import (
 
 	"gin-template/pkg/response"
 	"gin-template/pkg/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +43,7 @@ func JWT() gin.HandlerFunc {
 		}
 
 		// 将用户信息存储到上下文
-		c.Set("user_id", claims.UserID)
+		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Next()
 	}

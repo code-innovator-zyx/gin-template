@@ -153,10 +153,13 @@
 
 ## 快速开始
 
+> 💡 **提示**：详细的快速开始指南请查看 [QUICK_START.md](./QUICK_START.md)
+
 ### 前置条件
 
 - Go 1.20+
-- MySQL 5.7+ 或其他支持的数据库
+- MySQL 5.7+ 或其他支持的数据库（可选）
+- Redis 5.0+（可选）
 
 ### 安装
 
@@ -167,31 +170,42 @@ git clone https://github.com/yourusername/gin-template.git
 cd gin-template
 ```
 
-2. 安装依赖
+2. **重命名项目（推荐）**
+
+🎯 一键重命名项目名称和所有依赖：
+
+```bash
+make rename NEW_NAME=your-project-name
+
+# 例如：
+make rename NEW_NAME=blog-api
+```
+
+这个命令会自动更新：
+- ✅ `go.mod` 模块名
+- ✅ 所有 Go 文件的 import 路径
+- ✅ `Makefile` 应用名称
+- ✅ `docker-compose.yml` 容器名称
+- ✅ 所有文档中的项目名称
+
+> 📖 详细的重命名指南请查看 [RENAME_GUIDE.md](./RENAME_GUIDE.md)
+
+3. 安装依赖
 
 ```bash
 go mod tidy
 ```
 
-3. 配置数据库
-```shell
-mv app.yaml.template app.yaml
-```
-修改 `app.yaml`  文件中的数据库配置：
-
-```yaml
-database:
-  driver: mysql
-  host: localhost
-  port: 3306
-  username: root
-  password: your_password
-  dbname: gin_template
-  max_idle_conns: 10
-  max_open_conns: 100
+4. 配置应用
+```bash
+make init-config
+# 或手动复制
+cp app.yaml.template app.yaml
 ```
 
-4. 运行应用
+编辑 `app.yaml` 文件配置数据库（可选）和其他选项。
+
+5. 运行应用
 
 ```bash
 # 直接运行
@@ -205,9 +219,18 @@ make run
 
 ### 使用 Makefile
 
-项目提供了 Makefile 来简化常用操作：
+项目提供了完整的 Makefile 来简化常用操作：
 
 ```bash
+# 查看所有可用命令
+make help
+
+# 重命名项目（第一次使用）
+make rename NEW_NAME=your-project-name
+
+# 初始化配置文件
+make init-config
+
 # 运行应用
 make run
 
@@ -220,8 +243,16 @@ make swagger
 # 运行测试
 make test
 
+# 运行测试并查看覆盖率
+make test-coverage
+
 # 清理构建文件
 make clean
+
+# Docker相关
+make docker-build    # 构建Docker镜像
+make up              # 启动docker-compose
+make down            # 停止docker-compose
 ```
 
 ## API 文档

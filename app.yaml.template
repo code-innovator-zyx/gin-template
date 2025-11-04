@@ -15,7 +15,6 @@ server:
   # 空闲超时
   idle_timeout: 30s
 
-
 # 日志配置
 logger:
   # 是否打印调用者（文件名、行号）
@@ -29,3 +28,24 @@ logger:
   enable_file: true
   # 日志文件路径（enable_file=true 时必填）
   file_path: ./logs
+
+# 数据库配置（可选）
+# database:
+#   dsn: "root:password@tcp(localhost:3306)/gin_template?charset=utf8mb4&parseTime=True&loc=Local"
+#   max_open_conns: 100
+#   max_idle_conns: 10
+#   max_life_time: 3600
+#   log_level: 1
+
+# JWT配置（可选）
+# jwt:
+#   secret: "your-secret-key-change-this-in-production"
+#   expire: 86400  # 24小时，单位：秒
+
+# Redis配置（可选）
+# redis:
+#   host: localhost
+#   port: 6379
+#   password: ""
+#   db: 0
+#   pool_size: 10
