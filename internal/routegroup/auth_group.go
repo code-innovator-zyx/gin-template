@@ -2,6 +2,7 @@ package routegroup
 
 import (
 	"gin-template/internal/model/rbac"
+	"github.com/sirupsen/logrus"
 	"path"
 	"sync"
 
@@ -20,8 +21,8 @@ type AuthRouterGroup struct {
 	*gin.RouterGroup
 }
 
-// NewAuthRouterGroup
-func NewAuthRouterGroup(group *gin.RouterGroup) *AuthRouterGroup {
+// WithAuthRouterGroup
+func WithAuthRouterGroup(group *gin.RouterGroup) *AuthRouterGroup {
 	return &AuthRouterGroup{RouterGroup: group}
 }
 
@@ -115,4 +116,18 @@ func (g *AuthRouterGroup) Any(relativePath string, handlers ...gin.HandlerFunc) 
 func (g *AuthRouterGroup) Group(relativePath string, handlers ...gin.HandlerFunc) *AuthRouterGroup {
 	newGroup := g.RouterGroup.Group(relativePath, handlers...)
 	return &AuthRouterGroup{RouterGroup: newGroup}
+}
+
+// RegisterRoutes 注册需要认证的路由到资源表
+func RegisterRoutes() {
+	mu.Lock()
+	defer mu.Unlock()
+	// 将路由添加到系统资源
+	err := rbac.UpsertResource(protectedRoutes)
+	if err != nil {
+		// 因为这是在启动时执行的，我们不希望因为一个路由注册失败就导致整个服务无法启动
+		logrus.Error("Failed to register route as resource: " + err.Error())
+	}
+
+	logrus.Info("Successfully registered routes to resource table")
 }

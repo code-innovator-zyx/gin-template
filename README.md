@@ -253,3 +253,49 @@ http://localhost:8080/swagger/index.html
 ## 许可证
 
 [MIT License](LICENSE)
+
+
+### 路由注册设计
+
+在 `gin-template` 项目中，路由的注册采用了集中管理的设计模式，所有路由的注册逻辑通过 `core.RegisterRoutes()` 方法统一处理。
+
+#### 设计思路
+1. **集中管理**：通过 `core.RegisterRoutes()` 方法，将所有路由注册到资源表，便于统一管理和扩展。
+2. **模块化**：各模块的路由注册逻辑分散在对应的 `routegroup` 或 `handler` 层，`core.RegisterRoutes()` 负责调用这些模块的注册方法。
+3. **扩展性**：支持未来对路由注册逻辑的增强，例如动态加载、权限校验等。
+
+#### 实现方式
+在 `internal/routegroup/auth_group.go` 中实现 `RegisterRoutes()` 方法，示例如下：
+```go
+package routegroup
+//
+
+import (
+   "gin-template/internal/model/rbac"
+   "github.com/sirupsen/logrus"
+   "path"
+   "sync"
+
+   "github.com/gin-gonic/gin"
+)
+
+// RegisterRoutes 注册需要认证的路由到资源表
+func RegisterRoutes() {
+   mu.Lock()
+   defer mu.Unlock()
+   // 将路由添加到系统资源
+   err := rbac.UpsertResource(protectedRoutes)
+   if err != nil {
+      // 因为这是在启动时执行的，我们不希望因为一个路由注册失败就导致整个服务无法启动
+      logrus.Error("Failed to register route as resource: " + err.Error())
+   }
+
+   logrus.Info("Successfully registered routes to resource table")
+}
+
+```
+
+#### 优化点
+1. **动态路由**：未来可以通过配置文件或数据库动态加载路由。
+2. **日志记录**：增加日志输出，记录注册的路由信息。
+3. **文档完善**：为每个模块的路由注册逻辑增加注释，方便开发者理解。

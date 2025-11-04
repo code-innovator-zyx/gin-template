@@ -17,7 +17,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		userGroup.POST("/login", rbac.Login)
 
 		// 需要认证
-		authUserGroup := routegroup.NewAuthRouterGroup(userGroup.Group("/"))
+		authUserGroup := routegroup.WithAuthRouterGroup(userGroup.Group("/"))
 		authUserGroup.Use(middleware.JWT())
 		{
 			authUserGroup.GET("/profile", rbac.GetProfile)
@@ -27,7 +27,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		}
 	}
 	// 角色模块
-	roleGroup := routegroup.NewAuthRouterGroup(api.Group("/roles"))
+	roleGroup := routegroup.WithAuthRouterGroup(api.Group("/roles"))
 	roleGroup.Use(middleware.JWT())
 	{
 		roleGroup.GET("", rbac.GetRoles)
@@ -42,7 +42,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	}
 
 	// 权限模块
-	permissionGroup := routegroup.NewAuthRouterGroup(api.Group("/permissions"))
+	permissionGroup := routegroup.WithAuthRouterGroup(api.Group("/permissions"))
 	permissionGroup.Use(middleware.JWT())
 	{
 		permissionGroup.GET("", rbac.GetPermissions)
@@ -50,7 +50,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	}
 
 	// 资源模块
-	resourceGroup := routegroup.NewAuthRouterGroup(api.Group("/resources"))
+	resourceGroup := routegroup.WithAuthRouterGroup(api.Group("/resources"))
 	resourceGroup.Use(middleware.JWT())
 	{
 		resourceGroup.GET("", rbac.GetResources)
