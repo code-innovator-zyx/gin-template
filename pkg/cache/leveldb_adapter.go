@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -28,11 +29,9 @@ type levelDBCache struct {
 	stopChan chan struct{}
 }
 
-// cacheItem 缓存项（包含数据和过期时间）
-type cacheItem struct {
-	Data     json.RawMessage `json:"data"`
-	ExpireAt int64           `json:"expire_at"` // Unix时间戳，0表示永不过期
-}
+// 存储格式：[8字节过期时间戳][JSON数据]
+// 前8字节存储过期时间戳（int64微秒），0表示永不过期
+const expireAtSize = 8
 
 // NewLevelDBCache 创建LevelDB缓存实例
 func NewLevelDBCache(cfg LevelDBConfig) (Cache, error) {
@@ -59,51 +58,50 @@ func (l *levelDBCache) Get(ctx context.Context, key string, dest interface{}) er
 	data, err := l.db.Get([]byte(key), nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return fmt.Errorf("key not found")
+			return ErrKeyNotFound
 		}
 		return err
 	}
 
-	var item cacheItem
-	if err := json.Unmarshal(data, &item); err != nil {
-		return err
+	// 数据格式：[8字节过期时间戳][JSON数据]
+	if len(data) < expireAtSize {
+		return fmt.Errorf("invalid data format")
 	}
 
-	// 检查是否过期
-	if item.ExpireAt > 0 && time.Now().Unix() > item.ExpireAt {
+	expireAt := int64(binary.BigEndian.Uint64(data[:expireAtSize]))
+
+	if expireAt > 0 && time.Now().UnixMicro() > expireAt {
 		l.db.Delete([]byte(key), nil)
-		return fmt.Errorf("key expired")
+		l.ttlMu.Lock()
+		delete(l.ttlMap, key)
+		l.ttlMu.Unlock()
+		return ErrKeyNotFound
 	}
-
-	return json.Unmarshal(item.Data, dest)
+	return json.Unmarshal(data[expireAtSize:], dest)
 }
 
 // Set 设置缓存
 func (l *levelDBCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
-	data, err := json.Marshal(value)
+	jsonData, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("序列化失败: %w", err)
 	}
 
+	// 计算过期时间
 	var expireAt int64
 	if ttl > 0 {
-		expireAt = time.Now().Add(ttl).Unix()
+		expireAt = time.Now().Add(ttl).UnixMicro()
 		l.ttlMu.Lock()
 		l.ttlMap[key] = time.Now().Add(ttl)
 		l.ttlMu.Unlock()
 	}
 
-	item := cacheItem{
-		Data:     data,
-		ExpireAt: expireAt,
-	}
+	// 构建存储数据：[8字节过期时间戳][JSON数据]
+	data := make([]byte, expireAtSize+len(jsonData))
+	binary.BigEndian.PutUint64(data[:expireAtSize], uint64(expireAt))
+	copy(data[expireAtSize:], jsonData)
 
-	itemData, err := json.Marshal(item)
-	if err != nil {
-		return err
-	}
-
-	return l.db.Put([]byte(key), itemData, nil)
+	return l.db.Put([]byte(key), data, nil)
 }
 
 // Delete 删除缓存
@@ -120,13 +118,26 @@ func (l *levelDBCache) Delete(ctx context.Context, keys ...string) error {
 
 // Exists 检查key是否存在
 func (l *levelDBCache) Exists(ctx context.Context, key string) (bool, error) {
-	_, err := l.db.Get([]byte(key), nil)
+	data, err := l.db.Get([]byte(key), nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			return false, nil
 		}
 		return false, err
 	}
+
+	// 检查是否过期
+	if len(data) >= expireAtSize {
+		expireAt := int64(binary.BigEndian.Uint64(data[:expireAtSize]))
+		if expireAt > 0 && time.Now().UnixMicro() > expireAt {
+			l.db.Delete([]byte(key), nil)
+			l.ttlMu.Lock()
+			delete(l.ttlMap, key)
+			l.ttlMu.Unlock()
+			return false, nil
+		}
+	}
+
 	return true, nil
 }
 
@@ -175,23 +186,20 @@ func (l *levelDBCache) Expire(ctx context.Context, key string, ttl time.Duration
 		return err
 	}
 
-	var item cacheItem
-	if err := json.Unmarshal(data, &item); err != nil {
-		return err
+	// 数据格式：[8字节过期时间戳][JSON数据]
+	if len(data) < expireAtSize {
+		return fmt.Errorf("invalid data format")
 	}
 
-	// 更新过期时间
-	item.ExpireAt = time.Now().Add(ttl).Unix()
+	// 更新过期时间（只修改前8字节）
+	expireAt := time.Now().Add(ttl).UnixMicro()
+	binary.BigEndian.PutUint64(data[:expireAtSize], uint64(expireAt))
+
 	l.ttlMu.Lock()
 	l.ttlMap[key] = time.Now().Add(ttl)
 	l.ttlMu.Unlock()
 
-	itemData, err := json.Marshal(item)
-	if err != nil {
-		return err
-	}
-
-	return l.db.Put([]byte(key), itemData, nil)
+	return l.db.Put([]byte(key), data, nil)
 }
 
 // TTL 获取剩余过期时间
@@ -201,16 +209,19 @@ func (l *levelDBCache) TTL(ctx context.Context, key string) (time.Duration, erro
 		return 0, err
 	}
 
-	var item cacheItem
-	if err := json.Unmarshal(data, &item); err != nil {
-		return 0, err
+	// 数据格式：[8字节过期时间戳][JSON数据]
+	if len(data) < expireAtSize {
+		return 0, fmt.Errorf("invalid data format")
 	}
 
-	if item.ExpireAt == 0 {
+	// 读取过期时间戳
+	expireAt := int64(binary.BigEndian.Uint64(data[:expireAtSize]))
+
+	if expireAt == 0 {
 		return -1, nil // 永不过期
 	}
 
-	remaining := time.Unix(item.ExpireAt, 0).Sub(time.Now())
+	remaining := time.Until(time.UnixMicro(expireAt))
 	if remaining < 0 {
 		return 0, nil // 已过期
 	}

@@ -52,12 +52,12 @@ func (m *memoryCache) Get(ctx context.Context, key string, dest interface{}) err
 	m.mu.RUnlock()
 
 	if !exists {
-		return fmt.Errorf("key not found")
+		return ErrKeyNotFound
 	}
 
 	if !item.expireAt.IsZero() && time.Now().After(item.expireAt) {
 		m.Delete(ctx, key)
-		return fmt.Errorf("key expired")
+		return ErrKeyNotFound
 	}
 
 	return json.Unmarshal(item.value, dest)
@@ -176,7 +176,7 @@ func (m *memoryCache) Expire(ctx context.Context, key string, ttl time.Duration)
 
 	item, exists := m.data[key]
 	if !exists {
-		return fmt.Errorf("key not found")
+		return ErrKeyNotFound
 	}
 
 	item.expireAt = time.Now().Add(ttl)
@@ -190,7 +190,7 @@ func (m *memoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 	m.mu.RUnlock()
 
 	if !exists {
-		return 0, fmt.Errorf("key not found")
+		return 0, ErrKeyNotFound
 	}
 
 	if item.expireAt.IsZero() {

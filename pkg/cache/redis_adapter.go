@@ -52,6 +52,9 @@ func NewRedisCache(cfg RedisConfig) (Cache, error) {
 func (r *redisCache) Get(ctx context.Context, key string, dest interface{}) error {
 	data, err := r.client.Get(ctx, key).Bytes()
 	if err != nil {
+		if err == redis.Nil {
+			return ErrKeyNotFound
+		}
 		return err
 	}
 	return json.Unmarshal(data, dest)

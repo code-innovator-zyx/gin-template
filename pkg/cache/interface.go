@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -11,6 +12,9 @@ import (
 * @Date:   2025/11/04
 * @Package: 缓存接口定义
  */
+
+// ErrKeyNotFound 缓存键不存在错误（包括已过期的键）
+var ErrKeyNotFound = errors.New("cache: key not found")
 
 // Cache 缓存接口 - 支持多种实现（Redis、LevelDB、Memory等）
 type Cache interface {
