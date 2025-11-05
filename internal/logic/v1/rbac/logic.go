@@ -15,7 +15,9 @@ import (
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Success 200 {object} response.Response{data=[]rbac.Role} "成功获取角色列表"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [get]
 func GetRoles(c *gin.Context) {
@@ -33,9 +35,11 @@ func GetRoles(c *gin.Context) {
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param role body rbac.Role true "角色信息"
 // @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
 // @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [post]
 func CreateRole(c *gin.Context) {
@@ -61,9 +65,11 @@ func CreateRole(c *gin.Context) {
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param id path int true "角色ID"
 // @Success 200 {object} response.Response{data=rbac.Role} "成功获取角色详情"
 // @Failure 400 {object} response.Response "无效的角色ID"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 404 {object} response.Response "角色不存在"
 // @Router /roles/{id} [get]
 func GetRole(c *gin.Context) {
@@ -86,10 +92,12 @@ func GetRole(c *gin.Context) {
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param id path int true "角色ID"
 // @Param role body rbac.Role true "角色信息"
 // @Success 200 {object} response.Response{data=rbac.Role} "成功更新角色"
 // @Failure 400 {object} response.Response "无效的角色ID或请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 404 {object} response.Response "角色不存在"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles/{id} [put]
@@ -121,9 +129,11 @@ func UpdateRole(c *gin.Context) {
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param id path int true "角色ID"
 // @Success 204 {object} response.Response "成功删除角色"
 // @Failure 400 {object} response.Response "无效的角色ID"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles/{id} [delete]
 func DeleteRole(c *gin.Context) {
@@ -145,7 +155,9 @@ func DeleteRole(c *gin.Context) {
 // @Tags RBAC-权限管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Success 200 {object} response.Response{data=[]rbac.Permission} "成功获取权限列表"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [get]
 func GetPermissions(c *gin.Context) {
@@ -163,9 +175,11 @@ func GetPermissions(c *gin.Context) {
 // @Tags RBAC-权限管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param permission body rbac.Permission true "权限信息"
 // @Success 201 {object} response.Response{data=rbac.Permission} "成功创建权限"
 // @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [post]
 
@@ -188,7 +202,9 @@ func CreatePermission(c *gin.Context) {
 // @Tags RBAC-资源管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Success 200 {object} response.Response{data=[]rbac.Resource} "成功获取资源列表"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /resources [get]
 func GetResources(c *gin.Context) {
@@ -206,9 +222,11 @@ func GetResources(c *gin.Context) {
 // @Tags RBAC-用户角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param id path int true "用户ID"
 // @Success 200 {object} response.Response{data=[]rbac.UserRole} "成功获取用户角色"
 // @Failure 400 {object} response.Response "无效的用户ID"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /users/{id}/roles [get]
 func GetUserRoles(c *gin.Context) {
@@ -233,9 +251,11 @@ func GetUserRoles(c *gin.Context) {
 // @Tags RBAC-用户角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param userRole body rbac.UserRole true "用户角色信息"
 // @Success 201 {object} response.Response{data=rbac.UserRole} "成功分配角色"
 // @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user-roles [post]
 func AssignRoleToUser(c *gin.Context) {
@@ -259,10 +279,12 @@ func AssignRoleToUser(c *gin.Context) {
 // @Tags RBAC-用户角色管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param user_id path int true "用户ID"
 // @Param role_id path int true "角色ID"
 // @Success 204 {object} response.Response "成功移除角色"
 // @Failure 400 {object} response.Response "无效的用户ID或角色ID"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /users/{user_id}/roles/{role_id} [delete]
 func RemoveRoleFromUser(c *gin.Context) {
@@ -292,9 +314,11 @@ func RemoveRoleFromUser(c *gin.Context) {
 // @Tags RBAC-角色权限管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param rolePermission body rbac.RolePermission true "角色权限信息"
 // @Success 201 {object} response.Response{data=rbac.RolePermission} "成功分配权限"
 // @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /role-permissions [post]
 func AssignPermissionToRole(c *gin.Context) {
@@ -318,10 +342,12 @@ func AssignPermissionToRole(c *gin.Context) {
 // @Tags RBAC-角色权限管理
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param role_id path int true "角色ID"
 // @Param permission_id path int true "权限ID"
 // @Success 204 {object} response.Response "成功移除权限"
 // @Failure 400 {object} response.Response "无效的角色ID或权限ID"
+// @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles/{role_id}/permissions/{permission_id} [delete]
 func RemovePermissionFromRole(c *gin.Context) {

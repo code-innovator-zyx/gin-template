@@ -3,7 +3,9 @@ package core
 import (
 	"context"
 	"gin-template/internal/config"
+	"gin-template/pkg/orm"
 	"log"
+	"sync"
 
 	"gorm.io/gorm"
 )
@@ -12,35 +14,129 @@ import (
 * @Author: zouyx
 * @Email: 1003941268@qq.com
 * @Date:   2025/10/30 下午4:37
-* @Package:
+* @Package: 全局变量和单例管理
  */
+
 var (
-	Config       *config.AppConfig
-	db           *gorm.DB
+	// 配置单例
+	configOnce   sync.Once
+	appConfig    *config.AppConfig
+	configErr    error
+
+	// 数据库单例
+	dbOnce sync.Once
+	db     *gorm.DB
+	dbErr  error
+
 	migrateFuncs []func(*gorm.DB) error // 存储所有迁移函数
+	migrateMu    sync.Mutex              // 保护 migrateFuncs
 )
 
-// MustNewDb 获取全局数据库连接
+// ================================
+// 配置相关
+// ================================
+
+// GetConfig 获取全局配置（懒加载单例，线程安全）
+func GetConfig() (*config.AppConfig, error) {
+	configOnce.Do(func() {
+		appConfig, configErr = config.Init()
+	})
+	return appConfig, configErr
+}
+
+// MustGetConfig 获取全局配置（失败则 panic）
+func MustGetConfig() *config.AppConfig {
+	cfg, err := GetConfig()
+	if err != nil {
+		log.Fatalf("配置初始化失败: %v", err)
+	}
+	return cfg
+}
+
+// Config 获取配置（向后兼容，已废弃）
+// Deprecated: 使用 GetConfig() 或 MustGetConfig()
+var Config *config.AppConfig
+
+func init() {
+	// 为了向后兼容，仍然初始化 Config
+	Config = MustGetConfig()
+}
+
+// ================================
+// 数据库相关
+// ================================
+
+// GetDb 获取数据库连接（懒加载单例，线程安全）
+func GetDb() (*gorm.DB, error) {
+	dbOnce.Do(func() {
+		cfg := MustGetConfig()
+		if cfg.Database == nil {
+			dbErr = nil // 数据库未配置，不是错误
+			return
+		}
+		
+		db, dbErr = initDatabase(*cfg.Database)
+	})
+	return db, dbErr
+}
+
+// MustGetDb 获取数据库连接（失败则 panic）
+func MustGetDb() *gorm.DB {
+	database, err := GetDb()
+	if err != nil {
+		log.Fatalf("数据库初始化失败: %v", err)
+	}
+	if database == nil {
+		log.Fatal("数据库未配置")
+	}
+	return database
+}
+
+// MustNewDb 获取全局数据库连接（创建新 Session）
 func MustNewDb() *gorm.DB {
-	if db == nil {
-		log.Fatal("数据库未初始化")
-	}
-	return db.Session(&gorm.Session{})
+	database := MustGetDb()
+	return database.Session(&gorm.Session{})
 }
 
-// GetDb 获取数据库连接（不panic）
-func GetDb() *gorm.DB {
-	return db
-}
-
+// MustNewDbWithContext 获取带上下文的数据库连接
 func MustNewDbWithContext(ctx context.Context) *gorm.DB {
-	if db == nil {
-		log.Fatal("数据库未初始化")
-	}
-	return db.Session(&gorm.Session{}).WithContext(ctx)
+	database := MustGetDb()
+	return database.Session(&gorm.Session{}).WithContext(ctx)
 }
 
-// RegisterMigrate 注册数据库迁移函数
+// ================================
+// 数据库迁移
+// ================================
+
+// RegisterMigrate 注册数据库迁移函数（线程安全）
 func RegisterMigrate(fn func(*gorm.DB) error) {
+	migrateMu.Lock()
+	defer migrateMu.Unlock()
 	migrateFuncs = append(migrateFuncs, fn)
+}
+
+// ExecuteMigrations 执行所有已注册的迁移函数
+func ExecuteMigrations() error {
+	database := MustGetDb()
+	
+	migrateMu.Lock()
+	funcs := make([]func(*gorm.DB) error, len(migrateFuncs))
+	copy(funcs, migrateFuncs)
+	migrateMu.Unlock()
+	
+	for _, fn := range funcs {
+		if err := fn(database); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ================================
+// 内部辅助函数
+// ================================
+
+// initDatabase 初始化数据库（内部使用）
+func initDatabase(cfg orm.Config) (*gorm.DB, error) {
+	return orm.Init(cfg)
 }

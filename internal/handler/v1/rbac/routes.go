@@ -9,6 +9,19 @@ import (
 
 // RegisterRBACRoutes 注册RBAC相关路由
 func RegisterRBACRoutes(api *gin.RouterGroup) {
+	// 认证模块（不需要登录）
+	authGroup := api.Group("/auth")
+	{
+		authGroup.POST("/refresh", rbac.RefreshToken) // 刷新令牌
+	}
+
+	// 认证模块（需要登录）
+	authAuthGroup := routegroup.WithAuthRouterGroup(api.Group("/auth"))
+	authAuthGroup.Use(middleware.JWT())
+	{
+		authAuthGroup.POST("/logout", rbac.Logout) // 登出
+	}
+
 	// 用户模块
 	userGroup := api.Group("/user")
 	{

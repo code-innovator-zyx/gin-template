@@ -9,11 +9,10 @@ const docTemplatev1 = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
         "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
+            "name": "技术支持团队",
+            "url": "https://github.com/your-org/gin-template",
+            "email": "support@yourcompany.com"
         },
         "license": {
             "name": "Apache 2.0",
@@ -24,8 +23,154 @@ const docTemplatev1 = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-用户管理"
+                ],
+                "summary": "用户登出",
+                "parameters": [
+                    {
+                        "description": "登出信息（可选的 Refresh Token）",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.LogoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登出成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "使用 Refresh Token 获取新的 Access Token 和 Refresh Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-用户管理"
+                ],
+                "summary": "刷新令牌",
+                "parameters": [
+                    {
+                        "description": "刷新令牌信息",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.RefreshTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "刷新成功返回新令牌对",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/rbac.TokenResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "刷新令牌无效或已过期",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "检查系统各组件的健康状态",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统监控"
+                ],
+                "summary": "健康检查",
+                "responses": {
+                    "200": {
+                        "description": "健康状态",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/v1.HealthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/permissions": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "获取系统中所有权限的列表",
                 "consumes": [
                     "application/json"
@@ -59,6 +204,12 @@ const docTemplatev1 = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -70,6 +221,11 @@ const docTemplatev1 = `{
         },
         "/resources": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "获取系统中所有资源的列表",
                 "consumes": [
                     "application/json"
@@ -103,6 +259,12 @@ const docTemplatev1 = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -114,6 +276,11 @@ const docTemplatev1 = `{
         },
         "/role-permissions": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "为指定角色分配权限",
                 "consumes": [
                     "application/json"
@@ -161,6 +328,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -172,6 +345,11 @@ const docTemplatev1 = `{
         },
         "/roles": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "获取系统中所有角色的列表",
                 "consumes": [
                     "application/json"
@@ -205,6 +383,12 @@ const docTemplatev1 = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -214,6 +398,11 @@ const docTemplatev1 = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "创建新的系统角色",
                 "consumes": [
                     "application/json"
@@ -261,6 +450,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -272,6 +467,11 @@ const docTemplatev1 = `{
         },
         "/roles/{id}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "根据ID获取角色详细信息",
                 "consumes": [
                     "application/json"
@@ -317,6 +517,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "404": {
                         "description": "角色不存在",
                         "schema": {
@@ -326,6 +532,11 @@ const docTemplatev1 = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "根据ID更新角色信息",
                 "consumes": [
                     "application/json"
@@ -380,6 +591,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "404": {
                         "description": "角色不存在",
                         "schema": {
@@ -395,6 +612,11 @@ const docTemplatev1 = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "根据ID删除角色",
                 "consumes": [
                     "application/json"
@@ -428,6 +650,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -439,6 +667,11 @@ const docTemplatev1 = `{
         },
         "/roles/{role_id}/permissions/{permission_id}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "从指定角色移除指定权限",
                 "consumes": [
                     "application/json"
@@ -479,6 +712,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -490,6 +729,11 @@ const docTemplatev1 = `{
         },
         "/user-roles": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "为指定用户分配角色",
                 "consumes": [
                     "application/json"
@@ -537,6 +781,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -548,7 +798,7 @@ const docTemplatev1 = `{
         },
         "/user/login": {
             "post": {
-                "description": "用户登录并获取JWT令牌",
+                "description": "用户登录并获取JWT令牌（Access Token + Refresh Token）",
                 "consumes": [
                     "application/json"
                 ],
@@ -572,7 +822,7 @@ const docTemplatev1 = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "登录成功返回token",
+                        "description": "登录成功返回令牌对",
                         "schema": {
                             "allOf": [
                                 {
@@ -582,10 +832,7 @@ const docTemplatev1 = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
-                                            }
+                                            "$ref": "#/definitions/rbac.TokenResponse"
                                         }
                                     }
                                 }
@@ -725,6 +972,11 @@ const docTemplatev1 = `{
         },
         "/users/{id}/roles": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "获取指定用户的所有角色",
                 "consumes": [
                     "application/json"
@@ -773,6 +1025,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -784,6 +1042,11 @@ const docTemplatev1 = `{
         },
         "/users/{user_id}/roles/{role_id}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "从指定用户移除指定角色",
                 "consumes": [
                     "application/json"
@@ -824,6 +1087,12 @@ const docTemplatev1 = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "服务器内部错误",
                         "schema": {
@@ -835,6 +1104,15 @@ const docTemplatev1 = `{
         }
     },
     "definitions": {
+        "rbac.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
         "rbac.Permission": {
             "type": "object",
             "properties": {
@@ -869,6 +1147,18 @@ const docTemplatev1 = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
+        "rbac.RefreshTokenRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
             }
         },
@@ -958,6 +1248,27 @@ const docTemplatev1 = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "rbac.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "refresh_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
                 }
             }
         },
@@ -1075,20 +1386,146 @@ const docTemplatev1 = `{
                     "type": "string"
                 }
             }
+        },
+        "v1.ComponentHealth": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "详细信息",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "error": {
+                    "description": "错误信息",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "状态消息",
+                    "type": "string"
+                },
+                "response_time_ms": {
+                    "description": "响应时间（毫秒）",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "ok, error, not_configured",
+                    "type": "string"
+                }
+            }
+        },
+        "v1.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "components": {
+                    "description": "各组件状态",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/v1.ComponentHealth"
+                    }
+                },
+                "status": {
+                    "description": "总体状态",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/v1.HealthStatus"
+                        }
+                    ]
+                },
+                "system": {
+                    "description": "系统信息",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "timestamp": {
+                    "description": "检查时间戳",
+                    "type": "integer"
+                },
+                "uptime_seconds": {
+                    "description": "运行时长（秒）",
+                    "type": "integer"
+                },
+                "version": {
+                    "description": "应用版本",
+                    "type": "string"
+                }
+            }
+        },
+        "v1.HealthStatus": {
+            "type": "string",
+            "enum": [
+                "healthy",
+                "degraded",
+                "down"
+            ],
+            "x-enum-comments": {
+                "HealthStatusDegraded": "部分组件异常但服务可用",
+                "HealthStatusDown": "服务不可用",
+                "HealthStatusHealthy": "所有组件正常"
+            },
+            "x-enum-descriptions": [
+                "所有组件正常",
+                "部分组件异常但服务可用",
+                "服务不可用"
+            ],
+            "x-enum-varnames": [
+                "HealthStatusHealthy",
+                "HealthStatusDegraded",
+                "HealthStatusDown"
+            ]
         }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "JWT Token 认证，格式：Bearer {token}",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
+    "tags": [
+        {
+            "description": "用户注册、登录、个人信息管理",
+            "name": "RBAC-用户管理"
+        },
+        {
+            "description": "角色的增删改查操作",
+            "name": "RBAC-角色管理"
+        },
+        {
+            "description": "权限列表查询与管理",
+            "name": "RBAC-权限管理"
+        },
+        {
+            "description": "系统资源的查询与配置",
+            "name": "RBAC-资源管理"
+        },
+        {
+            "description": "用户与角色的关联管理",
+            "name": "RBAC-用户角色管理"
+        },
+        {
+            "description": "角色与权限的关联管理",
+            "name": "RBAC-角色权限管理"
+        }
+    ],
+    "externalDocs": {
+        "description": "项目文档",
+        "url": "https://github.com/your-org/gin-template/docs"
     }
 }`
 
 // SwaggerInfov1 holds exported Swagger Info so clients can modify it
 var SwaggerInfov1 = &swag.Spec{
-	Version:          "1.0",
-	Host:             "",
+	Version:          "1.0.0",
+	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
-	Title:            "Swagger Example API",
-	Description:      "This is a sample server.",
+	Schemes:          []string{"http", "https"},
+	Title:            "Gin Template API",
+	Description:      "企业级 Gin 框架模板项目 - RESTful API 文档\n提供完整的 RBAC 权限管理、用户认证、资源管理等企业级功能\n\n## 认证说明\n大部分 API 需要 JWT Token 认证，请先调用登录接口获取 token\n然后点击右上角 Authorize 按钮，输入格式：`Bearer {token}`\n\n## 错误码说明\n- 200: 成功\n- 400: 请求参数错误\n- 401: 未授权或 Token 过期\n- 403: 权限不足\n- 404: 资源不存在\n- 500: 服务器内部错误",
 	InfoInstanceName: "v1",
 	SwaggerTemplate:  docTemplatev1,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {

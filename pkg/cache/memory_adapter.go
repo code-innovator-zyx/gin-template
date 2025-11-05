@@ -152,21 +152,109 @@ func (m *memoryCache) SIsMember(ctx context.Context, key string, member interfac
 }
 
 // SMembers 获取集合所有成员
-func (m *memoryCache) SMembers(ctx context.Context, key string) ([]string, error) {
+func (m *memoryCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
 	m.mu.RLock()
 	item, exists := m.data[key]
 	m.mu.RUnlock()
 
 	if !exists || !item.isSet {
-		return []string{}, nil
+		return []interface{}{}, nil
 	}
 
-	members := make([]string, 0, len(item.setData))
+	members := make([]interface{}, 0, len(item.setData))
 	for member := range item.setData {
 		members = append(members, member)
 	}
 
 	return members, nil
+}
+
+// SRem 从集合中删除成员
+func (m *memoryCache) SRem(ctx context.Context, key string, members ...interface{}) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	item, exists := m.data[key]
+	if !exists || !item.isSet {
+		return nil
+	}
+
+	for _, member := range members {
+		memberStr := fmt.Sprintf("%v", member)
+		delete(item.setData, memberStr)
+	}
+
+	return nil
+}
+
+// Incr 递增计数器
+func (m *memoryCache) Incr(ctx context.Context, key string) (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	item, exists := m.data[key]
+	var count int64
+
+	if exists && !item.isSet {
+		// 反序列化现有值
+		if err := json.Unmarshal(item.value, &count); err != nil {
+			return 0, fmt.Errorf("value is not a number")
+		}
+	}
+
+	count++
+	
+	// 序列化新值
+	data, err := json.Marshal(count)
+	if err != nil {
+		return 0, err
+	}
+	
+	if exists {
+		item.value = data
+	} else {
+		m.data[key] = &memoryCacheItem{
+			value:    data,
+			expireAt: time.Time{},
+		}
+	}
+
+	return count, nil
+}
+
+// Decr 递减计数器
+func (m *memoryCache) Decr(ctx context.Context, key string) (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	item, exists := m.data[key]
+	var count int64
+
+	if exists && !item.isSet {
+		// 反序列化现有值
+		if err := json.Unmarshal(item.value, &count); err != nil {
+			return 0, fmt.Errorf("value is not a number")
+		}
+	}
+
+	count--
+	
+	// 序列化新值
+	data, err := json.Marshal(count)
+	if err != nil {
+		return 0, err
+	}
+	
+	if exists {
+		item.value = data
+	} else {
+		m.data[key] = &memoryCacheItem{
+			value:    data,
+			expireAt: time.Time{},
+		}
+	}
+
+	return count, nil
 }
 
 // Expire 设置过期时间

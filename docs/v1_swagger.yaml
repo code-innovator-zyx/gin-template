@@ -1,5 +1,11 @@
 basePath: /api/v1
 definitions:
+  rbac.LogoutRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
   rbac.Permission:
     properties:
       code:
@@ -25,6 +31,14 @@ definitions:
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
+    type: object
+  rbac.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - refresh_token
     type: object
   rbac.Resource:
     properties:
@@ -87,6 +101,21 @@ definitions:
       role_id:
         type: integer
       updated_at:
+        type: string
+    type: object
+  rbac.TokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      token_type:
+        example: Bearer
         type: string
     type: object
   rbac.User:
@@ -170,19 +199,183 @@ definitions:
         description: 提示信息
         type: string
     type: object
+  v1.ComponentHealth:
+    properties:
+      details:
+        additionalProperties: true
+        description: 详细信息
+        type: object
+      error:
+        description: 错误信息
+        type: string
+      message:
+        description: 状态消息
+        type: string
+      response_time_ms:
+        description: 响应时间（毫秒）
+        type: integer
+      status:
+        description: ok, error, not_configured
+        type: string
+    type: object
+  v1.HealthResponse:
+    properties:
+      components:
+        additionalProperties:
+          $ref: '#/definitions/v1.ComponentHealth'
+        description: 各组件状态
+        type: object
+      status:
+        allOf:
+        - $ref: '#/definitions/v1.HealthStatus'
+        description: 总体状态
+      system:
+        additionalProperties: true
+        description: 系统信息
+        type: object
+      timestamp:
+        description: 检查时间戳
+        type: integer
+      uptime_seconds:
+        description: 运行时长（秒）
+        type: integer
+      version:
+        description: 应用版本
+        type: string
+    type: object
+  v1.HealthStatus:
+    enum:
+    - healthy
+    - degraded
+    - down
+    type: string
+    x-enum-comments:
+      HealthStatusDegraded: 部分组件异常但服务可用
+      HealthStatusDown: 服务不可用
+      HealthStatusHealthy: 所有组件正常
+    x-enum-descriptions:
+    - 所有组件正常
+    - 部分组件异常但服务可用
+    - 服务不可用
+    x-enum-varnames:
+    - HealthStatusHealthy
+    - HealthStatusDegraded
+    - HealthStatusDown
+externalDocs:
+  description: 项目文档
+  url: https://github.com/your-org/gin-template/docs
+host: localhost:8080
 info:
   contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: This is a sample server.
+    email: support@yourcompany.com
+    name: 技术支持团队
+    url: https://github.com/your-org/gin-template
+  description: |-
+    企业级 Gin 框架模板项目 - RESTful API 文档
+    提供完整的 RBAC 权限管理、用户认证、资源管理等企业级功能
+
+    ## 认证说明
+    大部分 API 需要 JWT Token 认证，请先调用登录接口获取 token
+    然后点击右上角 Authorize 按钮，输入格式：`Bearer {token}`
+
+    ## 错误码说明
+    - 200: 成功
+    - 400: 请求参数错误
+    - 401: 未授权或 Token 过期
+    - 403: 权限不足
+    - 404: 资源不存在
+    - 500: 服务器内部错误
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
-  version: "1.0"
+  title: Gin Template API
+  version: 1.0.0
 paths:
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）
+      parameters:
+      - description: 登出信息（可选的 Refresh Token）
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 用户登出
+      tags:
+      - RBAC-用户管理
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
+      parameters:
+      - description: 刷新令牌信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功返回新令牌对
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.TokenResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 刷新令牌无效或已过期
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 刷新令牌
+      tags:
+      - RBAC-用户管理
+  /health:
+    get:
+      description: 检查系统各组件的健康状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 健康状态
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.HealthResponse'
+              type: object
+      summary: 健康检查
+      tags:
+      - 系统监控
   /permissions:
     get:
       consumes:
@@ -202,10 +395,16 @@ paths:
                     $ref: '#/definitions/rbac.Permission'
                   type: array
               type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取权限列表
       tags:
       - RBAC-权限管理
@@ -228,10 +427,16 @@ paths:
                     $ref: '#/definitions/rbac.Resource'
                   type: array
               type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取资源列表
       tags:
       - RBAC-资源管理
@@ -263,10 +468,16 @@ paths:
           description: 请求参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 分配权限给角色
       tags:
       - RBAC-角色权限管理
@@ -289,10 +500,16 @@ paths:
                     $ref: '#/definitions/rbac.Role'
                   type: array
               type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取角色列表
       tags:
       - RBAC-角色管理
@@ -323,10 +540,16 @@ paths:
           description: 请求参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 创建角色
       tags:
       - RBAC-角色管理
@@ -352,10 +575,16 @@ paths:
           description: 无效的角色ID
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 删除角色
       tags:
       - RBAC-角色管理
@@ -385,10 +614,16 @@ paths:
           description: 无效的角色ID
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "404":
           description: 角色不存在
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取角色详情
       tags:
       - RBAC-角色管理
@@ -424,6 +659,10 @@ paths:
           description: 无效的角色ID或请求参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "404":
           description: 角色不存在
           schema:
@@ -432,6 +671,8 @@ paths:
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 更新角色
       tags:
       - RBAC-角色管理
@@ -462,10 +703,16 @@ paths:
           description: 无效的角色ID或权限ID
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 从角色移除权限
       tags:
       - RBAC-角色权限管理
@@ -497,10 +744,16 @@ paths:
           description: 请求参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 分配角色给用户
       tags:
       - RBAC-用户角色管理
@@ -508,7 +761,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 用户登录并获取JWT令牌
+      description: 用户登录并获取JWT令牌（Access Token + Refresh Token）
       parameters:
       - description: 用户登录信息
         in: body
@@ -520,15 +773,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: 登录成功返回token
+          description: 登录成功返回令牌对
           schema:
             allOf:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  additionalProperties:
-                    type: string
-                  type: object
+                  $ref: '#/definitions/rbac.TokenResponse'
               type: object
         "400":
           description: 请求参数错误
@@ -639,10 +890,16 @@ paths:
           description: 无效的用户ID
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取用户角色
       tags:
       - RBAC-用户角色管理
@@ -673,11 +930,39 @@ paths:
           description: 无效的用户ID或角色ID
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 从用户移除角色
       tags:
       - RBAC-用户角色管理
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    description: JWT Token 认证，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
+tags:
+- description: 用户注册、登录、个人信息管理
+  name: RBAC-用户管理
+- description: 角色的增删改查操作
+  name: RBAC-角色管理
+- description: 权限列表查询与管理
+  name: RBAC-权限管理
+- description: 系统资源的查询与配置
+  name: RBAC-资源管理
+- description: 用户与角色的关联管理
+  name: RBAC-用户角色管理
+- description: 角色与权限的关联管理
+  name: RBAC-角色权限管理

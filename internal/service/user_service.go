@@ -5,6 +5,8 @@ import (
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/pkg/utils"
+	"sync"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -12,8 +14,22 @@ import (
 // userService 用户服务
 type userService struct{}
 
-// UserService 用户服务实例
-var UserService = new(userService)
+var (
+	userServiceOnce     sync.Once
+	globalUserService   *userService
+)
+
+// GetUserService 获取用户服务单例（懒加载，线程安全）
+func GetUserService() *userService {
+	userServiceOnce.Do(func() {
+		globalUserService = &userService{}
+	})
+	return globalUserService
+}
+
+// UserService 用户服务实例（向后兼容，已废弃）
+// Deprecated: 使用 GetUserService() 代替
+var UserService = GetUserService()
 
 // Create 创建用户
 func (s *userService) Create(user *rbac.User) error {
@@ -64,25 +80,26 @@ func (s *userService) GetByUsername(username string) (*rbac.User, error) {
 	return &user, nil
 }
 
-// Login 用户登录
-func (s *userService) Login(username, password string) (string, error) {
+// Login 用户登录（返回完整的 TokenPair）
+func (s *userService) Login(username, password string) (*utils.TokenPair, error) {
 	user, err := s.GetByUsername(username)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 验证密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", errors.New("密码错误")
+		return nil, errors.New("密码错误")
 	}
 
-	// 生成JWT令牌
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	// 生成JWT令牌对（Access Token + Refresh Token）
+	jwtManager := utils.GetJWTManager()
+	tokenPair, err := jwtManager.GenerateTokenPair(user.ID, user.Username, user.Email)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return token, nil
+	return tokenPair, nil
 }
 
 // Update 更新用户信息

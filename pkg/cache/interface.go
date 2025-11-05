@@ -26,8 +26,13 @@ type Cache interface {
 
 	// 集合操作（用于权限缓存等场景）
 	SAdd(ctx context.Context, key string, members ...interface{}) error
+	SRem(ctx context.Context, key string, members ...interface{}) error
 	SIsMember(ctx context.Context, key string, member interface{}) (bool, error)
-	SMembers(ctx context.Context, key string) ([]string, error)
+	SMembers(ctx context.Context, key string) ([]interface{}, error)
+	
+	// 计数器操作
+	Incr(ctx context.Context, key string) (int64, error)
+	Decr(ctx context.Context, key string) (int64, error)
 
 	// TTL管理
 	Expire(ctx context.Context, key string, ttl time.Duration) error

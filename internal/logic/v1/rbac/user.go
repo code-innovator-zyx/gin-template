@@ -4,6 +4,9 @@ import (
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	"gin-template/pkg/response"
+	"gin-template/pkg/utils"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,12 +44,12 @@ func Register(c *gin.Context) {
 
 // Login godoc
 // @Summary 用户登录
-// @Description 用户登录并获取JWT令牌
+// @Description 用户登录并获取JWT令牌（Access Token + Refresh Token）
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
 // @Param data body UserLoginRequest true "用户登录信息"
-// @Success 200 {object} response.Response{data=map[string]string} "登录成功返回token"
+// @Success 200 {object} response.Response{data=TokenResponse} "登录成功返回令牌对"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "用户名或密码错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -58,13 +61,113 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := service.UserService.Login(req.Username, req.Password)
+	tokenPair, err := service.UserService.Login(req.Username, req.Password)
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
 	}
 
-	response.Success(c, gin.H{"token": token})
+	// 返回令牌对
+	tokenResponse := TokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		TokenType:    tokenPair.TokenType,
+		ExpiresIn:    tokenPair.ExpiresIn,
+	}
+
+	response.Success(c, tokenResponse)
+}
+
+// RefreshToken godoc
+// @Summary 刷新令牌
+// @Description 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
+// @Tags RBAC-用户管理
+// @Accept json
+// @Produce json
+// @Param data body RefreshTokenRequest true "刷新令牌信息"
+// @Success 200 {object} response.Response{data=TokenResponse} "刷新成功返回新令牌对"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "刷新令牌无效或已过期"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /auth/refresh [post]
+func RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 使用 Refresh Token 获取新的令牌对
+	jwtManager := utils.GetJWTManager()
+	tokenPair, err := jwtManager.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		if err == utils.ErrRefreshTokenExpired || err == utils.ErrTokenExpired {
+			response.Unauthorized(c, "刷新令牌已过期，请重新登录")
+			return
+		}
+		if err == utils.ErrRefreshLimitReached {
+			response.Unauthorized(c, "刷新次数已达上限，请重新登录")
+			return
+		}
+		if err == utils.ErrTokenBlacklisted {
+			response.Unauthorized(c, "令牌已被撤销，请重新登录")
+			return
+		}
+		response.Unauthorized(c, "刷新令牌无效")
+		return
+	}
+
+	// 返回新的令牌对
+	tokenResponse := TokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		TokenType:    tokenPair.TokenType,
+		ExpiresIn:    tokenPair.ExpiresIn,
+	}
+
+	response.Success(c, tokenResponse)
+}
+
+// Logout godoc
+// @Summary 用户登出
+// @Description 撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）
+// @Tags RBAC-用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param data body LogoutRequest true "登出信息（可选的 Refresh Token）"
+// @Success 200 {object} response.Response "登出成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Router /auth/logout [post]
+func Logout(c *gin.Context) {
+	// 获取 Access Token
+	authHeader := c.GetHeader("Authorization")
+	accessToken := ""
+	if authHeader != "" {
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			accessToken = parts[1]
+		}
+	}
+
+	// 获取 Refresh Token（可选）
+	var req LogoutRequest
+	c.ShouldBindJSON(&req)
+
+	jwtManager := utils.GetJWTManager()
+	ctx := c.Request.Context()
+
+	// 撤销 Access Token
+	if accessToken != "" {
+		_ = jwtManager.RevokeToken(ctx, accessToken)
+	}
+
+	// 撤销 Refresh Token
+	if req.RefreshToken != "" {
+		_ = jwtManager.RevokeToken(ctx, req.RefreshToken)
+	}
+
+	response.Success(c, "登出成功")
 }
 
 // GetProfile godoc

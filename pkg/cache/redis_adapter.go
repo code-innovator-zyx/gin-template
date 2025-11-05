@@ -91,8 +91,32 @@ func (r *redisCache) SIsMember(ctx context.Context, key string, member interface
 }
 
 // SMembers 获取集合所有成员
-func (r *redisCache) SMembers(ctx context.Context, key string) ([]string, error) {
-	return r.client.SMembers(ctx, key).Result()
+func (r *redisCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
+	result, err := r.client.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+	
+	members := make([]interface{}, len(result))
+	for i, v := range result {
+		members[i] = v
+	}
+	return members, nil
+}
+
+// SRem 从集合中删除成员
+func (r *redisCache) SRem(ctx context.Context, key string, members ...interface{}) error {
+	return r.client.SRem(ctx, key, members...).Err()
+}
+
+// Incr 递增计数器
+func (r *redisCache) Incr(ctx context.Context, key string) (int64, error) {
+	return r.client.Incr(ctx, key).Result()
+}
+
+// Decr 递减计数器
+func (r *redisCache) Decr(ctx context.Context, key string) (int64, error) {
+	return r.client.Decr(ctx, key).Result()
 }
 
 // Expire 设置过期时间

@@ -15,19 +15,6 @@ import (
 	"time"
 )
 
-// @title 标题
-// @version 1.0 版本
-// @description 描述
-// @termsOfService http://swagger.io/terms/
-// @contact.name 联系人
-// @contact.url http://www.swagger.io/support
-// @contact.email 584807419@qq.com
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-// @host videotools.cn
-// @BasePath /freeapi/v1
-// @query.collection.format multi
-
 func main() {
 	// 初始化应用配置和依赖
 	core.Init()

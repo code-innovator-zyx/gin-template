@@ -160,12 +160,12 @@ func (l *levelDBCache) SIsMember(ctx context.Context, key string, member interfa
 }
 
 // SMembers 获取集合所有成员
-func (l *levelDBCache) SMembers(ctx context.Context, key string) ([]string, error) {
+func (l *levelDBCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
 	prefix := []byte(fmt.Sprintf("%s:member:", key))
 	iter := l.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
 
-	members := make([]string, 0)
+	members := make([]interface{}, 0)
 	for iter.Next() {
 		keyStr := string(iter.Key())
 		// 提取member部分
@@ -176,6 +176,51 @@ func (l *levelDBCache) SMembers(ctx context.Context, key string) ([]string, erro
 	}
 
 	return members, iter.Error()
+}
+
+// SRem 从集合中删除成员
+func (l *levelDBCache) SRem(ctx context.Context, key string, members ...interface{}) error {
+	batch := new(leveldb.Batch)
+	for _, member := range members {
+		memberKey := fmt.Sprintf("%s:member:%v", key, member)
+		batch.Delete([]byte(memberKey))
+		l.ttlMu.Lock()
+		delete(l.ttlMap, memberKey)
+		l.ttlMu.Unlock()
+	}
+	return l.db.Write(batch, nil)
+}
+
+// Incr 递增计数器
+func (l *levelDBCache) Incr(ctx context.Context, key string) (int64, error) {
+	var count int64
+	err := l.Get(ctx, key, &count)
+	if err != nil && err != ErrKeyNotFound {
+		return 0, err
+	}
+	
+	count++
+	if err := l.Set(ctx, key, count, 0); err != nil {
+		return 0, err
+	}
+	
+	return count, nil
+}
+
+// Decr 递减计数器
+func (l *levelDBCache) Decr(ctx context.Context, key string) (int64, error) {
+	var count int64
+	err := l.Get(ctx, key, &count)
+	if err != nil && err != ErrKeyNotFound {
+		return 0, err
+	}
+	
+	count--
+	if err := l.Set(ctx, key, count, 0); err != nil {
+		return 0, err
+	}
+	
+	return count, nil
 }
 
 // Expire 设置过期时间

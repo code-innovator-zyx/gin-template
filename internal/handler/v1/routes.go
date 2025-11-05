@@ -12,19 +12,62 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// @title Swagger Example API
-// @version 1.0
-// @description This is a sample server.
-// @termsOfService http://swagger.io/terms/
+// @title           Gin Template API
+// @version         1.0.0
+// @description     企业级 Gin 框架模板项目 - RESTful API 文档
+// @description     提供完整的 RBAC 权限管理、用户认证、资源管理等企业级功能
+// @description
+// @description     ## 认证说明
+// @description     大部分 API 需要 JWT Token 认证，请先调用登录接口获取 token
+// @description     然后点击右上角 Authorize 按钮，输入格式：`Bearer {token}`
+// @description
+// @description     ## 错误码说明
+// @description     - 200: 成功
+// @description     - 400: 请求参数错误
+// @description     - 401: 未授权或 Token 过期
+// @description     - 403: 权限不足
+// @description     - 404: 资源不存在
+// @description     - 500: 服务器内部错误
 
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
+// @contact.name    技术支持团队
+// @contact.url     https://github.com/your-org/gin-template
+// @contact.email   support@yourcompany.com
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name    Apache 2.0
+// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @BasePath /api/v1
+// @host            localhost:8080
+// @BasePath        /api/v1
+
+// @schemes         http https
+
+// @securityDefinitions.apikey  ApiKeyAuth
+// @in                          header
+// @name                        Authorization
+// @description                 JWT Token 认证，格式：Bearer {token}
+
+// @tag.name            RBAC-用户管理
+// @tag.description     用户注册、登录、个人信息管理
+
+// @tag.name            RBAC-角色管理
+// @tag.description     角色的增删改查操作
+
+// @tag.name            RBAC-权限管理
+// @tag.description     权限列表查询与管理
+
+// @tag.name            RBAC-资源管理
+// @tag.description     系统资源的查询与配置
+
+// @tag.name            RBAC-用户角色管理
+// @tag.description     用户与角色的关联管理
+
+// @tag.name            RBAC-角色权限管理
+// @tag.description     角色与权限的关联管理
+
+// @query.collection.format    multi
+
+// @externalDocs.description    项目文档
+// @externalDocs.url            https://github.com/your-org/gin-template/docs
 
 func RegisterRoutes(r *gin.Engine) {
 	// API版本v1

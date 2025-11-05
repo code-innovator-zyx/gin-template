@@ -43,8 +43,13 @@ type Server struct {
 
 // jwt 配置
 type Jwt struct {
-	Secret string `mapstructure:"secret" validate:"required"`
-	Expire int    `mapstructure:"expire" validate:"required,min=60"` // 至少 60 秒
+	Secret              string `mapstructure:"secret" validate:"required"`
+	AccessTokenExpire   int    `mapstructure:"access_token_expire" validate:"required,min=60"`   // Access Token 过期时间（秒），至少 60 秒
+	RefreshTokenExpire  int    `mapstructure:"refresh_token_expire" validate:"required,min=600"` // Refresh Token 过期时间（秒），至少 600 秒
+	Issuer              string `mapstructure:"issuer" validate:"required"`                       // 签发者
+	MaxRefreshCount     int    `mapstructure:"max_refresh_count" validate:"omitempty"`           // 单个 Refresh Token 最大刷新次数（0为不限制）
+	EnableBlacklist     bool   `mapstructure:"enable_blacklist" validate:"omitempty"`            // 是否启用黑名单
+	BlacklistGracePeriod int   `mapstructure:"blacklist_grace_period" validate:"omitempty"`      // 黑名单宽限期（秒）
 }
 
 // Init 初始化配置
