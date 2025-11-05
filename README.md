@@ -711,7 +711,7 @@ cache:
 ## 🎉 开始使用
 
 **不要只是收藏，动手试试吧！**
-[快速开始](./docs/QUICK_START.md) · [查看文档](./docs/RENAME_GUIDE.md) · [提交Issue](https://github.com/code-innovator-zyx/gin-template/issues)
+[快速开始](./docs/QUICK_START.md) · [查看文档](./docs/README.md) · [提交Issue](https://github.com/code-innovator-zyx/gin-template/issues)
 
 
 ### 如果这个项目对你有帮助，请给一个 ⭐️

@@ -202,5 +202,4 @@
 
 ---
 
-查看完整的优化报告：[OPTIMIZATION_REPORT.md](./OPTIMIZATION_REPORT.md)
 
