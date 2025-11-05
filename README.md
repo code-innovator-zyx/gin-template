@@ -351,7 +351,7 @@ gin-template/
 
 ```bash
 # 克隆你fork的仓库
-git clone https://github.com/your-username/gin-template.git
+git clone https://github.com/code-innovator-zyx/gin-template.git
 
 # 安装依赖
 make install
@@ -419,17 +419,6 @@ make all
 - [gin-admin](https://github.com/LyricTian/gin-admin) - RBAC权限设计参考
 - [go-clean-arch](https://github.com/bxcodec/go-clean-arch) - 架构设计灵感
 
----
-
-## ⭐ Star历史
-
-<div align="center">
-
-[![Star History Chart](https://api.star-history.com/svg?repos=code-innovator-zyx/gin-template&type=Date)](https://star-history.com/#code-innovator-zyx/gin-template&Date)
-
-</div>
-
----
 
 <div align="center">
 
@@ -441,7 +430,7 @@ make all
 
 ### 如果这个项目对你有帮助，请给一个⭐️
 
-**Made with ❤️ by [Your Name](https://github.com/code-innovator-zyx)**
+**Made with ❤️ by [mortal](https://github.com/code-innovator-zyx)**
 
 </div>
 
@@ -575,6 +564,19 @@ database:
 </details>
 
 ---
+
+---
+
+## ⭐ Star历史
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=code-innovator-zyx/gin-template&type=Date)](https://star-history.com/#code-innovator-zyx/gin-template&Date)
+
+</div>
+
+---
+
 
 <div align="center">
 

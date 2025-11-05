@@ -357,7 +357,7 @@ Thanks to all contributors!
 
 ### If this project helps you, please give it a ⭐️
 
-**Made with ❤️ by [Your Name](https://github.com/code-innovator-zyx)**
+**Made with ❤️ by [mortal](https://github.com/code-innovator-zyx)**
 
 </div>
 
