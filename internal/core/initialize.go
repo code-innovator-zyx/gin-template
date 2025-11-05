@@ -37,10 +37,6 @@ func Init() {
 			}
 		}
 	}
-	// 初始化缓存（可选）
-	if Config.Cache != nil {
-		if err = cache.InitCache(*Config.Cache); err != nil {
-			log.Printf("缓存初始化失败（非致命错误）: %v", err)
-		}
-	}
+	// 初始化缓存（必选，未配置时默认使用内存缓存）
+	cache.MustInitCache(Config.Cache)
 }

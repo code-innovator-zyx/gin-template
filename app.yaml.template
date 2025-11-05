@@ -42,7 +42,9 @@ logger:
 #   secret: "your-secret-key-change-this-in-production"
 #   expire: 86400  # 24小时，单位：秒
 
-# 缓存配置（可选）- 支持三种类型：redis, leveldb, memory
+# 缓存配置（可选）
+# 支持三种类型：redis, leveldb, memory
+# ⚠️ 注意：如果不配置缓存，系统将自动使用内存缓存（memory）
 # cache:
 #   type: redis  # 缓存类型: redis | leveldb | memory
 #   # Redis配置（type=redis时必填）
@@ -55,4 +57,4 @@ logger:
 #   # LevelDB配置（type=leveldb时必填）
 #   leveldb:
 #     path: ./data/leveldb
-#   # Memory缓存无需额外配置
+#   # Memory缓存无需额外配置（默认选项）

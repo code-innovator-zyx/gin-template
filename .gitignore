@@ -57,5 +57,3 @@ data/
 *.ldb
 *.log
 
-# Cache data
-cache/

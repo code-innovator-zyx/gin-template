@@ -47,7 +47,6 @@ type Jwt struct {
 	Expire int    `mapstructure:"expire" validate:"required,min=60"` // 至少 60 秒
 }
 
-
 // Init 初始化配置
 func Init() (*AppConfig, error) {
 	// 初始化Viper

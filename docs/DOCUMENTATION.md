@@ -18,9 +18,10 @@
 7. [缓存类型对比](./CACHE_COMPARISON.md) - 三种缓存的详细对比和选择指南
 8. [缓存服务指南](./CACHE_SERVICE_GUIDE.md) - 缓存服务API使用文档
 9. [多缓存实现指南](./CACHE_GUIDE.md) - Redis/LevelDB/Memory缓存使用 ⭐
+10. [缓存默认行为](./CACHE_DEFAULT_BEHAVIOR.md) - 零配置缓存和自动降级 🆕
 
 ### 开发指南
-10. [配置模板](../app.yaml.template) - 应用配置示例
+11. [配置模板](../app.yaml.template) - 应用配置示例
 
 ---
 
