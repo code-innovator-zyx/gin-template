@@ -37,16 +37,23 @@ func HealthCheck(c *gin.Context) {
 		health["database"] = "not_configured"
 	}
 
-	// 检查Redis连接
-	if cache.RedisClient != nil {
-		if _, err := cache.RedisClient.Ping(ctx).Result(); err == nil {
-			health["redis"] = "ok"
+	// 检查缓存连接
+	if cache.IsAvailable() {
+		cacheClient := cache.GetClient()
+		if err := cacheClient.Ping(ctx); err == nil {
+			health["cache"] = map[string]interface{}{
+				"status": "ok",
+				"type":   cacheClient.Type(),
+			}
 		} else {
-			health["redis"] = "error"
+			health["cache"] = map[string]interface{}{
+				"status": "error",
+				"type":   cacheClient.Type(),
+			}
 			health["status"] = "degraded"
 		}
 	} else {
-		health["redis"] = "not_configured"
+		health["cache"] = "not_configured"
 	}
 
 	response.Success(c, health)

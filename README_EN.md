@@ -69,7 +69,7 @@ English | [简体中文](./README.md)
 <table>
 <tr>
 <td align="center" width="25%">
-<a href="./QUICK_START.md">
+<a href="./docs/QUICK_START.md">
 <img src="https://img.icons8.com/color/96/000000/rocket.png" width="48" height="48" alt="Quick Start"/>
 <br />
 <b>Quick Start</b>
@@ -78,7 +78,7 @@ English | [简体中文](./README.md)
 <sub>5-minute guide</sub>
 </td>
 <td align="center" width="25%">
-<a href="./RENAME_GUIDE.md">
+<a href="./docs/RENAME_GUIDE.md">
 <img src="https://img.icons8.com/color/96/000000/edit.png" width="48" height="48" alt="Rename"/>
 <br />
 <b>Rename Guide</b>
@@ -87,7 +87,7 @@ English | [简体中文](./README.md)
 <sub>One-click rename</sub>
 </td>
 <td align="center" width="25%">
-<a href="./OPTIMIZATION_REPORT.md">
+<a href="./docs/OPTIMIZATION_REPORT.md">
 <img src="https://img.icons8.com/color/96/000000/document.png" width="48" height="48" alt="Report"/>
 <br />
 <b>Optimization Report</b>
@@ -96,7 +96,7 @@ English | [简体中文](./README.md)
 <sub>Technical details</sub>
 </td>
 <td align="center" width="25%">
-<a href="./CHANGELOG.md">
+<a href="./docs/CHANGELOG.md">
 <img src="https://img.icons8.com/color/96/000000/clock.png" width="48" height="48" alt="Changelog"/>
 <br />
 <b>Changelog</b>
@@ -177,7 +177,7 @@ Automatically updates:
 - ✅ Docker Compose config
 - ✅ All documentation
 
-> 📖 Details: [Rename Guide](./RENAME_GUIDE.md)
+> 📖 Details: [Rename Guide](./docs/RENAME_GUIDE.md)
 
 ### 3. Middleware Ecosystem
 
@@ -353,7 +353,7 @@ Thanks to all contributors!
 
 **Don't just star, try it now!**
 
-[Quick Start](./QUICK_START.md) · [Documentation](./OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/code-innovator-zyx/gin-template/issues)
+[Quick Start](./docs/QUICK_START.md) · [Documentation](./docs/OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/code-innovator-zyx/gin-template/issues)
 
 ### If this project helps you, please give it a ⭐️
 

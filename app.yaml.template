@@ -42,10 +42,17 @@ logger:
 #   secret: "your-secret-key-change-this-in-production"
 #   expire: 86400  # 24小时，单位：秒
 
-# Redis配置（可选）
-# redis:
-#   host: localhost
-#   port: 6379
-#   password: ""
-#   db: 0
-#   pool_size: 10
+# 缓存配置（可选）- 支持三种类型：redis, leveldb, memory
+# cache:
+#   type: redis  # 缓存类型: redis | leveldb | memory
+#   # Redis配置（type=redis时必填）
+#   redis:
+#     host: localhost
+#     port: 6379
+#     password: ""
+#     db: 0
+#     pool_size: 10
+#   # LevelDB配置（type=leveldb时必填）
+#   leveldb:
+#     path: ./data/leveldb
+#   # Memory缓存无需额外配置

@@ -37,10 +37,10 @@ func Init() {
 			}
 		}
 	}
-	// 初始化Redis（可选）
-	if Config.Redis != nil {
-		if err = cache.Init(*Config.Redis); err != nil {
-			log.Printf("Redis初始化失败（非致命错误）: %v", err)
+	// 初始化缓存（可选）
+	if Config.Cache != nil {
+		if err = cache.InitCache(*Config.Cache); err != nil {
+			log.Printf("缓存初始化失败（非致命错误）: %v", err)
 		}
 	}
 }

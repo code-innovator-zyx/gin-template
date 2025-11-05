@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"gin-template/pkg/cache"
 	"gin-template/pkg/logger"
 	"gin-template/pkg/orm"
 	"github.com/go-playground/validator/v10"
@@ -14,9 +15,9 @@ type AppConfig struct {
 	Server Server        `mapstructure:"server" validate:"required"`
 	Logger logger.Config `mapstructure:"logger" validate:"required"`
 	// 选填的配置
-	Database *orm.Config   `mapstructure:"database" validate:"omitempty"`
-	Jwt      *Jwt          `mapstructure:"jwt" validate:"omitempty"`
-	Redis    *RedisConfig  `mapstructure:"redis" validate:"omitempty"`
+	Database *orm.Config        `mapstructure:"database" validate:"omitempty"`
+	Jwt      *Jwt               `mapstructure:"jwt" validate:"omitempty"`
+	Cache    *cache.CacheConfig `mapstructure:"cache" validate:"omitempty"`
 }
 
 func (a AppConfig) validate() error {
@@ -46,14 +47,6 @@ type Jwt struct {
 	Expire int    `mapstructure:"expire" validate:"required,min=60"` // 至少 60 秒
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
-	Host     string `mapstructure:"host" validate:"required"`
-	Port     int    `mapstructure:"port" validate:"required,min=1,max=65535"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db" validate:"min=0"`
-	PoolSize int    `mapstructure:"pool_size" validate:"omitempty,min=1"`
-}
 
 // Init 初始化配置
 func Init() (*AppConfig, error) {

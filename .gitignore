@@ -51,3 +51,11 @@ tmp/
 .env
 .env.local
 .env.*.local
+
+# LevelDB data
+data/
+*.ldb
+*.log
+
+# Cache data
+cache/

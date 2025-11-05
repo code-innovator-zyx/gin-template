@@ -30,7 +30,7 @@ span
 <table>
 <tr>
 <td align="center" width="25%">
-<a href="./QUICK_START.md">
+<a href="./docs/QUICK_START.md">
 <img src="https://img.icons8.com/color/96/000000/rocket.png" width="48" height="48" alt="Quick Start"/>
 <br />
 <b>快速开始</b>
@@ -39,7 +39,7 @@ span
 <sub>5分钟上手指南</sub>
 </td>
 <td align="center" width="25%">
-<a href="./RENAME_GUIDE.md">
+<a href="./docs/RENAME_GUIDE.md">
 <img src="https://img.icons8.com/color/96/000000/edit.png" width="48" height="48" alt="Rename"/>
 <br />
 <b>重命名指南</b>
@@ -48,7 +48,7 @@ span
 <sub>一键改项目名</sub>
 </td>
 <td align="center" width="25%">
-<a href="./OPTIMIZATION_REPORT.md">
+<a href="./docs/OPTIMIZATION_REPORT.md">
 <img src="https://img.icons8.com/color/96/000000/document.png" width="48" height="48" alt="Report"/>
 <br />
 <b>优化报告</b>
@@ -57,7 +57,7 @@ span
 <sub>技术细节和性能</sub>
 </td>
 <td align="center" width="25%">
-<a href="./CHANGELOG.md">
+<a href="./docs/CHANGELOG.md">
 <img src="https://img.icons8.com/color/96/000000/clock.png" width="48" height="48" alt="Changelog"/>
 <br />
 <b>更新日志</b>
@@ -121,11 +121,29 @@ open http://localhost:8080/api/v1/health
 ```
 
 - 🔐 **安全优先** - 默认拒绝，明确授权
-- ⚡ **高性能** - Redis缓存，权限检查仅需2ms
+- ⚡ **高性能** - 多级缓存，权限检查仅需2ms
 - 🎯 **精细控制** - 精确到API路径+HTTP方法
 - 🔄 **动态管理** - 支持运行时权限调整
 
 > 📖 详细设计请查看：[RBAC权限设计文档](#rbac权限控制设计)
+
+### 1.5 多缓存实现支持 🆕
+
+支持三种缓存实现，通过配置切换：
+
+| 类型 | 场景 | 配置 |
+|------|------|------|
+| **Redis** | 生产环境 | `type: redis` |
+| **LevelDB** | 单机应用 | `type: leveldb` |
+| **Memory** | 开发测试 | `type: memory` |
+
+```yaml
+# 只需修改配置即可切换
+cache:
+  type: redis  # 或 leveldb, memory
+```
+
+> 📖 详细说明：[多缓存实现指南](./docs/CACHE_GUIDE.md)
 
 ### 2. 一键重命名功能
 
@@ -141,7 +159,7 @@ make rename NEW_NAME=blog-api
 - ✅ Docker Compose 配置
 - ✅ 所有文档
 
-> 📖 详细说明：[重命名指南](./RENAME_GUIDE.md)
+> 📖 详细说明：[重命名指南](./docs/RENAME_GUIDE.md)
 
 ### 3. 中间件生态
 
@@ -286,15 +304,16 @@ gin-template/
 ### vs 其他模板
 
 
-| 特性          | 本模板         | 其他模板        |
-| ------------- | -------------- | --------------- |
-| 完整RBAC权限  | ✅ 生产就绪    | ⚠️ 简单示例   |
-| Redis缓存优化 | ✅ 内置        | ❌ 需自己实现   |
-| 一键重命名    | ✅ 独家功能    | ❌ 无           |
-| Docker支持    | ✅ 完整配置    | ⚠️ 基础配置   |
-| 文档完善度    | ✅ 7份详细文档 | ⚠️ 基础README |
-| 单元测试      | ✅ 示例+工具   | ❌ 无           |
-| 生产就绪      | ✅ 是          | ⚠️ 需完善     |
+| 特性          | 本模板                    | 其他模板        |
+| ------------- | ------------------------- | --------------- |
+| 完整RBAC权限  | ✅ 生产就绪               | ⚠️ 简单示例   |
+| 多种缓存支持  | ✅ Redis/LevelDB/Memory   | ❌ 仅Redis或无  |
+| 缓存自动降级  | ✅ 智能降级               | ❌ 无           |
+| 一键重命名    | ✅ 独家功能               | ❌ 无           |
+| Docker支持    | ✅ 完整配置               | ⚠️ 基础配置   |
+| 文档完善度    | ✅ 10+份详细文档          | ⚠️ 基础README |
+| 单元测试      | ✅ 示例+工具              | ❌ 无           |
+| 生产就绪      | ✅ 是                     | ⚠️ 需完善     |
 
 ### 实际案例
 
@@ -418,7 +437,7 @@ make all
 
 **不要只是收藏，动手试试吧！**
 
-[快速开始](./QUICK_START.md) · [查看文档](./OPTIMIZATION_REPORT.md) · [提交Issue](https://github.com/code-innovator-zyx/gin-template/issues)
+[快速开始](./docs/QUICK_START.md) · [查看文档](./docs/DOCUMENTATION.md) · [提交Issue](https://github.com/code-innovator-zyx/gin-template/issues)
 
 ### 如果这个项目对你有帮助，请给一个⭐️
 
@@ -497,7 +516,7 @@ return result
 
 - ✅ **灵活性** - 支持一用户多角色
 - ✅ **安全性** - 默认拒绝策略
-- ✅ **性能** - Redis缓存优化
+- ✅ **性能** - 多种缓存优化（Redis/LevelDB/Memory）
 - ✅ **可维护性** - 清晰的模型关系
 - ✅ **可扩展性** - 易于添加新权限
 
