@@ -18,20 +18,20 @@ import (
 func main() {
 	// 初始化应用配置和依赖
 	core.Init()
-
+	cfg := core.MustGetConfig()
 	// 初始化路由
 	r := handler.Init()
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", core.Config.Server.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,
-		ReadTimeout:  core.Config.Server.ReadTimeout,
-		WriteTimeout: core.Config.Server.WriteTimeout,
-		IdleTimeout:  core.Config.Server.IdleTimeout,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	go func() {
-		logrus.Infof("服务器启动成功，监听端口: %d", core.Config.Server.Port)
+		logrus.Infof("服务器启动成功，监听端口: %d", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logrus.Fatalf("启动服务器失败: %v", err)
 		}

@@ -119,7 +119,7 @@ type JWTManager struct {
 
 // NewJWTManager 创建 JWT 管理器
 func NewJWTManager() *JWTManager {
-	jwtConfig := core.Config.Jwt
+	jwtConfig := core.MustGetConfig().Jwt
 
 	// 默认配置
 	secret := "kZ3r7XG8YpS+vO9fN7JxBtUo1e8L2jH4pFqS5mRw9tDcVyZxGqK0sT3bLnM6wA9d"
@@ -520,7 +520,7 @@ func generateJTI() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-// getCacheService 获取缓存服务（避免循环依赖）
+// getCacheService 获取缓存服务
 func getCacheService() interface {
 	SetInstance(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Exists(ctx context.Context, key string) (bool, error)

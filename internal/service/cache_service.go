@@ -50,8 +50,8 @@ type cacheService struct {
 }
 
 var (
-	cacheServiceOnce     sync.Once
-	globalCacheService   CacheService
+	cacheServiceOnce   sync.Once
+	globalCacheService CacheService
 )
 
 // GetCacheService 获取缓存服务单例（懒加载，线程安全）
@@ -64,28 +64,22 @@ func GetCacheService() CacheService {
 	return globalCacheService
 }
 
-// MustNewCacheService 创建缓存服务实例（向后兼容，已废弃）
-// Deprecated: 使用 GetCacheService() 代替
-func MustNewCacheService() CacheService {
-	return GetCacheService()
-}
-
 // ================================
 // 缓存Key管理
 // ================================
 
 const (
 	// 缓存Key前缀
-	cacheKeyPermission    = "permission:%d"      // 权限: permission:userID (使用Set存储 path_method)
-	cacheKeyToken         = "token:%s"           // Token黑名单: token:tokenString
-	cacheKeyJWTBlacklist  = "jwt:blacklist:%s"   // JWT黑名单: jwt:blacklist:token
-	cacheKeyUserSessions  = "user:sessions:%d"   // 用户会话: user:sessions:userID -> Set[sessionID]
-	cacheKeySessionTokens = "session:tokens:%s"  // 会话令牌: session:tokens:sessionID -> {access, refresh}
-	cacheKeyRefreshCount  = "refresh:count:%s"   // 刷新计数: refresh:count:refreshToken -> count
+	cacheKeyPermission    = "permission:%d"     // 权限: permission:userID (使用Set存储 path_method)
+	cacheKeyToken         = "token:%s"          // Token黑名单: token:tokenString
+	cacheKeyJWTBlacklist  = "jwt:blacklist:%s"  // JWT黑名单: jwt:blacklist:token
+	cacheKeyUserSessions  = "user:sessions:%d"  // 用户会话: user:sessions:userID -> Set[sessionID]
+	cacheKeySessionTokens = "session:tokens:%s" // 会话令牌: session:tokens:sessionID -> {access, refresh}
+	cacheKeyRefreshCount  = "refresh:count:%s"  // 刷新计数: refresh:count:refreshToken -> count
 
 	// 缓存TTL
-	ttlPermission = 10 * time.Minute // 权限缓存10分钟
-	ttlToken      = 24 * time.Hour   // Token 24小时
+	ttlPermission = 10 * time.Minute   // 权限缓存10分钟
+	ttlToken      = 24 * time.Hour     // Token 24小时
 	ttlSession    = 7 * 24 * time.Hour // 会话 7天
 )
 
@@ -242,7 +236,7 @@ func (s *cacheService) SaveUserSession(ctx context.Context, userID uint, session
 	}
 
 	cacheKey := fmt.Sprintf(cacheKeyUserSessions, userID)
-	
+
 	// 添加到用户会话集合
 	if err := s.client.SAdd(ctx, cacheKey, sessionID); err != nil {
 		return err
@@ -352,7 +346,7 @@ func (s *cacheService) IncrementRefreshCount(ctx context.Context, refreshToken s
 	}
 
 	cacheKey := fmt.Sprintf(cacheKeyRefreshCount, refreshToken)
-	
+
 	// 增加计数
 	count, err := s.client.Incr(ctx, cacheKey)
 	if err != nil {

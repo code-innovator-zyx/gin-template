@@ -77,7 +77,7 @@ func RegisterRoutes(r *gin.Engine) {
 	registerHealthRoutes(apiV1)
 	// 用户管理已整合到RBAC系统中
 	rbac.RegisterRBACRoutes(apiV1)
-	if core.Config.App.EnableSwagger {
+	if core.MustGetConfig().App.EnableSwagger {
 		r.GET("/swagger/v1/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.InstanceName("v1")))
 	}
 }

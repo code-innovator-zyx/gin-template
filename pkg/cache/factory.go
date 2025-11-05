@@ -62,29 +62,14 @@ func initCacheWithConfig(cfg *CacheConfig) (Cache, error) {
 	return cache, nil
 }
 
-// GetGlobalCache 获取全局缓存实例（懒加载单例，线程安全）
+// GetGlobalCache 获取全局缓存实例
 func GetGlobalCache() Cache {
 	cacheOnce.Do(func() {
 		// 这里需要从配置中获取缓存配置
-		// 暂时使用内存缓存作为默认值
 		globalCache = NewMemoryCache()
 		logrus.Info("缓存自动初始化为内存缓存（懒加载）")
 	})
 	return globalCache
-}
-
-// InitCache 初始化缓存（根据配置选择实现）
-// Deprecated: 建议使用 MustInitCache 或 GetGlobalCache
-func InitCache(cfg CacheConfig) error {
-	cache, err := initCacheWithConfig(&cfg)
-	if err != nil {
-		return err
-	}
-	
-	// 重置单例以使用新配置
-	cacheOnce = sync.Once{}
-	globalCache = cache
-	return nil
 }
 
 // MustInitCache 初始化缓存（无论如何都会成功，失败时自动降级到Memory）

@@ -19,9 +19,9 @@ import (
 
 var (
 	// 配置单例
-	configOnce   sync.Once
-	appConfig    *config.AppConfig
-	configErr    error
+	configOnce sync.Once
+	appConfig  *config.AppConfig
+	configErr  error
 
 	// 数据库单例
 	dbOnce sync.Once
@@ -29,7 +29,7 @@ var (
 	dbErr  error
 
 	migrateFuncs []func(*gorm.DB) error // 存储所有迁移函数
-	migrateMu    sync.Mutex              // 保护 migrateFuncs
+	migrateMu    sync.Mutex             // 保护 migrateFuncs
 )
 
 // ================================
@@ -53,15 +53,6 @@ func MustGetConfig() *config.AppConfig {
 	return cfg
 }
 
-// Config 获取配置（向后兼容，已废弃）
-// Deprecated: 使用 GetConfig() 或 MustGetConfig()
-var Config *config.AppConfig
-
-func init() {
-	// 为了向后兼容，仍然初始化 Config
-	Config = MustGetConfig()
-}
-
 // ================================
 // 数据库相关
 // ================================
@@ -74,8 +65,8 @@ func GetDb() (*gorm.DB, error) {
 			dbErr = nil // 数据库未配置，不是错误
 			return
 		}
-		
-		db, dbErr = initDatabase(*cfg.Database)
+
+		db, dbErr = orm.Init(*cfg.Database)
 	})
 	return db, dbErr
 }
@@ -118,25 +109,16 @@ func RegisterMigrate(fn func(*gorm.DB) error) {
 // ExecuteMigrations 执行所有已注册的迁移函数
 func ExecuteMigrations() error {
 	database := MustGetDb()
-	
+
 	migrateMu.Lock()
 	funcs := make([]func(*gorm.DB) error, len(migrateFuncs))
 	copy(funcs, migrateFuncs)
 	migrateMu.Unlock()
-	
+
 	for _, fn := range funcs {
 		if err := fn(database); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// ================================
-// 内部辅助函数
-// ================================
-
-// initDatabase 初始化数据库（内部使用）
-func initDatabase(cfg orm.Config) (*gorm.DB, error) {
-	return orm.Init(cfg)
 }
