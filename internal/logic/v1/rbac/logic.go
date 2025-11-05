@@ -1,12 +1,13 @@
 package rbac
 
 import (
-	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	"gin-template/internal/service"
 	"gin-template/pkg/response"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetRoles godoc
@@ -21,8 +22,8 @@ import (
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [get]
 func GetRoles(c *gin.Context) {
-	var roles []rbac.Role
-	if err := core.MustNewDb().Find(&roles).Error; err != nil {
+	roles, err := service.GetRbacService().GetAllRoles()
+	if err != nil {
 		response.InternalServerError(c, "获取角色列表失败")
 		return
 	}
@@ -48,7 +49,7 @@ func CreateRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := rbac.CreateRole(&role); err != nil {
+	if err := service.GetRbacService().CreateRole(&role); err != nil {
 		response.InternalServerError(c, "创建角色失败")
 		return
 	}
@@ -78,7 +79,7 @@ func GetRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := rbac.GetRoleByID(uint(id))
+	role, err := service.GetRbacService().GetRoleByID(uint(id))
 	if err != nil {
 		response.NotFound(c, "角色不存在")
 		return
@@ -107,7 +108,7 @@ func UpdateRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := rbac.GetRoleByID(uint(id))
+	role, err := service.GetRbacService().GetRoleByID(uint(id))
 	if err != nil {
 		response.NotFound(c, "角色不存在")
 		return
@@ -116,7 +117,7 @@ func UpdateRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := rbac.UpdateRole(role); err != nil {
+	if err := service.GetRbacService().UpdateRole(role); err != nil {
 		response.InternalServerError(c, "更新角色失败")
 		return
 	}
@@ -142,7 +143,7 @@ func DeleteRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	if err := rbac.DeleteRole(uint(id)); err != nil {
+	if err := service.GetRbacService().DeleteRole(uint(id)); err != nil {
 		response.InternalServerError(c, "删除角色失败")
 		return
 	}
@@ -161,8 +162,8 @@ func DeleteRole(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [get]
 func GetPermissions(c *gin.Context) {
-	var permissions []rbac.Permission
-	if err := core.MustNewDb().Find(&permissions).Error; err != nil {
+	permissions, err := service.GetRbacService().GetAllPermissions()
+	if err != nil {
 		response.InternalServerError(c, "获取权限列表失败")
 		return
 	}
@@ -182,14 +183,13 @@ func GetPermissions(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [post]
-
 func CreatePermission(c *gin.Context) {
 	var permission rbac.Permission
 	if err := c.ShouldBindJSON(&permission); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := rbac.CreatePermission(&permission); err != nil {
+	if err := service.GetRbacService().CreatePermission(&permission); err != nil {
 		response.InternalServerError(c, "创建权限失败")
 		return
 	}
@@ -208,8 +208,8 @@ func CreatePermission(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /resources [get]
 func GetResources(c *gin.Context) {
-	var resources []rbac.Resource
-	if err := core.MustNewDb().Find(&resources).Error; err != nil {
+	resources, err := service.GetRbacService().GetAllResources()
+	if err != nil {
 		response.InternalServerError(c, "获取资源列表失败")
 		return
 	}
@@ -236,8 +236,8 @@ func GetUserRoles(c *gin.Context) {
 		return
 	}
 
-	var userRoles []rbac.UserRole
-	if err := core.MustNewDb().Where("user_id = ?", userID).Find(&userRoles).Error; err != nil {
+	userRoles, err := service.GetRbacService().GetUserRoleRelations(uint(userID))
+	if err != nil {
 		response.InternalServerError(c, "获取用户角色失败")
 		return
 	}
@@ -265,7 +265,7 @@ func AssignRoleToUser(c *gin.Context) {
 		return
 	}
 
-	if err := core.MustNewDb().Create(&userRole).Error; err != nil {
+	if err := service.GetRbacService().CreateUserRole(&userRole); err != nil {
 		response.InternalServerError(c, "分配角色失败")
 		return
 	}
@@ -300,7 +300,7 @@ func RemoveRoleFromUser(c *gin.Context) {
 		return
 	}
 
-	if err := core.MustNewDb().Where("user_id = ? AND role_id = ?", userID, roleID).Delete(&rbac.UserRole{}).Error; err != nil {
+	if err := service.GetRbacService().RemoveRoleFromUser(uint(userID), uint(roleID)); err != nil {
 		response.InternalServerError(c, "移除角色失败")
 		return
 	}
@@ -328,7 +328,7 @@ func AssignPermissionToRole(c *gin.Context) {
 		return
 	}
 
-	if err := core.MustNewDb().Create(&rolePermission).Error; err != nil {
+	if err := service.GetRbacService().CreateRolePermission(&rolePermission); err != nil {
 		response.InternalServerError(c, "分配权限失败")
 		return
 	}
@@ -363,7 +363,7 @@ func RemovePermissionFromRole(c *gin.Context) {
 		return
 	}
 
-	if err := core.MustNewDb().Where("role_id = ? AND permission_id = ?", roleID, permissionID).Delete(&rbac.RolePermission{}).Error; err != nil {
+	if err := service.GetRbacService().RemovePermissionFromRole(uint(roleID), uint(permissionID)); err != nil {
 		response.InternalServerError(c, "移除权限失败")
 		return
 	}

@@ -34,7 +34,7 @@ func Register(c *gin.Context) {
 		Email:    req.Email,
 	}
 
-	if err := service.UserService.Create(user); err != nil {
+	if err := service.GetUserService().Create(user); err != nil {
 		response.Fail(c, 400, err.Error())
 		return
 	}
@@ -61,7 +61,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := service.UserService.Login(req.Username, req.Password)
+	tokenPair, err := service.GetUserService().Login(req.Username, req.Password)
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
@@ -183,7 +183,7 @@ func Logout(c *gin.Context) {
 // @Router /user/profile [get]
 func GetProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
-	user, err := service.UserService.GetByID(userID)
+	user, err := service.GetUserService().GetByID(userID)
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return

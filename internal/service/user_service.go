@@ -15,8 +15,8 @@ import (
 type userService struct{}
 
 var (
-	userServiceOnce     sync.Once
-	globalUserService   *userService
+	userServiceOnce   sync.Once
+	globalUserService *userService
 )
 
 // GetUserService 获取用户服务单例（懒加载，线程安全）
@@ -26,10 +26,6 @@ func GetUserService() *userService {
 	})
 	return globalUserService
 }
-
-// UserService 用户服务实例（向后兼容，已废弃）
-// Deprecated: 使用 GetUserService() 代替
-var UserService = GetUserService()
 
 // Create 创建用户
 func (s *userService) Create(user *rbac.User) error {
