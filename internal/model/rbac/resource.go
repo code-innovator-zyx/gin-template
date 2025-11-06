@@ -13,7 +13,6 @@ type Resource struct {
 	Path         string    `gorm:"size:200;not null;uniqueIndex:idx_path_method" json:"path" example:"/api/users" description:"资源路径"`
 	Method       string    `gorm:"size:10;not null;uniqueIndex:idx_path_method" json:"method" example:"GET" description:"HTTP方法"`
 	Description  string    `gorm:"size:200" json:"description" example:"获取用户列表" description:"接口中文描述"`
-	IsManaged    bool      `gorm:"default:false;index:idx_resource_managed" json:"is_managed" example:"false" description:"是否被权限组管理"`
 	PermissionID *uint     `gorm:"index:idx_resource_permission" json:"permission_id" example:"0" description:"所属权限ID"`
 	CreatedAt    time.Time `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
 	UpdatedAt    time.Time `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
