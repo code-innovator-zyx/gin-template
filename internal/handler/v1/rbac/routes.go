@@ -4,6 +4,7 @@ import (
 	"gin-template/internal/logic/v1/rbac"
 	"gin-template/internal/middleware"
 	"gin-template/internal/routegroup"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +22,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		SetPermission("auth:manage", "认证管理")
 	authAuthGroup.Use(middleware.JWT())
 	{
-		authAuthGroup.POST("/logout", rbac.Logout) // 登出
+		authAuthGroup.POSTDesc("/logout", "用户登出", rbac.Logout)
 	}
 
 	// 用户模块
@@ -36,10 +37,10 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 			SetPermission("user:manage", "用户管理")
 		authUserGroup.Use(middleware.JWT())
 		{
-			authUserGroup.GET("/profile", rbac.GetProfile)
-			authUserGroup.GET("/:id/roles", rbac.GetUserRoles)
-			authUserGroup.POST("/:id/roles", rbac.AssignRoleToUser)
-			authUserGroup.DELETE("/:id/roles/:role_id", rbac.RemoveRoleFromUser)
+			authUserGroup.GETDesc("/profile", "获取用户信息", rbac.GetProfile)
+			authUserGroup.GETDesc("/:id/roles", "获取用户角色", rbac.GetUserRoles)
+			authUserGroup.POSTDesc("/:id/roles", "分配角色给用户", rbac.AssignRoleToUser)
+			authUserGroup.DELETEDesc("/:id/roles/:role_id", "移除用户角色", rbac.RemoveRoleFromUser)
 		}
 	}
 
@@ -48,15 +49,15 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		SetPermission("role:manage", "角色管理")
 	roleGroup.Use(middleware.JWT())
 	{
-		roleGroup.GET("", rbac.GetRoles)
-		roleGroup.POST("", rbac.CreateRole)
-		roleGroup.GET("/:id", rbac.GetRole)
-		roleGroup.PUT("/:id", rbac.UpdateRole)
-		roleGroup.DELETE("/:id", rbac.DeleteRole)
+		roleGroup.GETDesc("", "获取角色列表", rbac.GetRoles)
+		roleGroup.POSTDesc("", "创建角色", rbac.CreateRole)
+		roleGroup.GETDesc("/:id", "获取角色详情", rbac.GetRole)
+		roleGroup.PUTDesc("/:id", "更新角色", rbac.UpdateRole)
+		roleGroup.DELETEDesc("/:id", "删除角色", rbac.DeleteRole)
 
 		// 角色-权限绑定
-		roleGroup.POST("/:id/permissions", rbac.AssignPermissionToRole)
-		roleGroup.DELETE("/:id/permissions/:permission_id", rbac.RemovePermissionFromRole)
+		roleGroup.POSTDesc("/:id/permissions", "分配权限给角色", rbac.AssignPermissionToRole)
+		roleGroup.DELETEDesc("/:id/permissions/:permission_id", "移除角色权限", rbac.RemovePermissionFromRole)
 	}
 
 	// 权限模块 - 声明权限组
@@ -64,8 +65,8 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		SetPermission("permission:manage", "权限管理")
 	permissionGroup.Use(middleware.JWT())
 	{
-		permissionGroup.GET("", rbac.GetPermissions)
-		permissionGroup.POST("", rbac.CreatePermission)
+		permissionGroup.GETDesc("", "获取权限列表", rbac.GetPermissions)
+		permissionGroup.POSTDesc("", "创建权限", rbac.CreatePermission)
 	}
 
 	// 资源模块 - 声明权限组
@@ -73,6 +74,6 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		SetPermission("resource:view", "资源查看")
 	resourceGroup.Use(middleware.JWT())
 	{
-		resourceGroup.GET("", rbac.GetResources)
+		resourceGroup.GETDesc("", "获取资源列表", rbac.GetResources)
 	}
 }

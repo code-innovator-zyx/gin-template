@@ -33,7 +33,7 @@ func CheckPermission(userID uint, path string, method string) (bool, error) {
 	var isManaged bool
 	var permissionID uint
 	err := core.MustNewDb().Raw(`
-		SELECT is_managed, permission_id FROM resources 
+		SELECT permission_id FROM resources 
 		WHERE path = ? AND method = ? LIMIT 1
 	`, path, method).Row().Scan(&isManaged, &permissionID)
 

@@ -96,8 +96,22 @@ func (g *AuthRouterGroup) POST(relativePath string, handlers ...gin.HandlerFunc)
 	return g
 }
 
+// POSTDesc POST请求，带路由描述
+func (g *AuthRouterGroup) POSTDesc(relativePath, description string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	g.addProtectedRoute("POST", relativePath, description)
+	g.RouterGroup.POST(relativePath, handlers...)
+	return g
+}
+
 func (g *AuthRouterGroup) GET(relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes {
 	g.addProtectedRoute("GET", relativePath, "")
+	g.RouterGroup.GET(relativePath, handlers...)
+	return g
+}
+
+// GETDesc GET请求，带路由描述
+func (g *AuthRouterGroup) GETDesc(relativePath, description string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	g.addProtectedRoute("GET", relativePath, description)
 	g.RouterGroup.GET(relativePath, handlers...)
 	return g
 }
@@ -108,14 +122,35 @@ func (g *AuthRouterGroup) DELETE(relativePath string, handlers ...gin.HandlerFun
 	return g
 }
 
+// DELETEDesc DELETE请求，带路由描述
+func (g *AuthRouterGroup) DELETEDesc(relativePath, description string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	g.addProtectedRoute("DELETE", relativePath, description)
+	g.RouterGroup.DELETE(relativePath, handlers...)
+	return g
+}
+
 func (g *AuthRouterGroup) PATCH(relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes {
 	g.addProtectedRoute("PATCH", relativePath, "")
 	g.RouterGroup.PATCH(relativePath, handlers...)
 	return g
 }
 
+// PATCHDesc PATCH请求，带路由描述
+func (g *AuthRouterGroup) PATCHDesc(relativePath, description string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	g.addProtectedRoute("PATCH", relativePath, description)
+	g.RouterGroup.PATCH(relativePath, handlers...)
+	return g
+}
+
 func (g *AuthRouterGroup) PUT(relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes {
 	g.addProtectedRoute("PUT", relativePath, "")
+	g.RouterGroup.PUT(relativePath, handlers...)
+	return g
+}
+
+// PUTDesc PUT请求，带路由描述
+func (g *AuthRouterGroup) PUTDesc(relativePath, description string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	g.addProtectedRoute("PUT", relativePath, description)
 	g.RouterGroup.PUT(relativePath, handlers...)
 	return g
 }

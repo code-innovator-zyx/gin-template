@@ -186,7 +186,6 @@ func autoBindResourcesToPermissions(tx *gorm.DB, routes []ProtectedRoute) error 
 				Where("path = ? AND method = ?", route.Resource.Path, route.Resource.Method).
 				Updates(map[string]interface{}{
 					"permission_id": permission.ID,
-					"is_managed":    true,
 				})
 
 			if result.Error != nil {
