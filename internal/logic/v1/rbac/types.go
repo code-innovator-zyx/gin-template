@@ -46,9 +46,14 @@ type UserProfile struct {
 	Resources []rbac.Resource `json:"resources" description:"用户可访问的资源列表"`
 }
 
+type CreateRoleRequest struct {
+	Name        string `json:"name,omitempty" example:"管理员"`
+	Description string `json:"description,omitempty" example:"系统管理员"`
+	Resources   []uint `json:"resources,omitempty" description:"角色绑定的资源ID列表"`
+}
+
 // UpdateRoleRequest 更新角色
 type UpdateRoleRequest struct {
-	Id          uint   `form:"id" json:"id" binding:"required" example:"1"`
 	Name        string `json:"name,omitempty" example:"管理员"`
 	Description string `json:"description,omitempty" example:"系统管理员"`
 	Resources   []uint `json:"resources,omitempty" description:"角色绑定的资源ID列表"`

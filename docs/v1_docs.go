@@ -341,75 +341,6 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/role-permissions": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "为指定角色分配权限",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "RBAC-角色权限管理"
-                ],
-                "summary": "分配权限给角色",
-                "parameters": [
-                    {
-                        "description": "角色权限信息",
-                        "name": "rolePermission",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/rbac.RolePermission"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "成功分配权限",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/rbac.RolePermission"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/roles": {
             "get": {
                 "security": [
@@ -488,7 +419,7 @@ const docTemplatev1 = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/rbac.Role"
+                            "$ref": "#/definitions/rbac.CreateRoleRequest"
                         }
                     }
                 ],
@@ -645,7 +576,7 @@ const docTemplatev1 = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/rbac.Role"
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -732,14 +663,14 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/roles/{role_id}/permissions/{permission_id}": {
-            "delete": {
+        "/roles/{role_id}/resources/{resource_id}": {
+            "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "从指定角色移除指定权限",
+                "description": "为指定角色分配资源（细粒度权限控制）",
                 "consumes": [
                     "application/json"
                 ],
@@ -747,9 +678,9 @@ const docTemplatev1 = `{
                     "application/json"
                 ],
                 "tags": [
-                    "RBAC-角色权限管理"
+                    "RBAC-角色资源管理"
                 ],
-                "summary": "从角色移除权限",
+                "summary": "分配资源给角色",
                 "parameters": [
                     {
                         "type": "integer",
@@ -760,21 +691,81 @@ const docTemplatev1 = `{
                     },
                     {
                         "type": "integer",
-                        "description": "权限ID",
-                        "name": "permission_id",
+                        "description": "资源ID",
+                        "name": "resource_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功分配资源",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "从指定角色移除指定资源",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-角色资源管理"
+                ],
+                "summary": "从角色移除资源",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "角色ID",
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "资源ID",
+                        "name": "resource_id",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "成功移除权限",
+                        "description": "成功移除资源",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
-                        "description": "无效的角色ID或权限ID",
+                        "description": "无效的角色ID或资源ID",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -1171,6 +1162,25 @@ const docTemplatev1 = `{
         }
     },
     "definitions": {
+        "rbac.CreateRoleRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "系统管理员"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "管理员"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "rbac.LogoutRequest": {
             "type": "object",
             "properties": {
@@ -1203,12 +1213,6 @@ const docTemplatev1 = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rbac.Resource"
-                    }
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/rbac.Role"
                     }
                 },
                 "updated_at": {
@@ -1254,7 +1258,13 @@ const docTemplatev1 = `{
                 },
                 "permission_id": {
                     "type": "integer",
-                    "example": 0
+                    "example": 1
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Role"
+                    }
                 },
                 "updated_at": {
                     "type": "string",
@@ -1282,29 +1292,15 @@ const docTemplatev1 = `{
                     "type": "string",
                     "example": "admin"
                 },
-                "permissions": {
+                "resources": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/rbac.Permission"
+                        "$ref": "#/definitions/rbac.Resource"
                     }
                 },
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
-                }
-            }
-        },
-        "rbac.RolePermission": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "permission_id": {
-                    "type": "integer"
-                },
-                "role_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -1331,19 +1327,14 @@ const docTemplatev1 = `{
         },
         "rbac.UpdateRoleRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "string",
+                    "example": "系统管理员"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "管理员"
                 },
                 "resources": {
                     "type": "array",

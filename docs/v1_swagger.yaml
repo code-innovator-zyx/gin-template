@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  rbac.CreateRoleRequest:
+    properties:
+      description:
+        example: 系统管理员
+        type: string
+      name:
+        example: 管理员
+        type: string
+      resources:
+        items:
+          type: integer
+        type: array
+    type: object
   rbac.LogoutRequest:
     properties:
       refresh_token:
@@ -23,10 +36,6 @@ definitions:
       resources:
         items:
           $ref: '#/definitions/rbac.Resource'
-        type: array
-      roles:
-        items:
-          $ref: '#/definitions/rbac.Role'
         type: array
       updated_at:
         example: "2023-01-01T00:00:00Z"
@@ -58,8 +67,12 @@ definitions:
         example: /api/users
         type: string
       permission_id:
-        example: 0
+        example: 1
         type: integer
+      roles:
+        items:
+          $ref: '#/definitions/rbac.Role'
+        type: array
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -79,22 +92,13 @@ definitions:
       name:
         example: admin
         type: string
-      permissions:
+      resources:
         items:
-          $ref: '#/definitions/rbac.Permission'
+          $ref: '#/definitions/rbac.Resource'
         type: array
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
-    type: object
-  rbac.RolePermission:
-    properties:
-      id:
-        type: integer
-      permission_id:
-        type: integer
-      role_id:
-        type: integer
     type: object
   rbac.TokenResponse:
     properties:
@@ -114,18 +118,15 @@ definitions:
   rbac.UpdateRoleRequest:
     properties:
       description:
+        example: 系统管理员
         type: string
-      id:
-        example: 1
-        type: integer
       name:
+        example: 管理员
         type: string
       resources:
         items:
           type: integer
         type: array
-    required:
-    - id
     type: object
   rbac.User:
     description: 用户信息模型
@@ -494,47 +495,6 @@ paths:
       summary: 获取资源列表
       tags:
       - RBAC-资源管理
-  /role-permissions:
-    post:
-      consumes:
-      - application/json
-      description: 为指定角色分配权限
-      parameters:
-      - description: 角色权限信息
-        in: body
-        name: rolePermission
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.RolePermission'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 成功分配权限
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.RolePermission'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 分配权限给角色
-      tags:
-      - RBAC-角色权限管理
   /roles:
     get:
       consumes:
@@ -577,7 +537,7 @@ paths:
         name: role
         required: true
         schema:
-          $ref: '#/definitions/rbac.Role'
+          $ref: '#/definitions/rbac.CreateRoleRequest'
       produces:
       - application/json
       responses:
@@ -707,7 +667,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/rbac.Role'
+                  type: object
               type: object
         "400":
           description: 无效的角色ID或请求参数错误
@@ -730,31 +690,31 @@ paths:
       summary: 更新角色
       tags:
       - RBAC-角色管理
-  /roles/{role_id}/permissions/{permission_id}:
+  /roles/{role_id}/resources/{resource_id}:
     delete:
       consumes:
       - application/json
-      description: 从指定角色移除指定权限
+      description: 从指定角色移除指定资源
       parameters:
       - description: 角色ID
         in: path
         name: role_id
         required: true
         type: integer
-      - description: 权限ID
+      - description: 资源ID
         in: path
-        name: permission_id
+        name: resource_id
         required: true
         type: integer
       produces:
       - application/json
       responses:
         "204":
-          description: 成功移除权限
+          description: 成功移除资源
           schema:
             $ref: '#/definitions/response.Response'
         "400":
-          description: 无效的角色ID或权限ID
+          description: 无效的角色ID或资源ID
           schema:
             $ref: '#/definitions/response.Response'
         "401":
@@ -767,9 +727,48 @@ paths:
             $ref: '#/definitions/response.Response'
       security:
       - ApiKeyAuth: []
-      summary: 从角色移除权限
+      summary: 从角色移除资源
       tags:
-      - RBAC-角色权限管理
+      - RBAC-角色资源管理
+    post:
+      consumes:
+      - application/json
+      description: 为指定角色分配资源（细粒度权限控制）
+      parameters:
+      - description: 角色ID
+        in: path
+        name: role_id
+        required: true
+        type: integer
+      - description: 资源ID
+        in: path
+        name: resource_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功分配资源
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 分配资源给角色
+      tags:
+      - RBAC-角色资源管理
   /user-roles:
     post:
       consumes:

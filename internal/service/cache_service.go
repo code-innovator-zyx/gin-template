@@ -25,6 +25,7 @@ type CacheService interface {
 	// 权限相关缓存
 	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error)
 	ClearUserPermissions(ctx context.Context, userID uint) error
+	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error
 	SetUserPermissions(ctx context.Context, userID uint, resources []rbac.Resource) error
 
 	// Token黑名单
@@ -185,6 +186,20 @@ func (s *cacheService) ClearUserPermissions(ctx context.Context, userID uint) er
 
 	key := fmt.Sprintf(cacheKeyPermission, userID)
 	return s.client.Delete(ctx, key)
+}
+
+// ClearMultipleUsersPermissions 批量清除多个用户的权限缓存
+func (s *cacheService) ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error {
+	if s.client == nil || len(userIDs) == 0 {
+		return nil
+	}
+
+	keys := make([]string, 0, len(userIDs))
+	for _, userID := range userIDs {
+		keys = append(keys, fmt.Sprintf(cacheKeyPermission, userID))
+	}
+
+	return s.client.Delete(ctx, keys...)
 }
 
 // ================================

@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
-	"sync"
-
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"sync"
 )
 
 // rbacService RBAC权限服务
@@ -39,9 +38,15 @@ func (s *rbacService) GetAllRoles(ctx context.Context) ([]rbac.Role, error) {
 }
 
 // GetRoleByID 根据ID获取角色
-func (s *rbacService) GetRoleByID(ctx context.Context, id uint) (*rbac.Role, error) {
+func (s *rbacService) GetRoleByID(ctx context.Context, id uint, preloads ...string) (*rbac.Role, error) {
 	var role rbac.Role
-	if err := core.MustNewDbWithContext(ctx).Preload("Resources").First(&role, id).Error; err != nil {
+	db := core.MustNewDbWithContext(ctx)
+
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+
+	if err := db.First(&role, id).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
@@ -52,12 +57,17 @@ func (s *rbacService) CreateRole(ctx context.Context, role *rbac.Role) error {
 	return core.MustNewDbWithContext(ctx).Create(role).Error
 }
 
-// UpdateRole 更新角色
+// UpdateRole 更新角色（不使用事务）
 func (s *rbacService) UpdateRole(ctx context.Context, role *rbac.Role) error {
 	return core.MustNewDbWithContext(ctx).Save(role).Error
 }
 
-// CheckRoleNameExists 检查角色名称是否存在（排除指定ID）
+// UpdateRoleWithTx 更新角色（使用事务）
+func (s *rbacService) UpdateRoleWithTx(tx *gorm.DB, role *rbac.Role) error {
+	return tx.Save(role).Error
+}
+
+// CheckRoleNameExists 检查角色名称是否存在
 func (s *rbacService) CheckRoleNameExists(ctx context.Context, name string, excludeID uint) (bool, error) {
 	var count int64
 	query := core.MustNewDbWithContext(ctx).Model(&rbac.Role{}).Where("name = ?", name)
@@ -70,29 +80,28 @@ func (s *rbacService) CheckRoleNameExists(ctx context.Context, name string, excl
 	return count > 0, nil
 }
 
-// UpdateRoleResources 更新角色的资源绑定（细粒度权限控制）
-func (s *rbacService) UpdateRoleResources(ctx context.Context, roleID uint, resourceIDs []uint) error {
-	db := core.MustNewDbWithContext(ctx)
+// UpdateRoleResourcesWithTx 更新角色的资源绑定（使用事务）
+func (s *rbacService) UpdateRoleResourcesWithTx(tx *gorm.DB, roleID uint, resourceIDs []uint) error {
+	// 1. 删除角色的所有旧资源绑定
+	if err := tx.Exec("DELETE FROM role_resources WHERE role_id = ?", roleID).Error; err != nil {
+		return err
+	}
 
-	// 使用事务确保原子性
-	return db.Transaction(func(tx *gorm.DB) error {
-		// 1. 删除角色的所有旧资源绑定
-		if err := tx.Exec("DELETE FROM role_resources WHERE role_id = ?", roleID).Error; err != nil {
+	// 2. 批量插入新的资源绑定
+	if len(resourceIDs) > 0 {
+		roleResources := make([]rbac.RoleResource, 0, len(resourceIDs))
+		for _, resID := range resourceIDs {
+			roleResources = append(roleResources, rbac.RoleResource{
+				RoleID:     roleID,
+				ResourceID: resID,
+			})
+		}
+		if err := tx.CreateInBatches(&roleResources, 100).Error; err != nil {
 			return err
 		}
+	}
+	return nil
 
-		// 2. 批量插入新的资源绑定
-		if len(resourceIDs) > 0 {
-			for _, resID := range resourceIDs {
-				if err := tx.Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)",
-					roleID, resID).Error; err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
 }
 
 // DeleteRole 删除角色
@@ -243,6 +252,34 @@ func (s *rbacService) GetRoleResources(ctx context.Context, roleID uint) ([]rbac
 		WHERE rr.role_id = ?
 		ORDER BY res.permission_id, res.path, res.method
 	`, roleID).Find(&resources).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
+}
+
+// GetUsersWithRole 获取拥有指定角色的所有用户ID
+func (s *rbacService) GetUsersWithRole(ctx context.Context, roleID uint) ([]uint, error) {
+	var userIDs []uint
+	err := core.MustNewDbWithContext(ctx).
+		Table("user_roles").
+		Select("user_id").
+		Where("role_id = ?", roleID).
+		Find(&userIDs).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return userIDs, nil
+}
+
+// GetResources 获取资源列表
+func (s *rbacService) GetResources(ctx context.Context, ids []uint) ([]rbac.Resource, error) {
+	var resources []rbac.Resource
+	err := core.MustNewDbWithContext(ctx).Raw(`
+		SELECT * FROM resources where id IN ?
+	`, ids).Find(&resources).Error
 
 	if err != nil {
 		return nil, err

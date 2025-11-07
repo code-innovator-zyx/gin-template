@@ -1,13 +1,17 @@
 package rbac
 
 import (
+	"fmt"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	"gin-template/pkg/response"
+	"gin-template/pkg/transaction"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetRoles godoc
@@ -37,19 +41,28 @@ func GetRoles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param role body rbac.Role true "角色信息"
+// @Param role body CreateRoleRequest true "角色信息"
 // @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [post]
 func CreateRole(c *gin.Context) {
-	var role rbac.Role
-	if err := c.ShouldBindJSON(&role); err != nil {
+	var request CreateRoleRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := service.GetRbacService().CreateRole(c.Request.Context(), &role); err != nil {
+	resources, err := service.GetRbacService().GetResources(c.Request.Context(), request.Resources)
+	if err != nil {
+		response.InternalServerError(c, err.Error())
+	}
+	role := rbac.Role{
+		Name:        request.Name,
+		Description: request.Description,
+		Resources:   resources,
+	}
+	if err = service.GetRbacService().CreateRole(c.Request.Context(), &role); err != nil {
 		response.InternalServerError(c, "创建角色失败")
 		return
 	}
@@ -79,9 +92,9 @@ func GetRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := service.GetRbacService().GetRoleByID(c.Request.Context(), uint(id))
+	role, err := service.GetRbacService().GetRoleByID(c.Request.Context(), uint(id), "Resources")
 	if err != nil {
-		response.NotFound(c, "角色不存在")
+		response.InternalServerError(c, err.Error())
 		return
 	}
 	response.Success(c, role)
@@ -96,7 +109,7 @@ func GetRole(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Param id path int true "角色ID"
 // @Param role body UpdateRoleRequest true "角色信息"
-// @Success 200 {object} response.Response{data=rbac.Role} "成功更新角色"
+// @Success 200 {object} response.Response{data=nil} "成功更新角色"
 // @Failure 400 {object} response.Response "无效的角色ID或请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 404 {object} response.Response "角色不存在"
@@ -140,20 +153,45 @@ func UpdateRole(c *gin.Context) {
 	if request.Description != "" {
 		role.Description = request.Description
 	}
-	// 更新角色
-	if err = service.GetRbacService().UpdateRole(ctx, role); err != nil {
-		response.InternalServerError(c, "更新角色失败")
+
+	roleID := uint(id)
+
+	// 使用事务管理器执行：更新基础信息 + 更新资源绑定 + 清除权限缓存
+	err = transaction.WithTransaction(ctx, "UpdateRole",
+		// 执行事务
+		func(tx *gorm.DB) error {
+			// 1. 更新角色基础信息
+			if err = service.GetRbacService().UpdateRoleWithTx(tx, role); err != nil {
+				return fmt.Errorf("更新角色基础信息失败: %w", err)
+			}
+
+			// 2. 更新角色资源绑定（如果有）
+			if len(request.Resources) > 0 {
+				if err = service.GetRbacService().UpdateRoleResourcesWithTx(tx, roleID, request.Resources); err != nil {
+					return fmt.Errorf("更新角色资源绑定失败: %w", err)
+				}
+			}
+			// 3. 移除所有相关用户的权限
+			// 事务提交后 清除所有拥有该角色的用户的权限缓存
+			userIDs, err := service.GetRbacService().GetUsersWithRole(ctx, roleID)
+			if err != nil {
+				logrus.Errorf("获取角色用户列表失败: %v", err)
+				return err
+			}
+			if len(userIDs) > 0 {
+				if err := service.GetCacheService().ClearMultipleUsersPermissions(ctx, userIDs); err != nil {
+					logrus.Errorf("批量清除用户权限缓存失败: %v", err)
+					return err
+				}
+				logrus.Infof("已清除 %d 个用户的权限缓存", len(userIDs))
+			}
+			return nil
+		})
+	if err != nil {
+		response.InternalServerError(c, err.Error())
 		return
 	}
-	// 更新角色资源绑定（细粒度权限控制）
-	if request.Resources != nil && len(request.Resources) > 0 {
-		if err = service.GetRbacService().UpdateRoleResources(ctx, role.ID, request.Resources); err != nil {
-			response.InternalServerError(c, "更新角色资源失败")
-			return
-		}
-	}
-
-	response.Success(c, role)
+	response.Success(c, nil)
 }
 
 // DeleteRole godoc
