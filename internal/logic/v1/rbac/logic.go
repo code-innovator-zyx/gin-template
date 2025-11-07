@@ -95,7 +95,7 @@ func GetRole(c *gin.Context) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Param id path int true "角色ID"
-// @Param role body rbac.Role true "角色信息"
+// @Param role body UpdateRoleRequest true "角色信息"
 // @Success 200 {object} response.Response{data=rbac.Role} "成功更新角色"
 // @Failure 400 {object} response.Response "无效的角色ID或请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
@@ -108,19 +108,51 @@ func UpdateRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := service.GetRbacService().GetRoleByID(c.Request.Context(), uint(id))
+
+	var request UpdateRoleRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	role, err := service.GetRbacService().GetRoleByID(ctx, uint(id))
 	if err != nil {
 		response.NotFound(c, "角色不存在")
 		return
 	}
-	if err := c.ShouldBindJSON(role); err != nil {
-		response.BadRequest(c, err.Error())
-		return
+
+	// 更新角色名称（检查重复）
+	if request.Name != "" && request.Name != role.Name {
+		exists, err := service.GetRbacService().CheckRoleNameExists(ctx, request.Name, role.ID)
+		if err != nil {
+			response.InternalServerError(c, "检查角色名称失败")
+			return
+		}
+		if exists {
+			response.BadRequest(c, "角色名称已存在")
+			return
+		}
+		role.Name = request.Name
 	}
-	if err := service.GetRbacService().UpdateRole(c.Request.Context(), role); err != nil {
+
+	// 更新角色描述
+	if request.Description != "" {
+		role.Description = request.Description
+	}
+	// 更新角色
+	if err = service.GetRbacService().UpdateRole(ctx, role); err != nil {
 		response.InternalServerError(c, "更新角色失败")
 		return
 	}
+	// 更新角色资源绑定（细粒度权限控制）
+	if request.Resources != nil && len(request.Resources) > 0 {
+		if err = service.GetRbacService().UpdateRoleResources(ctx, role.ID, request.Resources); err != nil {
+			response.InternalServerError(c, "更新角色资源失败")
+			return
+		}
+	}
+
 	response.Success(c, role)
 }
 
@@ -308,63 +340,70 @@ func RemoveRoleFromUser(c *gin.Context) {
 	response.NoContent(c)
 }
 
-// AssignPermissionToRole godoc
-// @Summary 分配权限给角色
-// @Description 为指定角色分配权限
-// @Tags RBAC-角色权限管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param rolePermission body rbac.RolePermission true "角色权限信息"
-// @Success 201 {object} response.Response{data=rbac.RolePermission} "成功分配权限"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /role-permissions [post]
-func AssignPermissionToRole(c *gin.Context) {
-	var rolePermission rbac.RolePermission
-	if err := c.ShouldBindJSON(&rolePermission); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	if err := service.GetRbacService().CreateRolePermission(c.Request.Context(), &rolePermission); err != nil {
-		response.InternalServerError(c, "分配权限失败")
-		return
-	}
-
-	response.Created(c, rolePermission)
-}
-
-// RemovePermissionFromRole godoc
-// @Summary 从角色移除权限
-// @Description 从指定角色移除指定权限
-// @Tags RBAC-角色权限管理
+// AssignResourceToRole godoc
+// @Summary 分配资源给角色
+// @Description 为指定角色分配资源（细粒度权限控制）
+// @Tags RBAC-角色资源管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param role_id path int true "角色ID"
-// @Param permission_id path int true "权限ID"
-// @Success 204 {object} response.Response "成功移除权限"
-// @Failure 400 {object} response.Response "无效的角色ID或权限ID"
+// @Param resource_id path int true "资源ID"
+// @Success 201 {object} response.Response "成功分配资源"
+// @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /roles/{role_id}/permissions/{permission_id} [delete]
-func RemovePermissionFromRole(c *gin.Context) {
+// @Router /roles/{role_id}/resources/{resource_id} [post]
+func AssignResourceToRole(c *gin.Context) {
 	roleID, err := strconv.ParseUint(c.Param("role_id"), 10, 32)
 	if err != nil {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
 
-	permissionID, err := strconv.ParseUint(c.Param("permission_id"), 10, 32)
+	resourceID, err := strconv.ParseUint(c.Param("resource_id"), 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的权限ID")
+		response.BadRequest(c, "无效的资源ID")
 		return
 	}
 
-	if err := service.GetRbacService().RemovePermissionFromRole(c.Request.Context(), uint(roleID), uint(permissionID)); err != nil {
-		response.InternalServerError(c, "移除权限失败")
+	if err := service.GetRbacService().AssignResourceToRole(c.Request.Context(), uint(roleID), uint(resourceID)); err != nil {
+		response.InternalServerError(c, "分配资源失败")
+		return
+	}
+
+	response.Created(c, nil)
+}
+
+// RemoveResourceFromRole godoc
+// @Summary 从角色移除资源
+// @Description 从指定角色移除指定资源
+// @Tags RBAC-角色资源管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param role_id path int true "角色ID"
+// @Param resource_id path int true "资源ID"
+// @Success 204 {object} response.Response "成功移除资源"
+// @Failure 400 {object} response.Response "无效的角色ID或资源ID"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /roles/{role_id}/resources/{resource_id} [delete]
+func RemoveResourceFromRole(c *gin.Context) {
+	roleID, err := strconv.ParseUint(c.Param("role_id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的角色ID")
+		return
+	}
+
+	resourceID, err := strconv.ParseUint(c.Param("resource_id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的资源ID")
+		return
+	}
+
+	if err := service.GetRbacService().RemoveResourceFromRole(c.Request.Context(), uint(roleID), uint(resourceID)); err != nil {
+		response.InternalServerError(c, "移除资源失败")
 		return
 	}
 

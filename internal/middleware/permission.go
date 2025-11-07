@@ -17,12 +17,8 @@ func PermissionMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// 获取请求路径和方法
-		path := c.Request.URL.Path
-		method := c.Request.Method
-
 		// 使用缓存服务检查权限
-		hasPermission, err := service.GetRbacService().CheckUserPermission(c.Request.Context(), userID.(uint), path, method)
+		hasPermission, err := service.GetRbacService().CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method)
 		if err != nil {
 			logrus.Error("failed check user permission: ", err)
 			response.InternalServerError(c, "权限检查失败")

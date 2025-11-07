@@ -36,12 +36,11 @@ func Logger() gin.HandlerFunc {
 
 		// 根据状态码选择日志级别
 		if statusCode >= 500 {
-			entry.Error("请求处理失败")
+			entry.Error("请求处理失败", statusCode)
 		} else if statusCode >= 400 {
-			entry.Warn("客户端请求错误")
+			entry.Warn("客户端请求错误", statusCode)
 		} else {
 			entry.Info("请求处理成功")
 		}
 	}
 }
-

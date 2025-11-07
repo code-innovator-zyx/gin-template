@@ -150,17 +150,22 @@ open http://localhost:8080/api/v1/health
 
 ## 💻 Core Features
 
-### 1. Complete RBAC Permission System
+### 1. Complete RBAC Permission System (New Architecture)
 
 ```
-User → Role → Permission → Resource
- ↓      ↓         ↓           ↓
-Alice  Admin  user:manage  GET /api/v1/users
- Bob   Editor  post:edit   POST /api/v1/posts
+User → Role → Resource  [Actual Authorization Path]
+ ↓      ↓         ↓
+Alice  Admin  GET /api/v1/users
+ Bob   Editor  POST /api/v1/posts
+                  ↓
+           Permission [UI Grouping Only]
 ```
 
+**New Architecture Features:**
+- 🎯 **Direct Authorization** - Roles bind resources directly, faster verification
+- 🎨 **UI Friendly** - Permission groups for frontend display
 - 🔐 **Security First** - Default deny, explicit grant
-- ⚡ **High Performance** - Redis cache, 2ms permission check
+- ⚡ **High Performance** - Multiple cache options, 2ms permission check
 - 🎯 **Fine-grained** - Precise to API path + HTTP method
 - 🔄 **Dynamic** - Runtime permission adjustment
 

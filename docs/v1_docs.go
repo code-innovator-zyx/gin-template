@@ -629,7 +629,7 @@ const docTemplatev1 = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/rbac.Role"
+                            "$ref": "#/definitions/rbac.UpdateRoleRequest"
                         }
                     }
                 ],
@@ -1297,9 +1297,6 @@ const docTemplatev1 = `{
         "rbac.RolePermission": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -1308,9 +1305,6 @@ const docTemplatev1 = `{
                 },
                 "role_id": {
                     "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
                 }
             }
         },
@@ -1332,6 +1326,30 @@ const docTemplatev1 = `{
                 "token_type": {
                     "type": "string",
                     "example": "Bearer"
+                }
+            }
+        },
+        "rbac.UpdateRoleRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -1395,22 +1413,10 @@ const docTemplatev1 = `{
         "rbac.UserProfile": {
             "type": "object",
             "properties": {
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/rbac.Permission"
-                    }
-                },
                 "resources": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rbac.Resource"
-                    }
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/rbac.Role"
                     }
                 },
                 "user": {

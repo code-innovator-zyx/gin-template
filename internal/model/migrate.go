@@ -17,9 +17,9 @@ func autoMigrate(db *gorm.DB) error {
 		&rbac.User{},
 		&rbac.Role{},
 		&rbac.Permission{},
-		&rbac.UserRole{},
-		&rbac.RolePermission{},
 		&rbac.Resource{},
+		&rbac.UserRole{},
+		&rbac.RoleResource{},
 	); err != nil {
 		return err
 	}

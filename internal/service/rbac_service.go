@@ -41,7 +41,7 @@ func (s *rbacService) GetAllRoles(ctx context.Context) ([]rbac.Role, error) {
 // GetRoleByID 根据ID获取角色
 func (s *rbacService) GetRoleByID(ctx context.Context, id uint) (*rbac.Role, error) {
 	var role rbac.Role
-	if err := core.MustNewDbWithContext(ctx).First(&role, id).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).Preload("Resources").First(&role, id).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
@@ -57,23 +57,61 @@ func (s *rbacService) UpdateRole(ctx context.Context, role *rbac.Role) error {
 	return core.MustNewDbWithContext(ctx).Save(role).Error
 }
 
+// CheckRoleNameExists 检查角色名称是否存在（排除指定ID）
+func (s *rbacService) CheckRoleNameExists(ctx context.Context, name string, excludeID uint) (bool, error) {
+	var count int64
+	query := core.MustNewDbWithContext(ctx).Model(&rbac.Role{}).Where("name = ?", name)
+	if excludeID > 0 {
+		query = query.Where("id != ?", excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// UpdateRoleResources 更新角色的资源绑定（细粒度权限控制）
+func (s *rbacService) UpdateRoleResources(ctx context.Context, roleID uint, resourceIDs []uint) error {
+	db := core.MustNewDbWithContext(ctx)
+
+	// 使用事务确保原子性
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 1. 删除角色的所有旧资源绑定
+		if err := tx.Exec("DELETE FROM role_resources WHERE role_id = ?", roleID).Error; err != nil {
+			return err
+		}
+
+		// 2. 批量插入新的资源绑定
+		if len(resourceIDs) > 0 {
+			for _, resID := range resourceIDs {
+				if err := tx.Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)",
+					roleID, resID).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 // DeleteRole 删除角色
 func (s *rbacService) DeleteRole(ctx context.Context, id uint) error {
 	return core.MustNewDbWithContext(ctx).Delete(&rbac.Role{}, id).Error
 }
 
-// ==================== 权限管理 ====================
+// ==================== 权限分组管理（仅用于UI展示） ====================
 
-// GetAllPermissions 获取所有权限
+// GetAllPermissions 获取所有权限分组（带资源列表）
 func (s *rbacService) GetAllPermissions(ctx context.Context) ([]rbac.Permission, error) {
 	var permissions []rbac.Permission
-	if err := core.MustNewDbWithContext(ctx).Find(&permissions).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).Preload("Resources").Find(&permissions).Error; err != nil {
 		return nil, err
 	}
 	return permissions, nil
 }
 
-// CreatePermission 创建权限
+// CreatePermission 创建权限分组
 func (s *rbacService) CreatePermission(ctx context.Context, permission *rbac.Permission) error {
 	return core.MustNewDbWithContext(ctx).Create(permission).Error
 }
@@ -90,18 +128,20 @@ func (s *rbacService) GetAllResources(ctx context.Context) ([]rbac.Resource, err
 }
 
 // CheckUserPermission 检查用户是否有权限访问指定路径和方法
+// 新架构：Permission 仅作为逻辑分组，实际授权通过 role_resources
 func (s *rbacService) CheckUserPermission(ctx context.Context, userID uint, path string, method string) (bool, error) {
 	// cache check First
 	exist, err := GetCacheService().CheckUserPermission(ctx, userID, path, method, s.GetUserResources)
 	if err == nil {
 		return exist, nil
 	}
+
+	// 直接检查 role_resources（不再查询 role_permissions）
 	var count int64
 	err = core.MustNewDbWithContext(ctx).Raw(`
 		SELECT COUNT(*) FROM resources res
-		JOIN permissions p ON res.permission_id = p.id
-		JOIN role_permissions rp ON p.id = rp.permission_id
-		JOIN user_roles ur ON rp.role_id = ur.role_id
+		JOIN role_resources rr ON res.id = rr.resource_id
+		JOIN user_roles ur ON rr.role_id = ur.role_id
 		WHERE ur.user_id = ? AND res.path = ? AND res.method = ?
 	`, userID, path, method).Scan(&count).Error
 
@@ -123,14 +163,17 @@ func (s *rbacService) GetUserRoles(ctx context.Context, userID uint) ([]rbac.Rol
 	return roles, nil
 }
 
-// GetUserPermissions 获取用户的所有权限（通过角色关联）
-func (s *rbacService) GetUserPermissions(ctx context.Context, userID uint) ([]rbac.Permission, error) {
+// GetUserPermissionGroups 获取用户的权限分组（基于用户拥有的资源）
+// 返回用户有资源的 Permission 分组（用于前端展示）
+func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) ([]rbac.Permission, error) {
 	var permissions []rbac.Permission
 	err := core.MustNewDbWithContext(ctx).Raw(`
 		SELECT DISTINCT p.* FROM permissions p
-		JOIN role_permissions rp ON p.id = rp.permission_id
-		JOIN user_roles ur ON rp.role_id = ur.role_id
+		JOIN resources res ON p.id = res.permission_id
+		JOIN role_resources rr ON res.id = rr.resource_id
+		JOIN user_roles ur ON rr.role_id = ur.role_id
 		WHERE ur.user_id = ?
+		ORDER BY p.code
 	`, userID).Find(&permissions).Error
 
 	if err != nil {
@@ -139,14 +182,13 @@ func (s *rbacService) GetUserPermissions(ctx context.Context, userID uint) ([]rb
 	return permissions, nil
 }
 
-// GetUserResources 获取用户可访问的资源列表（通过角色和权限关联）
+// GetUserResources 获取用户可访问的资源列表（直接通过 role_resources）
 func (s *rbacService) GetUserResources(ctx context.Context, userID uint) ([]rbac.Resource, error) {
 	var resources []rbac.Resource
 	err := core.MustNewDbWithContext(ctx).Raw(`
 		SELECT DISTINCT res.* FROM resources res
-		JOIN permissions p ON res.permission_id = p.id
-		JOIN role_permissions rp ON p.id = rp.permission_id
-		JOIN user_roles ur ON rp.role_id = ur.role_id
+		JOIN role_resources rr ON res.id = rr.resource_id
+		JOIN user_roles ur ON rr.role_id = ur.role_id
 		WHERE ur.user_id = ?
 		ORDER BY res.path, res.method
 	`, userID).Find(&resources).Error
@@ -182,29 +224,30 @@ func (s *rbacService) RemoveRoleFromUser(ctx context.Context, userID uint, roleI
 	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM user_roles WHERE user_id = ? AND role_id = ?", userID, roleID).Error
 }
 
-// CreateRolePermission 创建角色权限关联
-func (s *rbacService) CreateRolePermission(ctx context.Context, rolePermission *rbac.RolePermission) error {
-	return core.MustNewDbWithContext(ctx).Create(rolePermission).Error
+// AssignResourceToRole 为角色分配资源
+func (s *rbacService) AssignResourceToRole(ctx context.Context, roleID uint, resourceID uint) error {
+	return core.MustNewDbWithContext(ctx).Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)", roleID, resourceID).Error
 }
 
-// AssignPermissionToRole 为角色分配权限（通过ID）
-func (s *rbacService) AssignPermissionToRole(ctx context.Context, roleID uint, permissionID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", roleID, permissionID).Error
+// RemoveResourceFromRole 从角色移除资源
+func (s *rbacService) RemoveResourceFromRole(ctx context.Context, roleID uint, resourceID uint) error {
+	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM role_resources WHERE role_id = ? AND resource_id = ?", roleID, resourceID).Error
 }
 
-// RemovePermissionFromRole 从角色移除权限
-func (s *rbacService) RemovePermissionFromRole(ctx context.Context, roleID uint, permissionID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?", roleID, permissionID).Error
-}
+// GetRoleResources 获取角色的所有资源
+func (s *rbacService) GetRoleResources(ctx context.Context, roleID uint) ([]rbac.Resource, error) {
+	var resources []rbac.Resource
+	err := core.MustNewDbWithContext(ctx).Raw(`
+		SELECT res.* FROM resources res
+		JOIN role_resources rr ON res.id = rr.resource_id
+		WHERE rr.role_id = ?
+		ORDER BY res.permission_id, res.path, res.method
+	`, roleID).Find(&resources).Error
 
-// AssignMenuToRole 为角色分配菜单
-func (s *rbacService) AssignMenuToRole(ctx context.Context, roleID uint, menuID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("INSERT INTO role_menus (role_id, menu_id) VALUES (?, ?)", roleID, menuID).Error
-}
-
-// RemoveMenuFromRole 从角色移除菜单
-func (s *rbacService) RemoveMenuFromRole(ctx context.Context, roleID uint, menuID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM role_menus WHERE role_id = ? AND menu_id = ?", roleID, menuID).Error
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
 }
 
 // ==================== RBAC 系统初始化 ====================
@@ -231,12 +274,12 @@ type RBACInitConfig struct {
 // 参数 ctx: 上下文，用于控制请求生命周期
 // 参数 routes: 从路由收集器获取的受保护路由列表
 // 参数 config: RBAC初始化配置（如果为nil则使用默认配置）
-// 执行顺序：
-// 1. 从路由声明中提取权限组并自动创建
+// 新架构执行顺序：
+// 1. 从路由声明中提取并创建权限分组（Permission - 仅用于UI展示）
 // 2. 同步路由资源到数据库
-// 3. 自动绑定资源到权限组
+// 3. 自动绑定资源到权限分组（仅用于展示分组）
 // 4. 创建超级管理员角色
-// 5. 绑定所有权限组到超级管理员
+// 5. 绑定所有资源到超级管理员角色（role_resources - 实际授权）
 // 6. 创建默认管理员用户并分配角色
 func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRoute, config *RBACInitConfig) error {
 	// 如果配置为空或禁用自动初始化，则跳过
@@ -248,9 +291,9 @@ func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRout
 
 	logrus.Info("开始初始化 RBAC 权限系统...")
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// 1. 从路由声明中提取并创建权限组
+		// 1. 从路由声明中提取并创建权限分组（用于UI展示）
 		if err := s.extractAndCreatePermissions(tx, routes); err != nil {
-			return fmt.Errorf("创建权限组失败: %w", err)
+			return fmt.Errorf("创建权限分组失败: %w", err)
 		}
 
 		// 2. 同步路由资源
@@ -258,9 +301,9 @@ func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRout
 			return fmt.Errorf("同步路由资源失败: %w", err)
 		}
 
-		// 3. 自动绑定资源到权限组
+		// 3. 自动绑定资源到权限分组（仅用于UI展示分组）
 		if err := s.autoBindResourcesToPermissions(tx, routes); err != nil {
-			return fmt.Errorf("绑定资源到权限组失败: %w", err)
+			return fmt.Errorf("绑定资源到权限分组失败: %w", err)
 		}
 
 		// 4. 创建超级管理员角色
@@ -269,9 +312,9 @@ func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRout
 			return fmt.Errorf("初始化超级管理员角色失败: %w", err)
 		}
 
-		// 5. 绑定所有权限组到超级管理员角色
-		if err := s.bindAllPermissionsToRole(tx, config); err != nil {
-			return fmt.Errorf("绑定权限到角色失败: %w", err)
+		// 5. 绑定所有资源到超级管理员角色（实际授权）
+		if err := s.bindAllResourcesToRole(tx, adminRole.ID); err != nil {
+			return fmt.Errorf("绑定资源到角色失败: %w", err)
 		}
 
 		// 6. 创建默认管理员用户
@@ -292,11 +335,11 @@ func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRout
 	return nil
 }
 
-// extractAndCreatePermissions 从路由声明中提取权限组并创建
+// extractAndCreatePermissions 从路由声明中提取权限分组并创建（仅用于UI展示）
 func (s *rbacService) extractAndCreatePermissions(tx *gorm.DB, routes []ProtectedRoute) error {
-	logrus.Info("  - 从路由声明中提取并创建权限组...")
+	logrus.Info("  - 从路由声明中提取并创建权限分组（用于UI展示）...")
 
-	// 使用 map 去重，收集所有唯一的权限组
+	// 使用 map 去重，收集所有唯一的权限分组
 	permissionMap := make(map[string]string) // code -> name
 	for _, route := range routes {
 		if route.PermissionCode != "" && route.PermissionName != "" {
@@ -304,10 +347,10 @@ func (s *rbacService) extractAndCreatePermissions(tx *gorm.DB, routes []Protecte
 		}
 	}
 	if len(permissionMap) == 0 {
-		logrus.Warn("    ! 未发现任何权限组声明")
+		logrus.Warn("    ! 未发现任何权限分组声明")
 		return nil
 	}
-	// 创建权限组
+	// 创建权限分组
 	createdCount := 0
 	for code, name := range permissionMap {
 		var count int64
@@ -319,20 +362,20 @@ func (s *rbacService) extractAndCreatePermissions(tx *gorm.DB, routes []Protecte
 				Name: name,
 			}
 			if err := tx.Create(permission).Error; err != nil {
-				return fmt.Errorf("创建权限组 %s 失败: %w", code, err)
+				return fmt.Errorf("创建权限分组 %s 失败: %w", code, err)
 			}
-			logrus.Infof("    ✓ 创建权限组: %s (%s)", name, code)
+			logrus.Infof("    ✓ 创建权限分组: %s (%s)", name, code)
 			createdCount++
 		} else {
-			logrus.Debugf("    - 权限组已存在: %s (%s)", name, code)
+			logrus.Debugf("    - 权限分组已存在: %s (%s)", name, code)
 		}
 	}
 
-	logrus.Infof("    ✓ 从路由声明中发现 %d 个权限组，新建 %d 个", len(permissionMap), createdCount)
+	logrus.Infof("    ✓ 从路由声明中发现 %d 个权限分组，新建 %d 个", len(permissionMap), createdCount)
 	return nil
 }
 
-// syncRouteResources 同步路由资源到数据库
+// syncRouteResources 同步路由资源到数据库（保留 permission_id 用于UI分组）
 func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) error {
 	logrus.Info("  - 同步路由资源到数据库...")
 
@@ -349,11 +392,7 @@ func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) e
 
 		if result.Error == gorm.ErrRecordNotFound {
 			// 创建新资源
-			newResource := rbac.Resource{
-				Path:        route.Resource.Path,
-				Method:      route.Resource.Method,
-				Description: route.Description,
-			}
+			newResource := route.Resource
 			if err := tx.Create(&newResource).Error; err != nil {
 				return fmt.Errorf("创建资源失败 %s %s: %w", route.Resource.Method, route.Resource.Path, err)
 			}
@@ -361,8 +400,12 @@ func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) e
 			return result.Error
 		} else {
 			// 更新描述（如果有变化）
-			if resource.Description != route.Description && route.Description != "" {
-				tx.Model(&resource).Update("description", route.Description)
+			updates := make(map[string]interface{})
+			if route.Resource.Description != "" && resource.Description != route.Resource.Description {
+				updates["description"] = route.Resource.Description
+			}
+			if len(updates) > 0 {
+				tx.Model(&resource).Updates(updates)
 			}
 		}
 	}
@@ -371,27 +414,27 @@ func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) e
 	return nil
 }
 
-// autoBindResourcesToPermissions 自动绑定资源到权限组
+// autoBindResourcesToPermissions 自动绑定资源到权限分组（仅用于UI展示分组，不影响实际授权）
 func (s *rbacService) autoBindResourcesToPermissions(tx *gorm.DB, routes []ProtectedRoute) error {
-	logrus.Info("  - 自动绑定资源到权限组...")
+	logrus.Info("  - 自动绑定资源到权限分组（仅用于UI展示）...")
 
 	boundCount := 0
 
 	for _, route := range routes {
-		// 如果路由声明了权限组
+		// 如果路由声明了权限分组
 		if route.PermissionCode != "" {
-			// 查找对应的权限组
+			// 查找对应的权限分组
 			var permission rbac.Permission
 			if err := tx.Where("code = ?", route.PermissionCode).First(&permission).Error; err != nil {
 				if err == gorm.ErrRecordNotFound {
-					logrus.Warnf("    ! 路由 %s %s 指定的权限组 %s 不存在，跳过绑定",
+					logrus.Warnf("    ! 路由 %s %s 指定的权限分组 %s 不存在，跳过绑定",
 						route.Resource.Method, route.Resource.Path, route.PermissionCode)
 					continue
 				}
 				return err
 			}
 
-			// 更新资源的权限组绑定
+			// 更新资源的权限分组绑定（仅用于UI展示）
 			result := tx.Model(&rbac.Resource{}).
 				Where("path = ? AND method = ?", route.Resource.Path, route.Resource.Method).
 				Updates(map[string]interface{}{
@@ -399,18 +442,18 @@ func (s *rbacService) autoBindResourcesToPermissions(tx *gorm.DB, routes []Prote
 				})
 
 			if result.Error != nil {
-				return fmt.Errorf("绑定资源到权限组失败: %w", result.Error)
+				return fmt.Errorf("绑定资源到权限分组失败: %w", result.Error)
 			}
 
 			if result.RowsAffected > 0 {
 				boundCount++
-				logrus.Debugf("    ✓ 绑定资源 %s %s 到权限组 %s",
+				logrus.Debugf("    ✓ 绑定资源 %s %s 到权限分组 %s（用于UI展示）",
 					route.Resource.Method, route.Resource.Path, route.PermissionCode)
 			}
 		}
 	}
 
-	logrus.Infof("    ✓ 成功绑定 %d 个资源到权限组", boundCount)
+	logrus.Infof("    ✓ 成功绑定 %d 个资源到权限分组", boundCount)
 	return nil
 }
 
@@ -440,46 +483,40 @@ func (s *rbacService) initializeAdminRole(tx *gorm.DB, config *RBACInitConfig) (
 	return &role, nil
 }
 
-// bindAllPermissionsToRole 绑定所有权限组到超级管理员角色
-func (s *rbacService) bindAllPermissionsToRole(tx *gorm.DB, config *RBACInitConfig) error {
-	logrus.Info("  - 绑定所有权限组到超级管理员角色...")
+// bindAllResourcesToRole 绑定所有资源到超级管理员角色（实际授权）
+func (s *rbacService) bindAllResourcesToRole(tx *gorm.DB, roleID uint) error {
+	logrus.Info("  - 绑定所有资源到超级管理员角色...")
 
-	// 获取超级管理员角色
-	var adminRole rbac.Role
-	if err := tx.Where("name = ?", config.AdminRoleName).First(&adminRole).Error; err != nil {
-		return fmt.Errorf("未找到超级管理员角色: %w", err)
-	}
-
-	// 获取所有权限组
-	var permissions []rbac.Permission
-	if err := tx.Find(&permissions).Error; err != nil {
+	// 获取所有资源
+	var resources []rbac.Resource
+	if err := tx.Find(&resources).Error; err != nil {
 		return err
 	}
 
-	if len(permissions) == 0 {
-		logrus.Warn("    ! 未发现任何权限组")
+	if len(resources) == 0 {
+		logrus.Warn("    ! 未发现任何资源")
 		return nil
 	}
 
 	boundCount := 0
-	for _, perm := range permissions {
+	for _, res := range resources {
 		// 检查是否已经绑定
 		var count int64
-		tx.Table("role_permissions").
-			Where("role_id = ? AND permission_id = ?", adminRole.ID, perm.ID).
+		tx.Table("role_resources").
+			Where("role_id = ? AND resource_id = ?", roleID, res.ID).
 			Count(&count)
 
 		if count == 0 {
 			// 创建绑定关系
-			if err := tx.Exec("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-				adminRole.ID, perm.ID).Error; err != nil {
-				return fmt.Errorf("绑定权限 %s 到角色失败: %w", perm.Code, err)
+			if err := tx.Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)",
+				roleID, res.ID).Error; err != nil {
+				return fmt.Errorf("绑定资源 %s %s 到角色失败: %w", res.Method, res.Path, err)
 			}
 			boundCount++
-			logrus.Debugf("    ✓ 绑定权限组: %s (%s)", perm.Name, perm.Code)
+			logrus.Debugf("    ✓ 绑定资源: %s %s", res.Method, res.Path)
 		}
 	}
-	logrus.Infof("    ✓ 成功绑定 %d 个权限组到超级管理员", boundCount)
+	logrus.Infof("    ✓ 成功绑定 %d 个资源到超级管理员", boundCount)
 	return nil
 }
 

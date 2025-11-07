@@ -183,19 +183,33 @@ exportGroup.Use(middleware.JWT())
 
 ### 核心表说明
 
-- **`permissions`** - 权限组表，存储权限组的基本信息
-- **`resources`** - 资源表，存储所有受保护的路由资源
+- **`permissions`** - 权限组表，仅用于前端UI展示分组，不参与实际授权
+- **`resources`** - 资源表，存储所有受保护的路由资源（实际的权限控制对象）
 - **`roles`** - 角色表，存储系统角色
-- **`role_permissions`** - 角色-权限关联表（多对多）
+- **`role_resources`** - 角色-资源关联表（多对多，实际授权）
 - **`user_roles`** - 用户-角色关联表（多对多）
+
+### 新架构设计理念
+
+```
+User → Role → Resource (实际授权路径)
+              ↓
+         Permission (仅UI分组)
+```
+
+**关键变化：**
+- ✅ **实际授权**：Role 直接绑定 Resource（通过 `role_resources` 表）
+- 🎨 **UI展示**：Permission 作为逻辑分组（通过 Resource 的 `permission_id` 字段）
+- 🎯 **细粒度控制**：精确到每个 API 资源（path + method）
 
 ### 资源与权限组的关系
 
 ```
-Permission (1) ←→ (N) Resource
-    ↓
-    通过 permission_id 字段关联
-    is_managed = true 表示资源已被权限组管理
+Role (N) ←─ role_resources ─→ (N) Resource  [实际授权]
+                                     ↓
+                                permission_id (可选)
+                                     ↓
+                                Permission [仅UI分组]
 ```
 
 ## 工作原理
@@ -238,15 +252,15 @@ func Init() *gin.Engine {
 ### 3. 初始化流程
 
 ```
-1. 创建默认权限组
+1. 创建默认权限组（仅用于UI分组）
    ↓
 2. 同步路由资源到数据库
    ↓
-3. 根据 PermissionCode 自动绑定资源到权限组
+3. 根据 PermissionCode 设置资源的 permission_id（UI分组关联）
    ↓
 4. 创建超级管理员角色
    ↓
-5. 绑定所有权限组到超级管理员角色
+5. 绑定所有资源到超级管理员角色（通过 role_resources 实现实际授权）
    ↓
 6. 创建默认管理员用户并分配角色
 ```
@@ -264,15 +278,20 @@ func Init() *gin.Engine {
 5. 允许或拒绝访问
 ```
 
-SQL 查询逻辑：
+SQL 查询逻辑（新架构）：
 
 ```sql
--- 检查用户是否有权限访问指定资源
+-- 检查用户是否有权限访问指定资源（直接通过角色-资源关联）
 SELECT COUNT(*) FROM resources r
-JOIN role_permissions rp ON r.permission_id = rp.permission_id
-JOIN user_roles ur ON rp.role_id = ur.role_id
+JOIN role_resources rr ON r.id = rr.resource_id
+JOIN user_roles ur ON rr.role_id = ur.role_id
 WHERE ur.user_id = ? AND r.path = ? AND r.method = ?
 ```
+
+**关键改进：**
+- ✅ 直接查询 `role_resources` 表，不再经过 `permissions` 表
+- ⚡ 查询路径更短，性能更优
+- 🎯 权限控制更精确，直接到资源级别
 
 ## 常见问题
 
@@ -304,14 +323,14 @@ publicGroup := api.Group("/public")
 }
 ```
 
-### Q: 新添加的权限组会自动绑定给超级管理员吗？
+### Q: 新添加的资源会自动绑定给超级管理员吗？
 
 **A:** 是的！系统启动时会：
 1. 扫描所有路由声明
-2. 提取所有权限组
-3. **自动绑定给超级管理员角色**
+2. 同步所有资源到数据库
+3. **自动将所有资源绑定给超级管理员角色**（通过 `role_resources` 表）
 
-这样超级管理员始终拥有所有权限。
+这样超级管理员始终拥有所有资源的访问权限。
 
 ### Q: 如何修改默认管理员密码？
 
@@ -341,21 +360,25 @@ const (
 
 ### Q: 如何给普通用户分配权限？
 
-**A:** 通过 API 为用户分配角色：
+**A:** 通过 API 为用户分配角色和资源：
 
 ```bash
 # 1. 创建角色
 POST /api/v1/roles
 {"name": "普通用户", "description": "普通用户角色"}
 
-# 2. 为角色分配权限
-POST /api/v1/roles/:role_id/permissions
-{"permission_id": 1}
+# 2. 为角色分配资源（实际授权）
+POST /api/v1/roles/:role_id/resources
+{"resource_ids": [1, 2, 3]}
 
 # 3. 为用户分配角色
 POST /api/v1/user/:user_id/roles
 {"role_id": 1}
 ```
+
+**注意：** 
+- Permission（权限组）仅用于UI展示，不需要单独分配
+- 实际授权是通过给角色分配具体的 Resource（资源）实现的
 
 ## 最佳实践
 

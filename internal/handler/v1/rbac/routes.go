@@ -54,9 +54,9 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		roleGroup.PUTDesc("/:id", "更新角色", rbac.UpdateRole)
 		roleGroup.DELETEDesc("/:id", "删除角色", rbac.DeleteRole)
 
-		// 角色-权限绑定
-		roleGroup.POSTDesc("/:id/permissions", "分配权限给角色", rbac.AssignPermissionToRole)
-		roleGroup.DELETEDesc("/:id/permissions/:permission_id", "移除角色权限", rbac.RemovePermissionFromRole)
+		// 角色-资源绑定（实际授权）
+		roleGroup.POSTDesc("/:id/resources/:resource_id", "分配资源给角色", rbac.AssignResourceToRole)
+		roleGroup.DELETEDesc("/:id/resources/:resource_id", "移除角色资源", rbac.RemoveResourceFromRole)
 	}
 
 	// 权限模块 - 声明权限组

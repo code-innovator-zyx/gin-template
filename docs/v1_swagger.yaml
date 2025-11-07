@@ -89,16 +89,12 @@ definitions:
     type: object
   rbac.RolePermission:
     properties:
-      created_at:
-        type: string
       id:
         type: integer
       permission_id:
         type: integer
       role_id:
         type: integer
-      updated_at:
-        type: string
     type: object
   rbac.TokenResponse:
     properties:
@@ -114,6 +110,22 @@ definitions:
       token_type:
         example: Bearer
         type: string
+    type: object
+  rbac.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        type: string
+      resources:
+        items:
+          type: integer
+        type: array
+    required:
+    - id
     type: object
   rbac.User:
     description: 用户信息模型
@@ -158,17 +170,9 @@ definitions:
     type: object
   rbac.UserProfile:
     properties:
-      permissions:
-        items:
-          $ref: '#/definitions/rbac.Permission'
-        type: array
       resources:
         items:
           $ref: '#/definitions/rbac.Resource'
-        type: array
-      roles:
-        items:
-          $ref: '#/definitions/rbac.Role'
         type: array
       user:
         $ref: '#/definitions/rbac.User'
@@ -692,7 +696,7 @@ paths:
         name: role
         required: true
         schema:
-          $ref: '#/definitions/rbac.Role'
+          $ref: '#/definitions/rbac.UpdateRoleRequest'
       produces:
       - application/json
       responses:
