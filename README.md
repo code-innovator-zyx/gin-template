@@ -421,7 +421,6 @@ make all
 ### 灵感来源
 
 - [gin-gonic/gin](https://github.com/gin-gonic/gin) - 优秀的Web框架
-- [gin-admin](https://github.com/LyricTian/gin-admin) - RBAC权限设计参考
 - [go-clean-arch](https://github.com/bxcodec/go-clean-arch) - 架构设计灵感
 
 
@@ -446,7 +445,7 @@ make all
 <details>
 <summary><b>点击展开详细设计</b></summary>
 
-### 核心模型（新架构）
+### 核心模型
 
 ```
 ┌─────────┐     ┌─────────┐     ┌──────────┐
