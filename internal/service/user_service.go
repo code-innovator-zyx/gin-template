@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
@@ -28,10 +29,10 @@ func GetUserService() *userService {
 }
 
 // Create 创建用户
-func (s *userService) Create(user *rbac.User) error {
+func (s *userService) Create(ctx context.Context, user *rbac.User) error {
 	// 检查用户名是否已存在
 	var count int64
-	if err := core.MustNewDb().Model(&rbac.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).Model(&rbac.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
@@ -40,7 +41,7 @@ func (s *userService) Create(user *rbac.User) error {
 
 	// 检查邮箱是否已存在
 	if user.Email != "" {
-		if err := core.MustNewDb().Model(&rbac.User{}).Where("email = ?", user.Email).Count(&count).Error; err != nil {
+		if err := core.MustNewDbWithContext(ctx).Model(&rbac.User{}).Where("email = ?", user.Email).Count(&count).Error; err != nil {
 			return err
 		}
 		if count > 0 {
@@ -49,13 +50,13 @@ func (s *userService) Create(user *rbac.User) error {
 	}
 
 	// 创建用户
-	return core.MustNewDb().Create(user).Error
+	return core.MustNewDbWithContext(ctx).Create(user).Error
 }
 
 // GetByID 根据ID获取用户
-func (s *userService) GetByID(id uint) (*rbac.User, error) {
+func (s *userService) GetByID(ctx context.Context, id uint) (*rbac.User, error) {
 	var user rbac.User
-	if err := core.MustNewDb().First(&user, id).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
 		}
@@ -65,9 +66,9 @@ func (s *userService) GetByID(id uint) (*rbac.User, error) {
 }
 
 // GetByUsername 根据用户名获取用户
-func (s *userService) GetByUsername(username string) (*rbac.User, error) {
+func (s *userService) GetByUsername(ctx context.Context, username string) (*rbac.User, error) {
 	var user rbac.User
-	if err := core.MustNewDb().Where("username = ?", username).First(&user).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
 		}
@@ -77,33 +78,30 @@ func (s *userService) GetByUsername(username string) (*rbac.User, error) {
 }
 
 // Login 用户登录（返回完整的 TokenPair）
-func (s *userService) Login(username, password string) (*utils.TokenPair, error) {
-	user, err := s.GetByUsername(username)
+func (s *userService) Login(ctx context.Context, username, password string) (*utils.TokenPair, error) {
+	user, err := s.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
-
 	// 验证密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return nil, errors.New("密码错误")
 	}
-
-	// 生成JWT令牌对（Access Token + Refresh Token）
+	// 生成JWT令牌对
 	jwtManager := utils.GetJWTManager()
 	tokenPair, err := jwtManager.GenerateTokenPair(user.ID, user.Username, user.Email)
 	if err != nil {
 		return nil, err
 	}
-
 	return tokenPair, nil
 }
 
 // Update 更新用户信息
-func (s *userService) Update(user *rbac.User) error {
-	return core.MustNewDb().Save(user).Error
+func (s *userService) Update(ctx context.Context, user *rbac.User) error {
+	return core.MustNewDbWithContext(ctx).Save(user).Error
 }
 
 // Delete 删除用户
-func (s *userService) Delete(id uint) error {
-	return core.MustNewDb().Delete(&rbac.User{}, id).Error
+func (s *userService) Delete(ctx context.Context, id uint) error {
+	return core.MustNewDbWithContext(ctx).Delete(&rbac.User{}, id).Error
 }

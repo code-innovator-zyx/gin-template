@@ -217,6 +217,73 @@ const docTemplatev1 = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建新的系统权限",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-权限管理"
+                ],
+                "summary": "创建权限",
+                "parameters": [
+                    {
+                        "description": "权限信息",
+                        "name": "permission",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.Permission"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功创建权限",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/rbac.Permission"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
             }
         },
         "/resources": {
@@ -867,7 +934,7 @@ const docTemplatev1 = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取当前登录用户的个人资料",
+                "description": "获取当前登录用户的完整资料（包括角色、权限和可访问资源）",
                 "consumes": [
                     "application/json"
                 ],
@@ -880,7 +947,7 @@ const docTemplatev1 = `{
                 "summary": "获取用户个人资料",
                 "responses": {
                     "200": {
-                        "description": "成功返回用户信息",
+                        "description": "成功返回用户完整资料",
                         "schema": {
                             "allOf": [
                                 {
@@ -890,7 +957,7 @@ const docTemplatev1 = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/rbac.User"
+                                            "$ref": "#/definitions/rbac.UserProfile"
                                         }
                                     }
                                 }
@@ -1177,10 +1244,6 @@ const docTemplatev1 = `{
                     "type": "integer",
                     "example": 1
                 },
-                "is_managed": {
-                    "type": "boolean",
-                    "example": false
-                },
                 "method": {
                     "type": "string",
                     "example": "GET"
@@ -1329,6 +1392,32 @@ const docTemplatev1 = `{
                 }
             }
         },
+        "rbac.UserProfile": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Permission"
+                    }
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Resource"
+                    }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Role"
+                    }
+                },
+                "user": {
+                    "$ref": "#/definitions/rbac.User"
+                }
+            }
+        },
         "rbac.UserRegisterRequest": {
             "type": "object",
             "required": [
@@ -1354,17 +1443,11 @@ const docTemplatev1 = `{
         "rbac.UserRole": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
                 "role_id": {
                     "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
                 },
                 "user_id": {
                     "type": "integer"

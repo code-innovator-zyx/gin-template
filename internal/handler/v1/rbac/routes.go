@@ -11,18 +11,17 @@ import (
 // RegisterRBACRoutes 注册RBAC相关路由
 // 使用 SetPermission 声明路由组所属的权限组，系统会自动完成资源绑定
 func RegisterRBACRoutes(api *gin.RouterGroup) {
-	// 认证模块（不需要登录）
+	// 认证模块
 	authGroup := api.Group("/auth")
 	{
 		authGroup.POST("/refresh", rbac.RefreshToken) // 刷新令牌
 	}
 
-	// 认证模块（需要登录）- 声明权限组
-	authAuthGroup := routegroup.WithAuthRouterGroup(api.Group("/auth")).
-		SetPermission("auth:manage", "认证管理")
+	// 认证模块（需要登录但是不用控制权限啊）
+	authAuthGroup := api.Group("/auth")
 	authAuthGroup.Use(middleware.JWT())
 	{
-		authAuthGroup.POSTDesc("/logout", "用户登出", rbac.Logout)
+		authAuthGroup.POST("/logout", rbac.Logout)
 	}
 
 	// 用户模块
@@ -35,7 +34,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		// 需要认证和权限 - 声明权限组
 		authUserGroup := routegroup.WithAuthRouterGroup(userGroup.Group("/")).
 			SetPermission("user:manage", "用户管理")
-		authUserGroup.Use(middleware.JWT())
+		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 		{
 			authUserGroup.GETDesc("/profile", "获取用户信息", rbac.GetProfile)
 			authUserGroup.GETDesc("/:id/roles", "获取用户角色", rbac.GetUserRoles)
@@ -47,7 +46,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	// 角色模块 - 声明权限组
 	roleGroup := routegroup.WithAuthRouterGroup(api.Group("/roles")).
 		SetPermission("role:manage", "角色管理")
-	roleGroup.Use(middleware.JWT())
+	roleGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 	{
 		roleGroup.GETDesc("", "获取角色列表", rbac.GetRoles)
 		roleGroup.POSTDesc("", "创建角色", rbac.CreateRole)
@@ -63,7 +62,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	// 权限模块 - 声明权限组
 	permissionGroup := routegroup.WithAuthRouterGroup(api.Group("/permissions")).
 		SetPermission("permission:manage", "权限管理")
-	permissionGroup.Use(middleware.JWT())
+	permissionGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 	{
 		permissionGroup.GETDesc("", "获取权限列表", rbac.GetPermissions)
 		permissionGroup.POSTDesc("", "创建权限", rbac.CreatePermission)
@@ -72,7 +71,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	// 资源模块 - 声明权限组
 	resourceGroup := routegroup.WithAuthRouterGroup(api.Group("/resources")).
 		SetPermission("resource:view", "资源查看")
-	resourceGroup.Use(middleware.JWT())
+	resourceGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 	{
 		resourceGroup.GETDesc("", "获取资源列表", rbac.GetResources)
 	}

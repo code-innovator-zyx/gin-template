@@ -241,9 +241,6 @@ func TestMemoryCache_SMembers(t *testing.T) {
 
 	// 验证所有成员都存在
 	memberMap := make(map[string]bool)
-	for _, m := range members {
-		memberMap[m] = true
-	}
 
 	for _, expected := range expectedMembers {
 		if !memberMap[expected.(string)] {

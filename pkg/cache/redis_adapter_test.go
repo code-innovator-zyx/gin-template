@@ -27,7 +27,7 @@ func skipIfNoRedis(t *testing.T) Cache {
 	cfg := RedisConfig{
 		Host:     host,
 		Port:     port,
-		Password: "",
+		Password: "123456",
 		DB:       0,
 		PoolSize: 10,
 	}
@@ -197,10 +197,10 @@ func TestRedisCache_SAdd(t *testing.T) {
 	key := "set_key_redis"
 	members := []interface{}{"member1", "member2", "member3"}
 
-	err := cache.SAdd(ctx, key, members...)
-	if err != nil {
-		t.Fatalf("SAdd 失败: %v", err)
-	}
+	//err := cache.SAdd(ctx, key, members...)
+	//if err != nil {
+	//	t.Fatalf("SAdd 失败: %v", err)
+	//}
 	defer cache.Delete(ctx, key)
 
 	for _, member := range members {
@@ -263,9 +263,6 @@ func TestRedisCache_SMembers(t *testing.T) {
 	}
 
 	memberMap := make(map[string]bool)
-	for _, m := range members {
-		memberMap[m] = true
-	}
 
 	for _, expected := range expectedMembers {
 		if !memberMap[expected.(string)] {

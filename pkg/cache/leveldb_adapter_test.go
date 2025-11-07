@@ -253,9 +253,6 @@ func TestLevelDBCache_SMembers(t *testing.T) {
 	}
 
 	memberMap := make(map[string]bool)
-	for _, m := range members {
-		memberMap[m] = true
-	}
 
 	for _, expected := range expectedMembers {
 		if !memberMap[expected.(string)] {

@@ -4,9 +4,10 @@ import (
 	"gin-template/internal/service"
 	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-// PermissionMiddleware 权限验证中间件（带缓存优化）
+// PermissionMiddleware 权限验证中间件
 func PermissionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取当前用户ID
@@ -16,14 +17,14 @@ func PermissionMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
 		// 获取请求路径和方法
 		path := c.Request.URL.Path
 		method := c.Request.Method
 
 		// 使用缓存服务检查权限
-		hasPermission, err := service.GetCacheService().CheckUserPermission(c.Request.Context(), userID.(uint), path, method)
+		hasPermission, err := service.GetRbacService().CheckUserPermission(c.Request.Context(), userID.(uint), path, method)
 		if err != nil {
+			logrus.Error("failed check user permission: ", err)
 			response.InternalServerError(c, "权限检查失败")
 			c.Abort()
 			return

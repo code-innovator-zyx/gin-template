@@ -5,13 +5,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 /*
@@ -104,16 +102,30 @@ func (l *levelDBCache) Set(ctx context.Context, key string, value interface{}, t
 	return l.db.Put([]byte(key), data, nil)
 }
 
-// Delete 删除缓存
+// Delete 删除缓存（优化：减少锁操作）
 func (l *levelDBCache) Delete(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
 	batch := new(leveldb.Batch)
 	for _, key := range keys {
 		batch.Delete([]byte(key))
-		l.ttlMu.Lock()
-		delete(l.ttlMap, key)
-		l.ttlMu.Unlock()
 	}
-	return l.db.Write(batch, nil)
+
+	err := l.db.Write(batch, nil)
+	if err != nil {
+		return err
+	}
+
+	// 批量删除ttlMap（减少锁操作次数）
+	l.ttlMu.Lock()
+	for _, key := range keys {
+		delete(l.ttlMap, key)
+	}
+	l.ttlMu.Unlock()
+
+	return nil
 }
 
 // Exists 检查key是否存在
@@ -141,85 +153,133 @@ func (l *levelDBCache) Exists(ctx context.Context, key string) (bool, error) {
 	return true, nil
 }
 
-// SAdd 添加集合成员（LevelDB模拟实现）
+// setType 集合类型标识
+type setType struct {
+	Members map[string]bool `json:"members"`
+}
+
+// SAdd 添加集合成员（优化：整个集合存为一个 key）
 func (l *levelDBCache) SAdd(ctx context.Context, key string, members ...interface{}) error {
-	// 使用前缀存储集合成员
-	for _, member := range members {
-		memberKey := fmt.Sprintf("%s:member:%v", key, member)
-		if err := l.Set(ctx, memberKey, true, 0); err != nil {
-			return err
-		}
+	// 获取现有集合
+	var set setType
+	err := l.Get(ctx, key, &set)
+	if err != nil && err != ErrKeyNotFound {
+		return err
 	}
-	return nil
+
+	// 初始化集合
+	if set.Members == nil {
+		set.Members = make(map[string]bool)
+	}
+
+	// 添加成员
+	for _, member := range members {
+		memberStr := fmt.Sprintf("%v", member)
+		set.Members[memberStr] = true
+	}
+
+	// 保存集合（不设置TTL，由外部通过 Expire 管理）
+	return l.Set(ctx, key, set, 0)
 }
 
 // SIsMember 检查是否是集合成员
 func (l *levelDBCache) SIsMember(ctx context.Context, key string, member interface{}) (bool, error) {
-	memberKey := fmt.Sprintf("%s:member:%v", key, member)
-	return l.Exists(ctx, memberKey)
+	var set setType
+	err := l.Get(ctx, key, &set)
+	if err != nil {
+		if err == ErrKeyNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	memberStr := fmt.Sprintf("%v", member)
+	return set.Members[memberStr], nil
 }
 
 // SMembers 获取集合所有成员
 func (l *levelDBCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
-	prefix := []byte(fmt.Sprintf("%s:member:", key))
-	iter := l.db.NewIterator(util.BytesPrefix(prefix), nil)
-	defer iter.Release()
-
-	members := make([]interface{}, 0)
-	for iter.Next() {
-		keyStr := string(iter.Key())
-		// 提取member部分
-		parts := strings.Split(keyStr, ":member:")
-		if len(parts) == 2 {
-			members = append(members, parts[1])
+	var set setType
+	err := l.Get(ctx, key, &set)
+	if err != nil {
+		if err == ErrKeyNotFound {
+			return []interface{}{}, nil
 		}
+		return nil, err
 	}
 
-	return members, iter.Error()
+	members := make([]interface{}, 0, len(set.Members))
+	for member := range set.Members {
+		members = append(members, member)
+	}
+
+	return members, nil
 }
 
 // SRem 从集合中删除成员
 func (l *levelDBCache) SRem(ctx context.Context, key string, members ...interface{}) error {
-	batch := new(leveldb.Batch)
-	for _, member := range members {
-		memberKey := fmt.Sprintf("%s:member:%v", key, member)
-		batch.Delete([]byte(memberKey))
-		l.ttlMu.Lock()
-		delete(l.ttlMap, memberKey)
-		l.ttlMu.Unlock()
+	var set setType
+	err := l.Get(ctx, key, &set)
+	if err != nil {
+		if err == ErrKeyNotFound {
+			return nil // 集合不存在，不需要删除
+		}
+		return err
 	}
-	return l.db.Write(batch, nil)
+
+	// 删除成员
+	for _, member := range members {
+		memberStr := fmt.Sprintf("%v", member)
+		delete(set.Members, memberStr)
+	}
+
+	// 如果集合为空，删除整个 key
+	if len(set.Members) == 0 {
+		return l.Delete(ctx, key)
+	}
+
+	// 保存更新后的集合
+	return l.Set(ctx, key, set, 0)
 }
 
-// Incr 递增计数器
+// counterMu 计数器锁（确保原子性）
+var counterMu sync.Mutex
+
+// Incr 递增计数器（加锁保证原子性）
 func (l *levelDBCache) Incr(ctx context.Context, key string) (int64, error) {
+	counterMu.Lock()
+	defer counterMu.Unlock()
+
 	var count int64
 	err := l.Get(ctx, key, &count)
 	if err != nil && err != ErrKeyNotFound {
 		return 0, err
 	}
-	
+
 	count++
 	if err := l.Set(ctx, key, count, 0); err != nil {
 		return 0, err
 	}
-	
+
 	return count, nil
 }
 
-// Decr 递减计数器
+// Decr 递减计数器（加锁保证原子性）
 func (l *levelDBCache) Decr(ctx context.Context, key string) (int64, error) {
+	counterMu.Lock()
+	defer counterMu.Unlock()
+
 	var count int64
 	err := l.Get(ctx, key, &count)
 	if err != nil && err != ErrKeyNotFound {
 		return 0, err
 	}
-	
+
 	count--
 	if err := l.Set(ctx, key, count, 0); err != nil {
 		return 0, err
 	}
-	
+
 	return count, nil
 }
 
@@ -274,12 +334,12 @@ func (l *levelDBCache) TTL(ctx context.Context, key string) (time.Duration, erro
 	return remaining, nil
 }
 
-// Pipeline 创建管道（LevelDB使用batch模拟）
+// Pipeline 创建管道
 func (l *levelDBCache) Pipeline() Pipeline {
 	return &levelDBPipeline{
-		db:      l.db,
 		cache:   l,
-		results: make(map[string]interface{}),
+		cmds:    make([]pipelineCmd, 0),
+		results: make([]interface{}, 0),
 	}
 }
 
@@ -304,23 +364,53 @@ func (l *levelDBCache) Type() string {
 	return "leveldb"
 }
 
-// cleanupExpired 清理过期key
+// cleanupExpired 清理过期key（优化：批量删除 + 限制单次处理数量）
 func (l *levelDBCache) cleanupExpired() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
+	const maxCleanupPerBatch = 1000 // 每批最多清理1000个key
+
 	for {
 		select {
 		case <-ticker.C:
-			l.ttlMu.Lock()
+			l.ttlMu.RLock()
 			now := time.Now()
+			expiredKeys := make([]string, 0, maxCleanupPerBatch)
+
+			// 收集过期的key（限制数量避免锁持有时间过长）
 			for key, expireTime := range l.ttlMap {
 				if now.After(expireTime) {
-					l.db.Delete([]byte(key), nil)
-					delete(l.ttlMap, key)
+					expiredKeys = append(expiredKeys, key)
+					if len(expiredKeys) >= maxCleanupPerBatch {
+						break
+					}
 				}
 			}
-			l.ttlMu.Unlock()
+			l.ttlMu.RUnlock()
+
+			// 批量删除过期key
+			if len(expiredKeys) > 0 {
+				batch := new(leveldb.Batch)
+				for _, key := range expiredKeys {
+					batch.Delete([]byte(key))
+				}
+
+				if err := l.db.Write(batch, nil); err != nil {
+					logrus.Errorf("LevelDB清理过期key失败: %v", err)
+					continue
+				}
+
+				// 从ttlMap中删除
+				l.ttlMu.Lock()
+				for _, key := range expiredKeys {
+					delete(l.ttlMap, key)
+				}
+				l.ttlMu.Unlock()
+
+				logrus.Debugf("LevelDB清理了%d个过期key", len(expiredKeys))
+			}
+
 		case <-l.stopChan:
 			return
 		}
@@ -331,11 +421,17 @@ func (l *levelDBCache) cleanupExpired() {
 // Pipeline 实现
 // ================================
 
+type pipelineCmd struct {
+	cmdType string // "exists", "ismember", "expire"
+	key     string
+	member  interface{}
+	ttl     time.Duration
+}
+
 type levelDBPipeline struct {
-	db      *leveldb.DB
 	cache   *levelDBCache
-	batch   leveldb.Batch
-	results map[string]interface{}
+	cmds    []pipelineCmd
+	results []interface{}
 	mu      sync.Mutex
 }
 
@@ -343,36 +439,72 @@ func (p *levelDBPipeline) Exists(ctx context.Context, key string) ExistsCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	exists, _ := p.cache.Exists(ctx, key)
-	var result int64
-	if exists {
-		result = 1
-	}
-	p.results[key+"_exists"] = result
-	return &levelDBExistsCmd{result: result}
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, pipelineCmd{
+		cmdType: "exists",
+		key:     key,
+	})
+	p.results = append(p.results, nil)
+
+	return &levelDBExistsCmd{pipeline: p, index: idx}
 }
 
 func (p *levelDBPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	isMember, _ := p.cache.SIsMember(ctx, key, member)
-	p.results[key+"_ismember"] = isMember
-	return &levelDBBoolCmd{result: isMember}
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, pipelineCmd{
+		cmdType: "ismember",
+		key:     key,
+		member:  member,
+	})
+	p.results = append(p.results, nil)
+
+	return &levelDBBoolCmd{pipeline: p, index: idx}
 }
 
 func (p *levelDBPipeline) Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	err := p.cache.Expire(ctx, key, ttl)
-	result := err == nil
-	p.results[key+"_expire"] = result
-	return &levelDBBoolCmd{result: result}
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, pipelineCmd{
+		cmdType: "expire",
+		key:     key,
+		ttl:     ttl,
+	})
+	p.results = append(p.results, nil)
+
+	return &levelDBBoolCmd{pipeline: p, index: idx}
 }
 
 func (p *levelDBPipeline) Exec(ctx context.Context) error {
-	return p.db.Write(&p.batch, nil)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// 执行所有命令
+	for i, cmd := range p.cmds {
+		switch cmd.cmdType {
+		case "exists":
+			exists, _ := p.cache.Exists(ctx, cmd.key)
+			var result int64
+			if exists {
+				result = 1
+			}
+			p.results[i] = result
+
+		case "ismember":
+			isMember, _ := p.cache.SIsMember(ctx, cmd.key, cmd.member)
+			p.results[i] = isMember
+
+		case "expire":
+			err := p.cache.Expire(ctx, cmd.key, cmd.ttl)
+			p.results[i] = (err == nil)
+		}
+	}
+
+	return nil
 }
 
 // ================================
@@ -380,17 +512,41 @@ func (p *levelDBPipeline) Exec(ctx context.Context) error {
 // ================================
 
 type levelDBExistsCmd struct {
-	result int64
+	pipeline *levelDBPipeline
+	index    int
+	result   int64
 }
 
 func (c *levelDBExistsCmd) Result() (int64, error) {
+	if c.pipeline != nil {
+		c.pipeline.mu.Lock()
+		defer c.pipeline.mu.Unlock()
+
+		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
+			if val, ok := c.pipeline.results[c.index].(int64); ok {
+				return val, nil
+			}
+		}
+	}
 	return c.result, nil
 }
 
 type levelDBBoolCmd struct {
-	result bool
+	pipeline *levelDBPipeline
+	index    int
+	result   bool
 }
 
 func (c *levelDBBoolCmd) Result() (bool, error) {
+	if c.pipeline != nil {
+		c.pipeline.mu.Lock()
+		defer c.pipeline.mu.Unlock()
+
+		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
+			if val, ok := c.pipeline.results[c.index].(bool); ok {
+				return val, nil
+			}
+		}
+	}
 	return c.result, nil
 }

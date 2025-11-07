@@ -203,13 +203,13 @@ func (m *memoryCache) Incr(ctx context.Context, key string) (int64, error) {
 	}
 
 	count++
-	
+
 	// 序列化新值
 	data, err := json.Marshal(count)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if exists {
 		item.value = data
 	} else {
@@ -238,13 +238,13 @@ func (m *memoryCache) Decr(ctx context.Context, key string) (int64, error) {
 	}
 
 	count--
-	
+
 	// 序列化新值
 	data, err := json.Marshal(count)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if exists {
 		item.value = data
 	} else {
@@ -295,7 +295,11 @@ func (m *memoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 
 // Pipeline 创建管道
 func (m *memoryCache) Pipeline() Pipeline {
-	return &memoryPipeline{cache: m}
+	return &memoryPipeline{
+		cache:   m,
+		cmds:    make([]memoryPipelineCmd, 0),
+		results: make([]interface{}, 0),
+	}
 }
 
 // Ping 测试连接
@@ -314,22 +318,42 @@ func (m *memoryCache) Type() string {
 	return "memory"
 }
 
-// cleanupExpired 清理过期key
+// cleanupExpired 清理过期key（优化：读写锁分离）
 func (m *memoryCache) cleanupExpired() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
+	const maxCleanupPerBatch = 1000
+
 	for {
 		select {
 		case <-ticker.C:
-			m.mu.Lock()
+			// 使用读锁收集过期的key
+			m.mu.RLock()
 			now := time.Now()
+			expiredKeys := make([]string, 0, maxCleanupPerBatch)
+
 			for key, item := range m.data {
 				if !item.expireAt.IsZero() && now.After(item.expireAt) {
-					delete(m.data, key)
+					expiredKeys = append(expiredKeys, key)
+					if len(expiredKeys) >= maxCleanupPerBatch {
+						break
+					}
 				}
 			}
-			m.mu.Unlock()
+			m.mu.RUnlock()
+
+			// 使用写锁批量删除
+			if len(expiredKeys) > 0 {
+				m.mu.Lock()
+				for _, key := range expiredKeys {
+					delete(m.data, key)
+				}
+				m.mu.Unlock()
+
+				logrus.Debugf("内存缓存清理了%d个过期key", len(expiredKeys))
+			}
+
 		case <-m.stopChan:
 			return
 		}
@@ -340,51 +364,127 @@ func (m *memoryCache) cleanupExpired() {
 // Pipeline 实现
 // ================================
 
+type memoryPipelineCmd struct {
+	cmdType string
+	key     string
+	member  interface{}
+	ttl     time.Duration
+}
+
 type memoryPipeline struct {
 	cache   *memoryCache
-	results struct {
-		exists   int64
-		isMember bool
-		expire   bool
-	}
+	cmds    []memoryPipelineCmd
+	results []interface{}
+	mu      sync.Mutex
 }
 
 func (p *memoryPipeline) Exists(ctx context.Context, key string) ExistsCmd {
-	exists, _ := p.cache.Exists(ctx, key)
-	if exists {
-		p.results.exists = 1
-	}
-	return &memoryExistsCmd{result: p.results.exists}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, memoryPipelineCmd{
+		cmdType: "exists",
+		key:     key,
+	})
+	p.results = append(p.results, nil)
+
+	return &memoryExistsCmd{pipeline: p, index: idx}
 }
 
 func (p *memoryPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
-	isMember, _ := p.cache.SIsMember(ctx, key, member)
-	p.results.isMember = isMember
-	return &memoryBoolCmd{result: isMember}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, memoryPipelineCmd{
+		cmdType: "ismember",
+		key:     key,
+		member:  member,
+	})
+	p.results = append(p.results, nil)
+
+	return &memoryBoolCmd{pipeline: p, index: idx}
 }
 
 func (p *memoryPipeline) Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd {
-	err := p.cache.Expire(ctx, key, ttl)
-	p.results.expire = err == nil
-	return &memoryBoolCmd{result: p.results.expire}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	idx := len(p.cmds)
+	p.cmds = append(p.cmds, memoryPipelineCmd{
+		cmdType: "expire",
+		key:     key,
+		ttl:     ttl,
+	})
+	p.results = append(p.results, nil)
+
+	return &memoryBoolCmd{pipeline: p, index: idx}
 }
 
 func (p *memoryPipeline) Exec(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for i, cmd := range p.cmds {
+		switch cmd.cmdType {
+		case "exists":
+			exists, _ := p.cache.Exists(ctx, cmd.key)
+			var result int64
+			if exists {
+				result = 1
+			}
+			p.results[i] = result
+
+		case "ismember":
+			isMember, _ := p.cache.SIsMember(ctx, cmd.key, cmd.member)
+			p.results[i] = isMember
+
+		case "expire":
+			err := p.cache.Expire(ctx, cmd.key, cmd.ttl)
+			p.results[i] = err == nil
+		}
+	}
+
 	return nil
 }
 
 type memoryExistsCmd struct {
-	result int64
+	pipeline *memoryPipeline
+	index    int
+	result   int64
 }
 
 func (c *memoryExistsCmd) Result() (int64, error) {
+	if c.pipeline != nil {
+		c.pipeline.mu.Lock()
+		defer c.pipeline.mu.Unlock()
+
+		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
+			if val, ok := c.pipeline.results[c.index].(int64); ok {
+				return val, nil
+			}
+		}
+	}
 	return c.result, nil
 }
 
 type memoryBoolCmd struct {
-	result bool
+	pipeline *memoryPipeline
+	index    int
+	result   bool
 }
 
 func (c *memoryBoolCmd) Result() (bool, error) {
+	if c.pipeline != nil {
+		c.pipeline.mu.Lock()
+		defer c.pipeline.mu.Unlock()
+
+		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
+			if val, ok := c.pipeline.results[c.index].(bool); ok {
+				return val, nil
+			}
+		}
+	}
 	return c.result, nil
 }

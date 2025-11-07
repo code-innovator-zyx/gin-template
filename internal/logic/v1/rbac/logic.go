@@ -22,7 +22,7 @@ import (
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [get]
 func GetRoles(c *gin.Context) {
-	roles, err := service.GetRbacService().GetAllRoles()
+	roles, err := service.GetRbacService().GetAllRoles(c.Request.Context())
 	if err != nil {
 		response.InternalServerError(c, "获取角色列表失败")
 		return
@@ -49,7 +49,7 @@ func CreateRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := service.GetRbacService().CreateRole(&role); err != nil {
+	if err := service.GetRbacService().CreateRole(c.Request.Context(), &role); err != nil {
 		response.InternalServerError(c, "创建角色失败")
 		return
 	}
@@ -79,7 +79,7 @@ func GetRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := service.GetRbacService().GetRoleByID(uint(id))
+	role, err := service.GetRbacService().GetRoleByID(c.Request.Context(), uint(id))
 	if err != nil {
 		response.NotFound(c, "角色不存在")
 		return
@@ -108,7 +108,7 @@ func UpdateRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := service.GetRbacService().GetRoleByID(uint(id))
+	role, err := service.GetRbacService().GetRoleByID(c.Request.Context(), uint(id))
 	if err != nil {
 		response.NotFound(c, "角色不存在")
 		return
@@ -117,7 +117,7 @@ func UpdateRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := service.GetRbacService().UpdateRole(role); err != nil {
+	if err := service.GetRbacService().UpdateRole(c.Request.Context(), role); err != nil {
 		response.InternalServerError(c, "更新角色失败")
 		return
 	}
@@ -143,7 +143,7 @@ func DeleteRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	if err := service.GetRbacService().DeleteRole(uint(id)); err != nil {
+	if err := service.GetRbacService().DeleteRole(c.Request.Context(), uint(id)); err != nil {
 		response.InternalServerError(c, "删除角色失败")
 		return
 	}
@@ -162,7 +162,7 @@ func DeleteRole(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [get]
 func GetPermissions(c *gin.Context) {
-	permissions, err := service.GetRbacService().GetAllPermissions()
+	permissions, err := service.GetRbacService().GetAllPermissions(c.Request.Context())
 	if err != nil {
 		response.InternalServerError(c, "获取权限列表失败")
 		return
@@ -189,7 +189,7 @@ func CreatePermission(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := service.GetRbacService().CreatePermission(&permission); err != nil {
+	if err := service.GetRbacService().CreatePermission(c.Request.Context(), &permission); err != nil {
 		response.InternalServerError(c, "创建权限失败")
 		return
 	}
@@ -208,7 +208,7 @@ func CreatePermission(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /resources [get]
 func GetResources(c *gin.Context) {
-	resources, err := service.GetRbacService().GetAllResources()
+	resources, err := service.GetRbacService().GetAllResources(c.Request.Context())
 	if err != nil {
 		response.InternalServerError(c, "获取资源列表失败")
 		return
@@ -236,7 +236,7 @@ func GetUserRoles(c *gin.Context) {
 		return
 	}
 
-	userRoles, err := service.GetRbacService().GetUserRoleRelations(uint(userID))
+	userRoles, err := service.GetRbacService().GetUserRoleRelations(c.Request.Context(), uint(userID))
 	if err != nil {
 		response.InternalServerError(c, "获取用户角色失败")
 		return
@@ -265,7 +265,7 @@ func AssignRoleToUser(c *gin.Context) {
 		return
 	}
 
-	if err := service.GetRbacService().CreateUserRole(&userRole); err != nil {
+	if err := service.GetRbacService().CreateUserRole(c.Request.Context(), &userRole); err != nil {
 		response.InternalServerError(c, "分配角色失败")
 		return
 	}
@@ -300,7 +300,7 @@ func RemoveRoleFromUser(c *gin.Context) {
 		return
 	}
 
-	if err := service.GetRbacService().RemoveRoleFromUser(uint(userID), uint(roleID)); err != nil {
+	if err := service.GetRbacService().RemoveRoleFromUser(c.Request.Context(), uint(userID), uint(roleID)); err != nil {
 		response.InternalServerError(c, "移除角色失败")
 		return
 	}
@@ -328,7 +328,7 @@ func AssignPermissionToRole(c *gin.Context) {
 		return
 	}
 
-	if err := service.GetRbacService().CreateRolePermission(&rolePermission); err != nil {
+	if err := service.GetRbacService().CreateRolePermission(c.Request.Context(), &rolePermission); err != nil {
 		response.InternalServerError(c, "分配权限失败")
 		return
 	}
@@ -363,7 +363,7 @@ func RemovePermissionFromRole(c *gin.Context) {
 		return
 	}
 
-	if err := service.GetRbacService().RemovePermissionFromRole(uint(roleID), uint(permissionID)); err != nil {
+	if err := service.GetRbacService().RemovePermissionFromRole(c.Request.Context(), uint(roleID), uint(permissionID)); err != nil {
 		response.InternalServerError(c, "移除权限失败")
 		return
 	}

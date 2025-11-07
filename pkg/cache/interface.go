@@ -15,6 +15,7 @@ import (
 
 // ErrKeyNotFound 缓存键不存在错误（包括已过期的键）
 var ErrKeyNotFound = errors.New("cache: key not found")
+var ErrUnreachable = errors.New("cache: cache unreachable")
 
 // Cache 缓存接口 - 支持多种实现（Redis、LevelDB、Memory等）
 type Cache interface {
@@ -29,7 +30,7 @@ type Cache interface {
 	SRem(ctx context.Context, key string, members ...interface{}) error
 	SIsMember(ctx context.Context, key string, member interface{}) (bool, error)
 	SMembers(ctx context.Context, key string) ([]interface{}, error)
-	
+
 	// 计数器操作
 	Incr(ctx context.Context, key string) (int64, error)
 	Decr(ctx context.Context, key string) (int64, error)

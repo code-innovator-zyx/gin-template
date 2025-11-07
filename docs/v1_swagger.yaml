@@ -51,9 +51,6 @@ definitions:
       id:
         example: 1
         type: integer
-      is_managed:
-        example: false
-        type: boolean
       method:
         example: GET
         type: string
@@ -159,6 +156,23 @@ definitions:
     - password
     - username
     type: object
+  rbac.UserProfile:
+    properties:
+      permissions:
+        items:
+          $ref: '#/definitions/rbac.Permission'
+        type: array
+      resources:
+        items:
+          $ref: '#/definitions/rbac.Resource'
+        type: array
+      roles:
+        items:
+          $ref: '#/definitions/rbac.Role'
+        type: array
+      user:
+        $ref: '#/definitions/rbac.User'
+    type: object
   rbac.UserRegisterRequest:
     properties:
       email:
@@ -177,14 +191,10 @@ definitions:
     type: object
   rbac.UserRole:
     properties:
-      created_at:
-        type: string
       id:
         type: integer
       role_id:
         type: integer
-      updated_at:
-        type: string
       user_id:
         type: integer
     type: object
@@ -406,6 +416,46 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 获取权限列表
+      tags:
+      - RBAC-权限管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的系统权限
+      parameters:
+      - description: 权限信息
+        in: body
+        name: permission
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.Permission'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功创建权限
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Permission'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建权限
       tags:
       - RBAC-权限管理
   /resources:
@@ -800,18 +850,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前登录用户的个人资料
+      description: 获取当前登录用户的完整资料（包括角色、权限和可访问资源）
       produces:
       - application/json
       responses:
         "200":
-          description: 成功返回用户信息
+          description: 成功返回用户完整资料
           schema:
             allOf:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/rbac.User'
+                  $ref: '#/definitions/rbac.UserProfile'
               type: object
         "401":
           description: 未授权

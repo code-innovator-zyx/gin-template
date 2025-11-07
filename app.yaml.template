@@ -58,3 +58,18 @@ logger:
 #   leveldb:
 #     path: ./data/leveldb
 #   # Memory缓存无需额外配置（默认选项）
+
+# RBAC权限系统配置（可选）
+# 用于配置系统初始化时的默认管理员账号和角色
+# rbac:
+#   # 是否启用自动初始化（true: 启用, false: 禁用）
+#   enable_auto_init: true
+#   # 默认管理员用户配置
+#   admin_user:
+#     username: admin           # 管理员用户名
+#     password: admin123        # 管理员密码（建议生产环境使用强密码）
+#     email: admin@template.com # 管理员邮箱
+#   # 默认管理员角色配置
+#   admin_role:
+#     name: 超级管理员           # 角色名称
+#     description: 系统超级管理员，拥有所有权限  # 角色描述

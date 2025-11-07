@@ -120,36 +120,14 @@ type JWTManager struct {
 // NewJWTManager 创建 JWT 管理器
 func NewJWTManager() *JWTManager {
 	jwtConfig := core.MustGetConfig().Jwt
-
-	// 默认配置
-	secret := "kZ3r7XG8YpS+vO9fN7JxBtUo1e8L2jH4pFqS5mRw9tDcVyZxGqK0sT3bLnM6wA9d"
-	accessTokenExpire := 3600    // 1小时
-	refreshTokenExpire := 604800 // 7天
-	issuer := "gin-template"
-	maxRefreshCount := 10
-	enableBlacklist := true
-	blacklistGracePeriod := 300 // 5分钟
-
-	if jwtConfig != nil {
-		secret = jwtConfig.Secret
-		accessTokenExpire = jwtConfig.AccessTokenExpire
-		refreshTokenExpire = jwtConfig.RefreshTokenExpire
-		issuer = jwtConfig.Issuer
-		maxRefreshCount = jwtConfig.MaxRefreshCount
-		enableBlacklist = jwtConfig.EnableBlacklist
-		blacklistGracePeriod = jwtConfig.BlacklistGracePeriod
-	} else {
-		logrus.Warn("JWT 配置未找到，使用默认配置")
-	}
-
 	return &JWTManager{
-		secret:               []byte(secret),
-		accessTokenExpire:    time.Duration(accessTokenExpire) * time.Second,
-		refreshTokenExpire:   time.Duration(refreshTokenExpire) * time.Second,
-		issuer:               issuer,
-		maxRefreshCount:      maxRefreshCount,
-		enableBlacklist:      enableBlacklist,
-		blacklistGracePeriod: time.Duration(blacklistGracePeriod) * time.Second,
+		secret:               []byte(jwtConfig.Secret),
+		accessTokenExpire:    jwtConfig.AccessTokenExpire,
+		refreshTokenExpire:   jwtConfig.RefreshTokenExpire,
+		issuer:               jwtConfig.Issuer,
+		maxRefreshCount:      jwtConfig.MaxRefreshCount,
+		enableBlacklist:      jwtConfig.EnableBlacklist,
+		blacklistGracePeriod: jwtConfig.BlacklistGracePeriod,
 	}
 }
 
@@ -349,7 +327,7 @@ func (m *JWTManager) RefreshToken(ctx context.Context, refreshTokenString string
 		return nil, fmt.Errorf("生成新访问令牌失败: %w", err)
 	}
 
-	// 生成新的 Refresh Token（增加刷新计数）
+	// 生成新的 Refresh Token
 	newRefreshToken, err := m.generateNewRefreshToken(claims)
 	if err != nil {
 		return nil, fmt.Errorf("生成新刷新令牌失败: %w", err)

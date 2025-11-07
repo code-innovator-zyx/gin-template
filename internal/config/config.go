@@ -14,9 +14,10 @@ type AppConfig struct {
 	App    App           `mapstructure:"app" validate:"required"`
 	Server Server        `mapstructure:"server" validate:"required"`
 	Logger logger.Config `mapstructure:"logger" validate:"required"`
+	Jwt    *Jwt          `mapstructure:"jwt" validate:"required"`
+	RBAC   *RBACConfig   `mapstructure:"rbac" validate:"required"`
 	// 选填的配置
 	Database *orm.Config        `mapstructure:"database" validate:"omitempty"`
-	Jwt      *Jwt               `mapstructure:"jwt" validate:"omitempty"`
 	Cache    *cache.CacheConfig `mapstructure:"cache" validate:"omitempty"`
 }
 
@@ -43,13 +44,36 @@ type Server struct {
 
 // jwt 配置
 type Jwt struct {
-	Secret              string `mapstructure:"secret" validate:"required"`
-	AccessTokenExpire   int    `mapstructure:"access_token_expire" validate:"required,min=60"`   // Access Token 过期时间（秒），至少 60 秒
-	RefreshTokenExpire  int    `mapstructure:"refresh_token_expire" validate:"required,min=600"` // Refresh Token 过期时间（秒），至少 600 秒
-	Issuer              string `mapstructure:"issuer" validate:"required"`                       // 签发者
-	MaxRefreshCount     int    `mapstructure:"max_refresh_count" validate:"omitempty"`           // 单个 Refresh Token 最大刷新次数（0为不限制）
-	EnableBlacklist     bool   `mapstructure:"enable_blacklist" validate:"omitempty"`            // 是否启用黑名单
-	BlacklistGracePeriod int   `mapstructure:"blacklist_grace_period" validate:"omitempty"`      // 黑名单宽限期（秒）
+	Secret               string        `mapstructure:"secret" validate:"required"`
+	AccessTokenExpire    time.Duration `mapstructure:"access_token_expire" validate:"required,min=60s"`   // Access Token 过期时间（秒），至少 60 秒
+	RefreshTokenExpire   time.Duration `mapstructure:"refresh_token_expire" validate:"required,min=600s"` // Refresh Token 过期时间（秒），至少 600 秒
+	Issuer               string        `mapstructure:"issuer" validate:"required"`                        // 签发者
+	MaxRefreshCount      int           `mapstructure:"max_refresh_count" validate:"omitempty"`            // 单个 Refresh Token 最大刷新次数（0为不限制）
+	EnableBlacklist      bool          `mapstructure:"enable_blacklist" validate:"omitempty"`             // 是否启用黑名单
+	BlacklistGracePeriod time.Duration `mapstructure:"blacklist_grace_period" validate:"omitempty"`       // 黑名单宽限期（秒）
+}
+
+// RBACConfig RBAC权限系统配置
+type RBACConfig struct {
+	// 是否启用自动初始化
+	EnableAutoInit bool `mapstructure:"enable_auto_init" validate:"omitempty"`
+	// 默认管理员配置
+	AdminUser AdminUserConfig `mapstructure:"admin_user" validate:"omitempty"`
+	// 默认角色配置
+	AdminRole AdminRoleConfig `mapstructure:"admin_role" validate:"omitempty"`
+}
+
+// AdminUserConfig 默认管理员用户配置
+type AdminUserConfig struct {
+	Username string `mapstructure:"username" validate:"required"`
+	Password string `mapstructure:"password" validate:"required"`
+	Email    string `mapstructure:"email" validate:"required,email"`
+}
+
+// AdminRoleConfig 默认管理员角色配置
+type AdminRoleConfig struct {
+	Name        string `mapstructure:"name" validate:"required"`
+	Description string `mapstructure:"description" validate:"omitempty"`
 }
 
 // Init 初始化配置

@@ -34,7 +34,7 @@ func Register(c *gin.Context) {
 		Email:    req.Email,
 	}
 
-	if err := service.GetUserService().Create(user); err != nil {
+	if err := service.GetUserService().Create(c.Request.Context(), user); err != nil {
 		response.Fail(c, 400, err.Error())
 		return
 	}
@@ -61,7 +61,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := service.GetUserService().Login(req.Username, req.Password)
+	tokenPair, err := service.GetUserService().Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
@@ -103,10 +103,6 @@ func RefreshToken(c *gin.Context) {
 	if err != nil {
 		if err == utils.ErrRefreshTokenExpired || err == utils.ErrTokenExpired {
 			response.Unauthorized(c, "刷新令牌已过期，请重新登录")
-			return
-		}
-		if err == utils.ErrRefreshLimitReached {
-			response.Unauthorized(c, "刷新次数已达上限，请重新登录")
 			return
 		}
 		if err == utils.ErrTokenBlacklisted {
@@ -172,22 +168,38 @@ func Logout(c *gin.Context) {
 
 // GetProfile godoc
 // @Summary 获取用户个人资料
-// @Description 获取当前登录用户的个人资料
+// @Description 获取当前登录用户的完整资料（包括角色、权限和可访问资源）
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Success 200 {object} response.Response{data=rbac.User} "成功返回用户信息"
+// @Success 200 {object} response.Response{data=UserProfile} "成功返回用户完整资料"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user/profile [get]
 func GetProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
-	user, err := service.GetUserService().GetByID(userID)
+	ctx := c.Request.Context()
+
+	// 获取用户基础信息
+	user, err := service.GetUserService().GetByID(ctx, userID)
 	if err != nil {
-		response.Fail(c, 500, err.Error())
+		response.Fail(c, 500, "获取用户信息失败: "+err.Error())
 		return
 	}
 
-	response.Success(c, user)
+	// 获取用户可访问的资源列表
+	resources, err := service.GetRbacService().GetUserResources(ctx, userID)
+	if err != nil {
+		response.Fail(c, 500, "获取用户资源失败: "+err.Error())
+		return
+	}
+
+	// 组装用户完整资料
+	profile := UserProfile{
+		User:      user,
+		Resources: resources,
+	}
+
+	response.Success(c, profile)
 }
