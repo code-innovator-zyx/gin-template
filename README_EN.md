@@ -1,4 +1,4 @@
-<div align="center">
+span
 
 # 🚀 Gin Enterprise Template
 
@@ -22,45 +22,6 @@ English | [简体中文](./README.md)
 <table>
 <tr>
 <td width="50%">
-
-### 🏗️ Enterprise Architecture
-- ✅ **Clean Layered Architecture** - Handler/Logic/Service/Model
-- ✅ **Complete RBAC** - User-Role-Permission-Resource
-- ✅ **Redis Cache Optimization** - 96% permission check speedup
-- ✅ **Transaction Support** - Complete transaction handling
-
-</td>
-<td width="50%">
-
-### ⚡ Development Efficiency
-- ✅ **One-Click Rename** - Quick project setup
-- ✅ **Swagger Docs** - Auto-generated API documentation
-- ✅ **Hot Reload** - Air hot reload support
-- ✅ **Docker Support** - One-click environment setup
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🛡️ Production Ready
-- ✅ **Health Check** - DB/Redis status monitoring
-- ✅ **Graceful Shutdown** - Zero-downtime deployment
-- ✅ **Request Tracing** - Complete request tracking
-- ✅ **Panic Recovery** - Automatic fault recovery
-
-</td>
-<td width="50%">
-
-### 🔧 Developer Tools
-- ✅ **Complete Makefile** - 20+ useful commands
-- ✅ **Parameter Validation** - Auto validation with i18n
-- ✅ **Unit Tests** - Test examples and coverage
-- ✅ **Environment Variables** - Environment variable support
-
-</td>
-</tr>
-</table>
 
 ---
 
@@ -162,6 +123,7 @@ Alice  Admin  GET /api/v1/users
 ```
 
 **New Architecture Features:**
+
 - 🎯 **Direct Authorization** - Roles bind resources directly, faster verification
 - 🎨 **UI Friendly** - Permission groups for frontend display
 - 🔐 **Security First** - Default deny, explicit grant
@@ -176,6 +138,7 @@ make rename NEW_NAME=blog-api
 ```
 
 Automatically updates:
+
 - ✅ go.mod module name
 - ✅ All import paths
 - ✅ Makefile config
@@ -186,14 +149,15 @@ Automatically updates:
 
 ### 3. Middleware Ecosystem
 
-| Middleware | Function | Description |
-|-----------|----------|-------------|
-| Recovery | Panic Recovery | Auto capture and log panics |
-| RequestID | Request Tracing | Generate unique ID for each request |
-| Logger | Logging | Structured logs with timing and status |
-| JWT | Authentication | JWT-based user authentication |
-| Permission | Authorization | RBAC permission check (cached) |
-| CORS | Cross-Origin | Configurable CORS policy |
+
+| Middleware | Function        | Description                            |
+| ---------- | --------------- | -------------------------------------- |
+| Recovery   | Panic Recovery  | Auto capture and log panics            |
+| RequestID  | Request Tracing | Generate unique ID for each request    |
+| Logger     | Logging         | Structured logs with timing and status |
+| JWT        | Authentication  | JWT-based user authentication          |
+| Permission | Authorization   | RBAC permission check (cached)         |
+| CORS       | Cross-Origin    | Configurable CORS policy               |
 
 ---
 
@@ -203,34 +167,16 @@ Automatically updates:
 <tr>
 <td width="50%">
 
-**Core**
-- [Gin](https://github.com/gin-gonic/gin) - Web Framework
-- [GORM](https://gorm.io) - ORM
-- [Viper](https://github.com/spf13/viper) - Configuration
-- [Logrus](https://github.com/sirupsen/logrus) - Logging
-
-</td>
-<td width="50%">
-
-**Middleware/Tools**
-- [JWT](https://github.com/golang-jwt/jwt) - Authentication
-- [Redis](https://github.com/go-redis/redis) - Cache
-- [Swagger](https://github.com/swaggo/swag) - Documentation
-- [Validator](https://github.com/go-playground/validator) - Validation
-
-</td>
-</tr>
-</table>
-
 ---
 
 ## 📊 Performance
 
-| Metric | Without Cache | With Redis Cache | Improvement |
-|--------|---------------|------------------|-------------|
-| Permission Check | ~50ms | ~2ms | **96%** ⬆️ |
-| Concurrent Requests | 1000 req/s | 5000+ req/s | **400%** ⬆️ |
-| Database Queries | 3 per request | 0 (cache hit) | **100%** ⬇️ |
+
+| Metric              | Without Cache | With Redis Cache | Improvement   |
+| ------------------- | ------------- | ---------------- | ------------- |
+| Permission Check    | ~50ms         | ~2ms             | **96%** ⬆️  |
+| Concurrent Requests | 1000 req/s    | 5000+ req/s      | **400%** ⬆️ |
+| Database Queries    | 3 per request | 0 (cache hit)    | **100%** ⬇️ |
 
 ---
 
@@ -273,31 +219,6 @@ gin-template/
 <tr>
 <td width="33%">
 
-### 🏢 Enterprise Apps
-- Admin dashboards
-- Management platforms
-- Permission systems
-
-</td>
-<td width="33%">
-
-### 🌐 API Services
-- RESTful APIs
-- Microservices
-- Data interfaces
-
-</td>
-<td width="33%">
-
-### 🚀 Rapid Development
-- Project scaffold
-- Tech validation
-- Quick prototyping
-
-</td>
-</tr>
-</table>
-
 ---
 
 ## 🤝 Contributing
@@ -327,6 +248,7 @@ We welcome all forms of contributions!
 This project is licensed under the [MIT License](LICENSE).
 
 You are free to:
+
 - ✅ Commercial use
 - ✅ Modification
 - ✅ Distribution
@@ -347,7 +269,6 @@ Thanks to all contributors!
 ### Inspiration
 
 - [gin-gonic/gin](https://github.com/gin-gonic/gin) - Excellent web framework
-- [gin-admin](https://github.com/LyricTian/gin-admin) - RBAC design reference
 - [go-clean-arch](https://github.com/bxcodec/go-clean-arch) - Architecture inspiration
 
 ---
@@ -373,4 +294,3 @@ Thanks to all contributors!
 **[⬆ Back to Top](#-gin-enterprise-template)**
 
 </div>
-
