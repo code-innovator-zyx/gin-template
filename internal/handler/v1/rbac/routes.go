@@ -17,7 +17,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		authGroup.POST("/refresh", rbac.RefreshToken) // 刷新令牌
 	}
 
-	// 认证模块（需要登录但是不用控制权限啊）
+	// 认证模块（需要登录但是不用控制权限）
 	authAuthGroup := api.Group("/auth")
 	authAuthGroup.Use(middleware.JWT())
 	{

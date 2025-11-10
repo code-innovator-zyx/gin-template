@@ -15,9 +15,13 @@ import (
 )
 
 func Init() *gin.Engine {
+	// 根据配置设置 Gin 运行模式
+	cfg := core.MustGetConfig()
+	gin.SetMode(cfg.App.GetGinMode())
+
 	r := gin.New()
 
-	// 添加中间件（按顺序）
+	// 添加中间件
 	r.Use(middleware.Recovery())  // panic恢复
 	r.Use(middleware.RequestID()) // 请求ID追踪
 	r.Use(middleware.Logger())    // 日志记录

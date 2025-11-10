@@ -5,9 +5,11 @@ import (
 	"gin-template/pkg/cache"
 	"gin-template/pkg/logger"
 	"gin-template/pkg/orm"
+	"time"
+
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
-	"time"
 )
 
 type AppConfig struct {
@@ -32,6 +34,23 @@ type App struct {
 	Version       string `mapstructure:"version" validate:"required"`
 	EnableSwagger bool   `mapstructure:"enable_swagger" validate:"omitempty"`
 	Env           string `mapstructure:"env" validate:"required,oneof=dev test prod"`
+}
+
+// GetGinMode 根据环境配置返回对应的 Gin 运行模式
+// dev -> gin.DebugMode (开发环境，输出详细日志)
+// test -> gin.TestMode (测试环境，减少日志输出)
+// prod -> gin.ReleaseMode (生产环境，最小化日志)
+func (a App) GetGinMode() string {
+	switch a.Env {
+	case "dev":
+		return gin.DebugMode
+	case "test":
+		return gin.TestMode
+	case "prod":
+		return gin.ReleaseMode
+	default:
+		return gin.DebugMode // 默认使用 Debug 模式
+	}
 }
 
 // Server HTTP服务器配置

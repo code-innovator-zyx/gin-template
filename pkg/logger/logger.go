@@ -45,7 +45,6 @@ func Init(c Config) {
 	// 输出到控制台 + 文件
 	if c.EnableFile {
 		dir := filepath.Dir(c.FilePath)
-		fmt.Println(dir)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			if mkErr := os.MkdirAll(dir, 0755); mkErr != nil {
 				log.Fatalf("创建日志目录失败: %v", mkErr)
