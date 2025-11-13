@@ -11,18 +11,6 @@ import (
 // RegisterRBACRoutes 注册RBAC相关路由
 // 使用 SetPermission 声明路由组所属的权限组，系统会自动完成资源绑定
 func RegisterRBACRoutes(api *gin.RouterGroup) {
-	// 认证模块
-	authGroup := api.Group("/auth")
-	{
-		authGroup.POST("/refresh", rbac.RefreshToken) // 刷新令牌
-	}
-
-	// 认证模块（需要登录但是不用控制权限）
-	authAuthGroup := api.Group("/auth")
-	authAuthGroup.Use(middleware.JWT())
-	{
-		authAuthGroup.POST("/logout", rbac.Logout)
-	}
 
 	// 用户模块
 	userGroup := api.Group("/user")
@@ -30,9 +18,14 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 		// 公共接口（不需要权限）
 		userGroup.POST("/register", rbac.Register)
 		userGroup.POST("/login", rbac.Login)
-
+		userGroup.POST("/refresh", rbac.RefreshToken) // 刷新令牌
+		authGroup := userGroup.Group("")
+		authGroup.Use(middleware.JWT())
+		{
+			authGroup.POST("/logout", rbac.Logout)
+		}
 		// 需要认证和权限 - 声明权限组
-		authUserGroup := routegroup.WithAuthRouterGroup(userGroup.Group("/")).
+		authUserGroup := routegroup.WithAuthRouterGroup(userGroup).
 			SetPermission("user:manage", "用户管理")
 		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 		{

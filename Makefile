@@ -105,7 +105,7 @@ clean: ## 清理构建文件
 	@rm -f coverage.out coverage.html
 	@echo "清理完成"
 
-swagger: ## 生成Swagger文档
+swagger_v1: ## 生成Swagger文档
 	@echo "生成Swagger文档..."
 	swag init -g internal/handler/v1/routes.go -o docs --parseDependency --parseInternal --instanceName v1
 	@echo "Swagger文档生成完成"

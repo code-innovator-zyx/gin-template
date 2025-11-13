@@ -89,7 +89,7 @@ func Login(c *gin.Context) {
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "刷新令牌无效或已过期"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /auth/refresh [post]
+// @Router /user/refresh [post]
 func RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -134,7 +134,7 @@ func RefreshToken(c *gin.Context) {
 // @Param data body LogoutRequest true "登出信息（可选的 Refresh Token）"
 // @Success 200 {object} response.Response "登出成功"
 // @Failure 401 {object} response.Response "未授权"
-// @Router /auth/logout [post]
+// @Router /user/logout [post]
 func Logout(c *gin.Context) {
 	// 获取 Access Token
 	authHeader := c.GetHeader("Authorization")

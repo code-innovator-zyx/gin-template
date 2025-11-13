@@ -3,7 +3,6 @@ package v1
 import (
 	_ "gin-template/docs"
 	"gin-template/internal/core"
-
 	"gin-template/internal/handler/v1/rbac"
 	v1 "gin-template/internal/logic/v1"
 
@@ -67,8 +66,8 @@ import (
 // @query.collection.format    multi
 
 // @externalDocs.description    项目文档
-// @externalDocs.url            https://github.com/your-org/gin-template/docs
 
+// @externalDocs.url            https://github.com/your-org/gin-template/docs
 func RegisterRoutes(r *gin.Engine) {
 	// API版本v1
 	apiV1 := r.Group("/api/v1")

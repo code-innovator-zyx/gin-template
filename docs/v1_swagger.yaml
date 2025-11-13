@@ -344,73 +344,6 @@ info:
   title: Gin Template API
   version: 1.0.0
 paths:
-  /auth/logout:
-    post:
-      consumes:
-      - application/json
-      description: 撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）
-      parameters:
-      - description: 登出信息（可选的 Refresh Token）
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.LogoutRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 登出成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 用户登出
-      tags:
-      - RBAC-用户管理
-  /auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
-      parameters:
-      - description: 刷新令牌信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 刷新成功返回新令牌对
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.TokenResponse'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 刷新令牌无效或已过期
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 刷新令牌
-      tags:
-      - RBAC-用户管理
   /health:
     get:
       description: 检查系统各组件的健康状态
@@ -887,6 +820,34 @@ paths:
       summary: 用户登录
       tags:
       - RBAC-用户管理
+  /user/logout:
+    post:
+      consumes:
+      - application/json
+      description: 撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）
+      parameters:
+      - description: 登出信息（可选的 Refresh Token）
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 用户登出
+      tags:
+      - RBAC-用户管理
   /user/profile:
     get:
       consumes:
@@ -915,6 +876,45 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 获取用户个人资料
+      tags:
+      - RBAC-用户管理
+  /user/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
+      parameters:
+      - description: 刷新令牌信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功返回新令牌对
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.TokenResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 刷新令牌无效或已过期
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 刷新令牌
       tags:
       - RBAC-用户管理
   /user/register:
