@@ -35,11 +35,6 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
 
-// LogoutRequest 登出请求
-type LogoutRequest struct {
-	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-}
-
 // UserProfile 用户详情
 type UserProfile struct {
 	User      *rbac.User      `json:"user" description:"用户基础信息"`

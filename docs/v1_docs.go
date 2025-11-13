@@ -816,7 +816,7 @@ const docTemplatev1 = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）",
+                "description": "撤销当前用户的令牌",
                 "consumes": [
                     "application/json"
                 ],
@@ -827,17 +827,6 @@ const docTemplatev1 = `{
                     "RBAC-用户管理"
                 ],
                 "summary": "用户登出",
-                "parameters": [
-                    {
-                        "description": "登出信息（可选的 Refresh Token）",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/rbac.LogoutRequest"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "登出成功",
@@ -1219,15 +1208,6 @@ const docTemplatev1 = `{
                     "items": {
                         "type": "integer"
                     }
-                }
-            }
-        },
-        "rbac.LogoutRequest": {
-            "type": "object",
-            "properties": {
-                "refresh_token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
             }
         },

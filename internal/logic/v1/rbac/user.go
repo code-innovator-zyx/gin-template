@@ -126,12 +126,11 @@ func RefreshToken(c *gin.Context) {
 
 // Logout godoc
 // @Summary 用户登出
-// @Description 撤销当前用户的令牌（需要传入 Access Token 和 Refresh Token）
+// @Description 撤销当前用户的令牌
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param data body LogoutRequest true "登出信息（可选的 Refresh Token）"
 // @Success 200 {object} response.Response "登出成功"
 // @Failure 401 {object} response.Response "未授权"
 // @Router /user/logout [post]
@@ -146,21 +145,12 @@ func Logout(c *gin.Context) {
 		}
 	}
 
-	// 获取 Refresh Token（可选）
-	var req LogoutRequest
-	c.ShouldBindJSON(&req)
-
 	jwtManager := utils.GetJWTManager()
 	ctx := c.Request.Context()
 
 	// 撤销 Access Token
 	if accessToken != "" {
 		_ = jwtManager.RevokeToken(ctx, accessToken)
-	}
-
-	// 撤销 Refresh Token
-	if req.RefreshToken != "" {
-		_ = jwtManager.RevokeToken(ctx, req.RefreshToken)
 	}
 
 	response.Success(c, "登出成功")
