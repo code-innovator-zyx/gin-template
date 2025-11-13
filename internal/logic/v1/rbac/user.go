@@ -179,7 +179,7 @@ func GetProfile(c *gin.Context) {
 	}
 
 	// 获取用户可访问的资源列表
-	resources, err := service.GetRbacService().GetUserResources(ctx, userID)
+	resources, err := service.GetRbacService().GetUserPermissionGroups(ctx, userID)
 	if err != nil {
 		response.Fail(c, 500, "获取用户资源失败: "+err.Error())
 		return
@@ -187,8 +187,8 @@ func GetProfile(c *gin.Context) {
 
 	// 组装用户完整资料
 	profile := UserProfile{
-		User:      user,
-		Resources: resources,
+		User:        user,
+		Permissions: resources,
 	}
 
 	response.Success(c, profile)

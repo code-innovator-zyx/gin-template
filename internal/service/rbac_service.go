@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"gin-template/internal/core"
@@ -8,6 +9,8 @@ import (
 	"gin-template/pkg/consts"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"maps"
+	"slices"
 	"sync"
 )
 
@@ -126,17 +129,6 @@ func (s *rbacService) CreatePermission(ctx context.Context, permission *rbac.Per
 	return core.MustNewDbWithContext(ctx).Create(permission).Error
 }
 
-// ==================== 资源管理 ====================
-
-// GetAllResources 获取所有资源
-func (s *rbacService) GetAllResources(ctx context.Context) ([]rbac.Resource, error) {
-	var resources []rbac.Resource
-	if err := core.MustNewDbWithContext(ctx).Find(&resources).Error; err != nil {
-		return nil, err
-	}
-	return resources, nil
-}
-
 // CheckUserPermission 检查用户是否有权限访问指定路径和方法
 // 新架构：Permission 仅作为逻辑分组，实际授权通过 role_resources
 func (s *rbacService) CheckUserPermission(ctx context.Context, userID uint, path string, method string) (bool, error) {
@@ -174,22 +166,60 @@ func (s *rbacService) GetUserRoles(ctx context.Context, userID uint) ([]rbac.Rol
 }
 
 // GetUserPermissionGroups 获取用户的权限分组（基于用户拥有的资源）
-// 返回用户有资源的 Permission 分组（用于前端展示）
+// 返回用户有资源的 Permission
 func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) ([]rbac.Permission, error) {
-	var permissions []rbac.Permission
+	var rows []struct {
+		PermissionID   uint   `json:"permission_id"`
+		PermissionName string `json:"permission_name"`
+		PermissionCode string `json:"permission_code"`
+		ResourceID     uint   `json:"resource_id"`
+		Path           string `json:"path"`
+		Method         string `json:"method"`
+		Description    string `json:"description"`
+	}
 	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT DISTINCT p.* FROM permissions p
+		SELECT DISTINCT
+			p.id   AS permission_id,
+			p.name AS permission_name,
+			p.code AS permission_code,
+			res.id AS resource_id,
+			res.path,
+			res.method,
+			res.description
+		FROM permissions p
 		JOIN resources res ON p.id = res.permission_id
 		JOIN role_resources rr ON res.id = rr.resource_id
 		JOIN user_roles ur ON rr.role_id = ur.role_id
 		WHERE ur.user_id = ?
-		ORDER BY p.code
-	`, userID).Find(&permissions).Error
+		ORDER BY p.code, res.path, res.method
+	`, userID).Scan(&rows).Error
 
 	if err != nil {
 		return nil, err
 	}
-	return permissions, nil
+
+	permMap := make(map[uint]rbac.Permission)
+	for _, row := range rows {
+		p, ok := permMap[row.PermissionID]
+		if !ok {
+			p = rbac.Permission{
+				ID:   row.PermissionID,
+				Name: row.PermissionName,
+				Code: row.PermissionCode,
+			}
+			permMap[row.PermissionID] = p
+		}
+		p.Resources = append(p.Resources, rbac.Resource{
+			ID:          row.ResourceID,
+			Path:        row.Path,
+			Method:      row.Method,
+			Description: row.Description,
+		})
+		permMap[row.PermissionID] = p
+	}
+	return slices.SortedFunc(maps.Values(permMap), func(permission rbac.Permission, permission2 rbac.Permission) int {
+		return cmp.Compare(permission.ID, permission2.ID)
+	}), nil
 }
 
 // GetUserResources 获取用户可访问的资源列表（直接通过 role_resources）

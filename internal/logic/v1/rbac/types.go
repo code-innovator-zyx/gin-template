@@ -37,8 +37,8 @@ type RefreshTokenRequest struct {
 
 // UserProfile 用户详情
 type UserProfile struct {
-	User      *rbac.User      `json:"user" description:"用户基础信息"`
-	Resources []rbac.Resource `json:"resources" description:"用户可访问的资源列表"`
+	User        *rbac.User        `json:"user" description:"用户基础信息"`
+	Permissions []rbac.Permission `json:"permissions" description:"用户可访问的资源列表"`
 }
 
 type CreateRoleRequest struct {

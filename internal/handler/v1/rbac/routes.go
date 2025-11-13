@@ -58,14 +58,5 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 	permissionGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 	{
 		permissionGroup.GETDesc("", "获取权限列表", rbac.GetPermissions)
-		permissionGroup.POSTDesc("", "创建权限", rbac.CreatePermission)
-	}
-
-	// 资源模块 - 声明权限组
-	resourceGroup := routegroup.WithAuthRouterGroup(api.Group("/resources")).
-		SetPermission("resource:view", "资源查看")
-	resourceGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
-	{
-		resourceGroup.GETDesc("", "获取资源列表", rbac.GetResources)
 	}
 }

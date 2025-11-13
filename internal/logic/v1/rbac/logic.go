@@ -240,52 +240,6 @@ func GetPermissions(c *gin.Context) {
 	response.Success(c, permissions)
 }
 
-// CreatePermission godoc
-// @Summary 创建权限
-// @Description 创建新的系统权限
-// @Tags RBAC-权限管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param permission body rbac.Permission true "权限信息"
-// @Success 201 {object} response.Response{data=rbac.Permission} "成功创建权限"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /permissions [post]
-func CreatePermission(c *gin.Context) {
-	var permission rbac.Permission
-	if err := c.ShouldBindJSON(&permission); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	if err := service.GetRbacService().CreatePermission(c.Request.Context(), &permission); err != nil {
-		response.InternalServerError(c, "创建权限失败")
-		return
-	}
-	response.Created(c, permission)
-}
-
-// GetResources godoc
-// @Summary 获取资源列表
-// @Description 获取系统中所有资源的列表
-// @Tags RBAC-资源管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Success 200 {object} response.Response{data=[]rbac.Resource} "成功获取资源列表"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /resources [get]
-func GetResources(c *gin.Context) {
-	resources, err := service.GetRbacService().GetAllResources(c.Request.Context())
-	if err != nil {
-		response.InternalServerError(c, "获取资源列表失败")
-		return
-	}
-	response.Success(c, resources)
-}
-
 // GetUserRoles godoc
 // @Summary 获取用户角色
 // @Description 获取指定用户的所有角色

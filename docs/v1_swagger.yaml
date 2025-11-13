@@ -203,9 +203,9 @@ definitions:
     type: object
   rbac.UserProfile:
     properties:
-      resources:
+      permissions:
         items:
-          $ref: '#/definitions/rbac.Resource'
+          $ref: '#/definitions/rbac.Permission'
         type: array
       user:
         $ref: '#/definitions/rbac.User'
@@ -388,78 +388,6 @@ paths:
       summary: 获取权限列表
       tags:
       - RBAC-权限管理
-    post:
-      consumes:
-      - application/json
-      description: 创建新的系统权限
-      parameters:
-      - description: 权限信息
-        in: body
-        name: permission
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.Permission'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 成功创建权限
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.Permission'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 创建权限
-      tags:
-      - RBAC-权限管理
-  /resources:
-    get:
-      consumes:
-      - application/json
-      description: 获取系统中所有资源的列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功获取资源列表
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/rbac.Resource'
-                  type: array
-              type: object
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取资源列表
-      tags:
-      - RBAC-资源管理
   /roles:
     get:
       consumes:
