@@ -61,7 +61,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := service.GetUserService().Login(c.Request.Context(), req.Username, req.Password)
+	tokenPair, err := service.GetUserService().Login(c.Request.Context(), req.Account, req.Password)
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return

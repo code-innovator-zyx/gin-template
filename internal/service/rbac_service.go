@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	"gin-template/pkg/consts"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"sync"
@@ -505,6 +506,7 @@ func (s *rbacService) initializeAdminRole(tx *gorm.DB, config *RBACInitConfig) (
 		// 创建角色
 		role = rbac.Role{
 			Name:        config.AdminRoleName,
+			Status:      consts.ROLESTATUS_ACTIVE,
 			Description: config.AdminRoleDesc,
 		}
 		if err := tx.Create(&role).Error; err != nil {
@@ -570,7 +572,7 @@ func (s *rbacService) initializeAdminUser(tx *gorm.DB, roleID uint, config *RBAC
 			Username: config.AdminUsername,
 			Password: config.AdminPassword,
 			Email:    config.AdminEmail,
-			Status:   1,
+			Status:   consts.UserStatusActive,
 		}
 		if err := tx.Create(&user).Error; err != nil {
 			return err

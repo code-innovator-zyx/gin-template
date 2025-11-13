@@ -1162,6 +1162,47 @@ const docTemplatev1 = `{
         }
     },
     "definitions": {
+        "consts.RoleStatus": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "ROLESTATUS_UNKNOWN",
+                "ROLESTATUS_ACTIVE",
+                "ROLESTATUS_INACTIVE"
+            ]
+        },
+        "consts.UserStatus": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "x-enum-comments": {
+                "UserStatusActive": "启用：允许登录",
+                "UserStatusDisabled": "禁用：禁止登录",
+                "UserStatusLocked": "锁定：异常登录或安全封禁"
+            },
+            "x-enum-descriptions": [
+                "",
+                "启用：允许登录",
+                "禁用：禁止登录",
+                "锁定：异常登录或安全封禁"
+            ],
+            "x-enum-varnames": [
+                "UserStatusUnknown",
+                "UserStatusActive",
+                "UserStatusDisabled",
+                "UserStatusLocked"
+            ]
+        },
         "rbac.CreateRoleRequest": {
             "type": "object",
             "properties": {
@@ -1298,6 +1339,14 @@ const docTemplatev1 = `{
                         "$ref": "#/definitions/rbac.Resource"
                     }
                 },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.RoleStatus"
+                        }
+                    ],
+                    "example": 1
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
@@ -1371,7 +1420,11 @@ const docTemplatev1 = `{
                     }
                 },
                 "status": {
-                    "type": "integer",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.UserStatus"
+                        }
+                    ],
                     "example": 1
                 },
                 "updated_at": {
@@ -1387,17 +1440,17 @@ const docTemplatev1 = `{
         "rbac.UserLoginRequest": {
             "type": "object",
             "required": [
-                "password",
-                "username"
+                "account",
+                "password"
             ],
             "properties": {
+                "account": {
+                    "type": "string",
+                    "example": "johndoe"
+                },
                 "password": {
                     "type": "string",
                     "example": "password123"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "johndoe"
                 }
             }
         },

@@ -77,9 +77,23 @@ func (s *userService) GetByUsername(ctx context.Context, username string) (*rbac
 	return &user, nil
 }
 
+// GetByAccount 根据用户名或邮箱获取用户
+func (s *userService) GetByAccount(ctx context.Context, account string) (*rbac.User, error) {
+	var user rbac.User
+	db := core.MustNewDbWithContext(ctx)
+	if err := db.Where("username = ? OR email = ?", account, account).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("用户不存在")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 // Login 用户登录（返回完整的 TokenPair）
-func (s *userService) Login(ctx context.Context, username, password string) (*utils.TokenPair, error) {
-	user, err := s.GetByUsername(ctx, username)
+func (s *userService) Login(ctx context.Context, account, password string) (*utils.TokenPair, error) {
+	user, err := s.GetByAccount(ctx, account)
 	if err != nil {
 		return nil, err
 	}

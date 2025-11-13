@@ -1,5 +1,38 @@
 basePath: /api/v1
 definitions:
+  consts.RoleStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - ROLESTATUS_UNKNOWN
+    - ROLESTATUS_ACTIVE
+    - ROLESTATUS_INACTIVE
+  consts.UserStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    format: int32
+    type: integer
+    x-enum-comments:
+      UserStatusActive: 启用：允许登录
+      UserStatusDisabled: 禁用：禁止登录
+      UserStatusLocked: 锁定：异常登录或安全封禁
+    x-enum-descriptions:
+    - ""
+    - 启用：允许登录
+    - 禁用：禁止登录
+    - 锁定：异常登录或安全封禁
+    x-enum-varnames:
+    - UserStatusUnknown
+    - UserStatusActive
+    - UserStatusDisabled
+    - UserStatusLocked
   rbac.CreateRoleRequest:
     properties:
       description:
@@ -96,6 +129,10 @@ definitions:
         items:
           $ref: '#/definitions/rbac.Resource'
         type: array
+      status:
+        allOf:
+        - $ref: '#/definitions/consts.RoleStatus'
+        example: 1
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -148,8 +185,9 @@ definitions:
           $ref: '#/definitions/rbac.Role'
         type: array
       status:
+        allOf:
+        - $ref: '#/definitions/consts.UserStatus'
         example: 1
-        type: integer
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -159,15 +197,15 @@ definitions:
     type: object
   rbac.UserLoginRequest:
     properties:
+      account:
+        example: johndoe
+        type: string
       password:
         example: password123
         type: string
-      username:
-        example: johndoe
-        type: string
     required:
+    - account
     - password
-    - username
     type: object
   rbac.UserProfile:
     properties:

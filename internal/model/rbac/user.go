@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"gin-template/internal/core"
+	"gin-template/pkg/consts"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 
@@ -11,15 +12,15 @@ import (
 // User 用户模型
 // @Description 用户信息模型
 type User struct {
-	ID        uint      `gorm:"primarykey" json:"id" example:"1" description:"用户ID"`
-	Username  string    `gorm:"size:50;not null;uniqueIndex" json:"username" example:"johndoe" description:"用户名"`
-	Password  string    `gorm:"size:100;not null" json:"-" description:"密码"`
-	Email     string    `gorm:"size:100;uniqueIndex" json:"email" example:"john@example.com" description:"邮箱"`
-	Avatar    string    `gorm:"size:255" json:"avatar" example:"https://example.com/avatar.jpg" description:"头像URL"`
-	Status    int       `gorm:"default:1" json:"status" example:"1" description:"状态 1:正常 0:禁用"`
-	Roles     []Role    `gorm:"many2many:user_roles;" json:"roles" description:"用户角色"`
-	CreatedAt time.Time `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
-	UpdatedAt time.Time `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
+	ID        uint              `gorm:"primarykey" json:"id" example:"1" description:"用户ID"`
+	Username  string            `gorm:"size:50;not null;uniqueIndex" json:"username" example:"johndoe" description:"用户名"`
+	Password  string            `gorm:"size:100;not null" json:"-" description:"密码"`
+	Email     string            `gorm:"size:100;uniqueIndex" json:"email" example:"john@example.com" description:"邮箱"`
+	Avatar    string            `gorm:"size:255" json:"avatar" example:"https://example.com/avatar.jpg" description:"头像URL"`
+	Status    consts.UserStatus `gorm:"type:tinyint;default:1;not null" json:"status" example:"1" description:"用户状态"`
+	Roles     []Role            `gorm:"many2many:user_roles;" json:"roles" description:"用户角色"`
+	CreatedAt time.Time         `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`
+	UpdatedAt time.Time         `json:"updated_at" example:"2023-01-01T00:00:00Z" description:"更新时间"`
 }
 
 // BeforeSave 保存前的钩子函数
