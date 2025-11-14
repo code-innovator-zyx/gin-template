@@ -5,6 +5,7 @@ import (
 	"gin-template/internal/core"
 	"gin-template/internal/handler/v1/rbac"
 	v1 "gin-template/internal/logic/v1"
+	"gin-template/internal/routegroup"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -69,8 +70,8 @@ import (
 
 // @externalDocs.url            https://github.com/your-org/gin-template/docs
 func RegisterRoutes(r *gin.Engine) {
-	// API版本v1
-	apiV1 := r.Group("/api/v1")
+	// API版本v1 使用authGroup 自动维护权限管理
+	apiV1 := routegroup.WrapGroup(r.Group("/api/v1"))
 
 	// 注册各个模块的路由
 	registerHealthRoutes(apiV1)
@@ -82,7 +83,7 @@ func RegisterRoutes(r *gin.Engine) {
 }
 
 // registerHealthRoutes 注册健康检查相关路由
-func registerHealthRoutes(api *gin.RouterGroup) {
+func registerHealthRoutes(api *routegroup.RouterGroup) {
 	// 健康检查
-	api.GET("/health", v1.HealthCheck)
+	api.Public().GET("/health", v1.HealthCheck)
 }

@@ -10,7 +10,7 @@
 
 ```go
 // 使用 SetPermission() 声明权限组
-userGroup := routegroup.WithAuthRouterGroup(api.Group("/users")).
+userGroup := routegroup.WithRouterGroup(api.Group("/users")).
     SetPermission("user:manage", "用户管理")  // ← 就是这里！
 userGroup.Use(middleware.JWT())
 {
@@ -65,7 +65,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
     }
 
     // 用户管理（需要 user:manage 权限）
-    userGroup := routegroup.WithAuthRouterGroup(api.Group("/user")).
+    userGroup := routegroup.WithRouterGroup(api.Group("/user")).
         SetPermission("user:manage", "用户管理")
     userGroup.Use(middleware.JWT())
     {
@@ -75,7 +75,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
     }
 
     // 角色管理（需要 role:manage 权限）
-    roleGroup := routegroup.WithAuthRouterGroup(api.Group("/roles")).
+    roleGroup := routegroup.WithRouterGroup(api.Group("/roles")).
         SetPermission("role:manage", "角色管理")
     roleGroup.Use(middleware.JWT())
     {
@@ -86,7 +86,7 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
     }
 
     // 权限管理（需要 permission:manage 权限）
-    permissionGroup := routegroup.WithAuthRouterGroup(api.Group("/permissions")).
+    permissionGroup := routegroup.WithRouterGroup(api.Group("/permissions")).
         SetPermission("permission:manage", "权限管理")
     permissionGroup.Use(middleware.JWT())
     {
@@ -181,7 +181,7 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES (1, 1);
 
 ```go
 // 一行代码搞定！
-userGroup := routegroup.WithAuthRouterGroup(api.Group("/users")).
+userGroup := routegroup.WithRouterGroup(api.Group("/users")).
     SetPermission("user:manage", "用户管理")
 ```
 
@@ -191,7 +191,7 @@ userGroup := routegroup.WithAuthRouterGroup(api.Group("/users")).
 
 ```go
 // 只需声明权限组，系统自动处理其他
-productGroup := routegroup.WithAuthRouterGroup(api.Group("/products")).
+productGroup := routegroup.WithRouterGroup(api.Group("/products")).
     SetPermission("product:manage", "产品管理")
 productGroup.Use(middleware.JWT())
 {
@@ -204,7 +204,7 @@ productGroup.Use(middleware.JWT())
 
 ```go
 // 父路由组
-orderGroup := routegroup.WithAuthRouterGroup(api.Group("/orders")).
+orderGroup := routegroup.WithRouterGroup(api.Group("/orders")).
     SetPermission("order:view", "订单查看")
 orderGroup.Use(middleware.JWT())
 {
@@ -222,7 +222,7 @@ orderGroup.Use(middleware.JWT())
 
 ```go
 // 查看订单需要较低权限
-viewGroup := routegroup.WithAuthRouterGroup(api.Group("/orders")).
+viewGroup := routegroup.WithRouterGroup(api.Group("/orders")).
     SetPermission("order:view", "订单查看")
 viewGroup.Use(middleware.JWT())
 {
@@ -259,7 +259,7 @@ const (
 
 ```go
 // 在你的路由文件中直接声明
-customGroup := routegroup.WithAuthRouterGroup(api.Group("/custom")).
+customGroup := routegroup.WithRouterGroup(api.Group("/custom")).
     SetPermission("custom:manage", "自定义管理")
 customGroup.Use(middleware.JWT())
 {

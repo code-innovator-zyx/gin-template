@@ -24,4 +24,3 @@ func (Permission) TableName() string {
 func CreatePermission(permission *Permission) error {
 	return core.MustNewDb().Create(permission).Error
 }
-

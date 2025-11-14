@@ -5,7 +5,6 @@ import (
 	"gin-template/internal/core"
 	v1 "gin-template/internal/handler/v1"
 	"gin-template/internal/middleware"
-	"gin-template/internal/model/rbac"
 	"gin-template/internal/routegroup"
 	"gin-template/internal/service"
 
@@ -26,7 +25,6 @@ func Init() *gin.Engine {
 	r.Use(middleware.RequestID()) // 请求ID追踪
 	r.Use(middleware.Logger())    // 日志记录
 	r.Use(middleware.Cors())      // 跨域处理
-
 	// 注册API路由
 	v1.RegisterRoutes(r)
 
@@ -38,6 +36,7 @@ func Init() *gin.Engine {
 	// 4. 自动创建超级管理员角色和默认管理员账号
 	// 5. 幂等操作：重复执行不会产生副作用
 	protectedRoutes := convertRoutes(routegroup.GetProtectedRoutes())
+
 	rbacConfig := buildRBACConfig()
 	// 使用 Service 层来处理 RBAC 初始化业务逻辑（应用启动时使用 Background context）
 	if err := service.GetRbacService().InitializeRBAC(context.Background(), protectedRoutes, rbacConfig); err != nil {
@@ -48,15 +47,11 @@ func Init() *gin.Engine {
 }
 
 // convertRoutes 转换路由格式（从 routegroup 到 service 层）
-func convertRoutes(routes []routegroup.ProtectedRoute) []service.ProtectedRoute {
+func convertRoutes(routes []*routegroup.ProtectedRoute) []service.ProtectedRoute {
 	result := make([]service.ProtectedRoute, len(routes))
 	for i, route := range routes {
 		result[i] = service.ProtectedRoute{
-			Resource: rbac.Resource{
-				Path:        route.Resource.Path,
-				Method:      route.Resource.Method,
-				Description: route.Description,
-			},
+			Resource:       route.Resource,
 			PermissionCode: route.PermissionCode,
 			PermissionName: route.PermissionName,
 			Description:    route.Description,

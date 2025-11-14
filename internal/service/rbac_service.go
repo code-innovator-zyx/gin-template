@@ -3,6 +3,7 @@ package service
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
@@ -406,8 +407,6 @@ func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRout
 // extractAndCreatePermissions 从路由声明中提取权限分组并创建（仅用于UI展示）
 func (s *rbacService) extractAndCreatePermissions(tx *gorm.DB, routes []ProtectedRoute) error {
 	logrus.Info("  - 从路由声明中提取并创建权限分组（用于UI展示）...")
-
-	// 使用 map 去重，收集所有唯一的权限分组
 	permissionMap := make(map[string]string) // code -> name
 	for _, route := range routes {
 		if route.PermissionCode != "" && route.PermissionName != "" {
@@ -418,28 +417,47 @@ func (s *rbacService) extractAndCreatePermissions(tx *gorm.DB, routes []Protecte
 		logrus.Warn("    ! 未发现任何权限分组声明")
 		return nil
 	}
-	// 创建权限分组
-	createdCount := 0
-	for code, name := range permissionMap {
-		var count int64
-		tx.Model(&rbac.Permission{}).Where("code = ?", code).Count(&count)
+	var dbPerms []rbac.Permission
+	if err := tx.Find(&dbPerms).Error; err != nil {
+		return err
+	}
+	dbPermMap := make(map[string]rbac.Permission) // code -> Permission
+	for _, p := range dbPerms {
+		dbPermMap[p.Code] = p
+	}
+	var toInsert []rbac.Permission
+	var toDelete []uint
 
-		if count == 0 {
-			permission := &rbac.Permission{
+	for code, name := range permissionMap {
+		if _, exists := dbPermMap[code]; !exists {
+			toInsert = append(toInsert, rbac.Permission{
 				Code: code,
 				Name: name,
-			}
-			if err := tx.Create(permission).Error; err != nil {
-				return fmt.Errorf("创建权限分组 %s 失败: %w", code, err)
-			}
-			logrus.Infof("    ✓ 创建权限分组: %s (%s)", name, code)
-			createdCount++
-		} else {
-			logrus.Debugf("    - 权限分组已存在: %s (%s)", name, code)
+			})
 		}
 	}
+	for code, perm := range dbPermMap {
+		if _, exists := permissionMap[code]; !exists {
+			toDelete = append(toDelete, perm.ID)
+		}
+	}
+	// 批量插入新增的
+	if len(toInsert) > 0 {
+		if err := tx.Create(&toInsert).Error; err != nil {
+			return fmt.Errorf("批量创建权限分组失败: %w", err)
+		}
+		logrus.Infof("    ✓ 新增 %d 个权限分组", len(toInsert))
+	}
 
-	logrus.Infof("    ✓ 从路由声明中发现 %d 个权限分组，新建 %d 个", len(permissionMap), createdCount)
+	// 批量删除无效的
+	if len(toDelete) > 0 {
+		if err := tx.Where("id IN ?", toDelete).Delete(&rbac.Permission{}).Error; err != nil {
+			return fmt.Errorf("批量删除无效权限分组失败: %w", err)
+		}
+		logrus.Infof("    ✓ 删除 %d 个已失效权限分组", len(toDelete))
+	}
+
+	logrus.Infof("    ✓ 从路由声明中发现 %d 个权限分组，新建 %d 个 ,删除 %d 个", len(permissionMap), len(toInsert), len(toDelete))
 	return nil
 }
 
@@ -452,33 +470,67 @@ func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) e
 		return nil
 	}
 
-	// 批量 upsert 资源
-	for _, route := range routes {
-		var resource rbac.Resource
-		result := tx.Where("path = ? AND method = ?", route.Resource.Path, route.Resource.Method).
-			First(&resource)
+	routeMap := make(map[string]rbac.Resource)
+	for _, rt := range routes {
+		key := rt.Resource.Path + "|" + rt.Resource.Method
+		routeMap[key] = rt.Resource
+	}
 
-		if result.Error == gorm.ErrRecordNotFound {
-			// 创建新资源
-			newResource := route.Resource
-			if err := tx.Create(&newResource).Error; err != nil {
-				return fmt.Errorf("创建资源失败 %s %s: %w", route.Resource.Method, route.Resource.Path, err)
-			}
-		} else if result.Error != nil {
-			return result.Error
+	var dbResources []rbac.Resource
+	if err := tx.Find(&dbResources).Error; err != nil {
+		return err
+	}
+
+	dbMap := make(map[string]rbac.Resource)
+	for _, r := range dbResources {
+		key := r.Path + "|" + r.Method
+		dbMap[key] = r
+	}
+
+	var toInsert []rbac.Resource
+	var toUpdate []rbac.Resource
+	var toDelete []uint
+
+	for key, res := range routeMap {
+		if dbRes, exists := dbMap[key]; !exists {
+			toInsert = append(toInsert, res)
 		} else {
-			// 更新描述（如果有变化）
-			updates := make(map[string]interface{})
-			if route.Resource.Description != "" && resource.Description != route.Resource.Description {
-				updates["description"] = route.Resource.Description
-			}
-			if len(updates) > 0 {
-				tx.Model(&resource).Updates(updates)
-			}
+			res.ID = dbRes.ID
+			res.PermissionID = dbRes.PermissionID
+			toUpdate = append(toUpdate, res)
 		}
 	}
 
-	logrus.Infof("    ✓ 同步了 %d 个路由资源", len(routes))
+	for key, res := range dbMap {
+		if _, exists := routeMap[key]; !exists {
+			toDelete = append(toDelete, res.ID)
+		}
+	}
+
+	if len(toInsert) > 0 {
+		if err := tx.Create(&toInsert).Error; err != nil {
+			return fmt.Errorf("批量创建资源失败: %w", err)
+		}
+		logrus.Infof("    ✓ 新增 %d 个资源", len(toInsert))
+	}
+
+	// 5) 批量更新
+	for _, res := range toUpdate {
+		if err := tx.Model(&rbac.Resource{}).Where("id = ?", res.ID).
+			Omit("permission_id").
+			Updates(res).Error; err != nil {
+			return fmt.Errorf("更新资源失败: %w", err)
+		}
+	}
+
+	if len(toDelete) > 0 {
+		if err := tx.Where("id IN ?", toDelete).Delete(&rbac.Resource{}).Error; err != nil {
+			return fmt.Errorf("批量删除旧资源失败: %w", err)
+		}
+		logrus.Infof("    ✓ 删除 %d 个已失效资源", len(toDelete))
+	}
+
+	logrus.Infof("    ✓ 资源同步完成: 新增 %d ，更新 %d ，删除 %d", len(toInsert), len(toUpdate), len(toDelete))
 	return nil
 }
 
@@ -487,32 +539,28 @@ func (s *rbacService) autoBindResourcesToPermissions(tx *gorm.DB, routes []Prote
 	logrus.Info("  - 自动绑定资源到权限分组（仅用于UI展示）...")
 
 	boundCount := 0
-
 	for _, route := range routes {
 		// 如果路由声明了权限分组
 		if route.PermissionCode != "" {
 			// 查找对应的权限分组
 			var permission rbac.Permission
 			if err := tx.Where("code = ?", route.PermissionCode).First(&permission).Error; err != nil {
-				if err == gorm.ErrRecordNotFound {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
 					logrus.Warnf("    ! 路由 %s %s 指定的权限分组 %s 不存在，跳过绑定",
 						route.Resource.Method, route.Resource.Path, route.PermissionCode)
 					continue
 				}
 				return err
 			}
-
 			// 更新资源的权限分组绑定（仅用于UI展示）
 			result := tx.Model(&rbac.Resource{}).
 				Where("path = ? AND method = ?", route.Resource.Path, route.Resource.Method).
 				Updates(map[string]interface{}{
 					"permission_id": permission.ID,
 				})
-
 			if result.Error != nil {
 				return fmt.Errorf("绑定资源到权限分组失败: %w", result.Error)
 			}
-
 			if result.RowsAffected > 0 {
 				boundCount++
 				logrus.Debugf("    ✓ 绑定资源 %s %s 到权限分组 %s（用于UI展示）",
@@ -520,7 +568,6 @@ func (s *rbacService) autoBindResourcesToPermissions(tx *gorm.DB, routes []Prote
 			}
 		}
 	}
-
 	logrus.Infof("    ✓ 成功绑定 %d 个资源到权限分组", boundCount)
 	return nil
 }
@@ -537,6 +584,7 @@ func (s *rbacService) initializeAdminRole(tx *gorm.DB, config *RBACInitConfig) (
 		role = rbac.Role{
 			Name:        config.AdminRoleName,
 			Status:      consts.ROLESTATUS_ACTIVE,
+			BuiltIn:     true, // 系统创建的资源，不允许任何人修改
 			Description: config.AdminRoleDesc,
 		}
 		if err := tx.Create(&role).Error; err != nil {

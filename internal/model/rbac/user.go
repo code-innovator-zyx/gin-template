@@ -39,6 +39,11 @@ func (u *User) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
+func (u *User) BeforeUpdate(tx *gorm.DB) error {
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
 // CheckPassword 检查密码是否正确
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))

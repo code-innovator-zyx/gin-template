@@ -21,7 +21,7 @@
 
 ```go
 // 用户管理模块 - 声明权限组
-userGroup := routegroup.WithAuthRouterGroup(api.Group("/users")).
+userGroup := routegroup.WithRouterGroup(api.Group("/users")).
     SetPermission("user:manage", "用户管理")
 userGroup.Use(middleware.JWT())
 {
@@ -65,7 +65,7 @@ func RegisterUserRoutes(api *gin.RouterGroup) {
     }
     
     // 需要权限的路由
-    authGroup := routegroup.WithAuthRouterGroup(api.Group("/user")).
+    authGroup := routegroup.WithRouterGroup(api.Group("/user")).
         SetPermission("user:manage", "用户管理")
     authGroup.Use(middleware.JWT())
     {
@@ -83,7 +83,7 @@ func RegisterUserRoutes(api *gin.RouterGroup) {
 
 ```go
 // 产品管理模块
-productGroup := routegroup.WithAuthRouterGroup(api.Group("/products")).
+productGroup := routegroup.WithRouterGroup(api.Group("/products")).
     SetPermission("product:manage", "产品管理")
 productGroup.Use(middleware.JWT())
 {
@@ -106,7 +106,7 @@ productGroup.Use(middleware.JWT())
 
 ```go
 // 订单模块
-orderGroup := routegroup.WithAuthRouterGroup(api.Group("/orders")).
+orderGroup := routegroup.WithRouterGroup(api.Group("/orders")).
     SetPermission("order:view", "订单查看")
 orderGroup.Use(middleware.JWT())
 {
@@ -154,7 +154,7 @@ SetPermission("order:manage", "订单管理")
 
 ```go
 // 在路由文件中声明新的权限组
-reportGroup := routegroup.WithAuthRouterGroup(api.Group("/reports")).
+reportGroup := routegroup.WithRouterGroup(api.Group("/reports")).
     SetPermission("report:view", "报表查看")  // ← 这就完成了！
 reportGroup.Use(middleware.JWT())
 {
@@ -163,7 +163,7 @@ reportGroup.Use(middleware.JWT())
 }
 
 // 需要更高权限的操作
-exportGroup := routegroup.WithAuthRouterGroup(api.Group("/reports")).
+exportGroup := routegroup.WithRouterGroup(api.Group("/reports")).
     SetPermission("report:export", "报表导出")  // ← 另一个权限组
 exportGroup.Use(middleware.JWT())
 {
@@ -217,8 +217,8 @@ Role (N) ←─ role_resources ─→ (N) Resource  [实际授权]
 ### 1. 路由收集阶段
 
 ```go
-// 使用 AuthRouterGroup 注册路由时
-authGroup := routegroup.WithAuthRouterGroup(api.Group("/users")).
+// 使用 RouterGroup 注册路由时
+authGroup := routegroup.WithRouterGroup(api.Group("/users")).
     SetPermission("user:manage", "用户管理")
 authGroup.GET("/:id", handler.GetUser)
 
@@ -305,7 +305,7 @@ WHERE ur.user_id = ? AND r.path = ? AND r.method = ?
 
 ```go
 // 就这一行！
-newGroup := routegroup.WithAuthRouterGroup(api.Group("/new-module")).
+newGroup := routegroup.WithRouterGroup(api.Group("/new-module")).
     SetPermission("new:manage", "新模块管理")
 ```
 
@@ -313,7 +313,7 @@ newGroup := routegroup.WithAuthRouterGroup(api.Group("/new-module")).
 
 ### Q: 如何让某个路由不需要权限？
 
-**A:** 不要使用 `AuthRouterGroup`，直接使用普通的 `gin.RouterGroup`：
+**A:** 不要使用 `RouterGroup`，直接使用普通的 `gin.RouterGroup`：
 
 ```go
 // 公共路由，无需权限
@@ -454,7 +454,7 @@ func UpdateUser(c *gin.Context) {
 
 ```go
 // 只使用 JWT 中间件，不使用 Permission 中间件
-authGroup := routegroup.WithAuthRouterGroup(api.Group("/profile"))
+authGroup := routegroup.WithRouterGroup(api.Group("/profile"))
 authGroup.Use(middleware.JWT())  // 只验证登录，不验证权限
 // 不调用 SetPermission
 {
