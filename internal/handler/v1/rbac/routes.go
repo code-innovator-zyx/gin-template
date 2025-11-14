@@ -29,7 +29,11 @@ func RegisterRBACRoutes(api *gin.RouterGroup) {
 			SetPermission("user:manage", "用户管理")
 		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 		{
-			authUserGroup.GETDesc("/profile", "获取用户信息", rbac.GetProfile)
+			authUserGroup.GETDesc("", "查询用户列表")
+			authUserGroup.GETDesc("/profile", "获取当前用户信息", rbac.GetProfile)
+			authUserGroup.GETDesc("/:id", "查询用户详情")
+			authUserGroup.POSTDesc("", "创建用户")
+			authUserGroup.PUTDesc("/:id", "修改用户")
 			authUserGroup.GETDesc("/:id/roles", "获取用户角色", rbac.GetUserRoles)
 			authUserGroup.POSTDesc("/:id/roles", "分配角色给用户", rbac.AssignRoleToUser)
 			authUserGroup.DELETEDesc("/:id/roles/:role_id", "移除用户角色", rbac.RemoveRoleFromUser)
