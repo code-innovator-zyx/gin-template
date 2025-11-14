@@ -78,6 +78,8 @@ definitions:
     type: object
   rbac.Resource:
     properties:
+      code:
+        type: string
       created_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -107,6 +109,8 @@ definitions:
   rbac.Role:
     description: 角色信息模型
     properties:
+      built_in:
+        type: boolean
       created_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -233,6 +237,27 @@ definitions:
       role_id:
         type: integer
       user_id:
+        type: integer
+    type: object
+  response.PaginatedResponse:
+    properties:
+      code:
+        description: 业务状态码
+        type: integer
+      data: {}
+      message:
+        description: 提示信息
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationParams'
+    type: object
+  response.PaginationParams:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
         type: integer
     type: object
   response.Response:
@@ -703,6 +728,62 @@ paths:
       summary: 分配角色给用户
       tags:
       - RBAC-用户角色管理
+  /user/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有用户信息列表（支持分页）
+      parameters:
+      - example: john@example.com
+        in: query
+        name: email
+        type: string
+      - example: johndoe
+        in: query
+        name: name
+        type: string
+      - default: 1
+        example: 1
+        in: query
+        name: page
+        required: true
+        type: integer
+      - default: 10
+        example: 10
+        in: query
+        name: pageSize
+        required: true
+        type: integer
+      - example: 1
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回用户列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.PaginatedResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户列表
+      tags:
+      - RBAC-用户管理
   /user/login:
     post:
       consumes:

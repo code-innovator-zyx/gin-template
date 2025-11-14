@@ -1,6 +1,7 @@
 package response
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,17 @@ type Response struct {
 	Message string      `json:"message"` // 提示信息
 	Data    interface{} `json:"data"`    // 数据
 }
+type PaginatedResponse struct {
+	Code       int              `json:"code"`    // 业务状态码
+	Message    string           `json:"message"` // 提示信息
+	Data       any              `json:"data"`
+	Pagination PaginationParams `json:"pagination"`
+}
+type PaginationParams struct {
+	Page     int   `json:"page"`
+	PageSize int   `json:"page_size"`
+	Total    int64 `json:"total"`
+}
 
 // Success 成功响应
 func Success(c *gin.Context, data interface{}) {
@@ -19,6 +31,21 @@ func Success(c *gin.Context, data interface{}) {
 		Code:    200,
 		Message: "success",
 		Data:    data,
+	})
+}
+
+// SuccessPage 分页响应
+func SuccessPage(c *gin.Context, data any, page, pageSize int, total int64) {
+	fmt.Println("response ", data)
+	c.JSON(http.StatusOK, PaginatedResponse{
+		Code:    200,
+		Message: "success",
+		Data:    data,
+		Pagination: PaginationParams{
+			Page:     page,
+			PageSize: pageSize,
+			Total:    total,
+		},
 	})
 }
 

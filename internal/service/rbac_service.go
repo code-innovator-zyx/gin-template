@@ -175,6 +175,7 @@ func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) 
 		PermissionCode string `json:"permission_code"`
 		ResourceID     uint   `json:"resource_id"`
 		Path           string `json:"path"`
+		Code           string `json:"code"`
 		Method         string `json:"method"`
 		Description    string `json:"description"`
 	}
@@ -186,6 +187,7 @@ func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) 
 			res.id AS resource_id,
 			res.path,
 			res.method,
+			res.code,
 			res.description
 		FROM permissions p
 		JOIN resources res ON p.id = res.permission_id
@@ -214,6 +216,7 @@ func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) 
 			ID:          row.ResourceID,
 			Path:        row.Path,
 			Method:      row.Method,
+			Code:        row.Code,
 			Description: row.Description,
 		})
 		permMap[row.PermissionID] = p

@@ -3,6 +3,7 @@ package rbac
 import (
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
+	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/response"
 	"gin-template/pkg/utils"
 	"strings"
@@ -16,13 +17,13 @@ import (
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
-// @Param data body UserRegisterRequest true "用户注册信息"
+// @Param data body types.UserRegisterRequest true "用户注册信息"
 // @Success 200 {object} response.Response{data=rbac.User} "注册成功返回用户信息"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user/register [post]
 func Register(c *gin.Context) {
-	var req UserRegisterRequest
+	var req types.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -48,14 +49,14 @@ func Register(c *gin.Context) {
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
-// @Param data body UserLoginRequest true "用户登录信息"
-// @Success 200 {object} response.Response{data=TokenResponse} "登录成功返回令牌对"
+// @Param data body types.UserLoginRequest true "用户登录信息"
+// @Success 200 {object} response.Response{data=types.TokenResponse} "登录成功返回令牌对"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "用户名或密码错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user/login [post]
 func Login(c *gin.Context) {
-	var req UserLoginRequest
+	var req types.UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -68,7 +69,7 @@ func Login(c *gin.Context) {
 	}
 
 	// 返回令牌对
-	tokenResponse := TokenResponse{
+	tokenResponse := types.TokenResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		TokenType:    tokenPair.TokenType,
@@ -91,7 +92,7 @@ func Login(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user/refresh [post]
 func RefreshToken(c *gin.Context) {
-	var req RefreshTokenRequest
+	var req types.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -114,7 +115,7 @@ func RefreshToken(c *gin.Context) {
 	}
 
 	// 返回新的令牌对
-	tokenResponse := TokenResponse{
+	tokenResponse := types.TokenResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		TokenType:    tokenPair.TokenType,
@@ -186,10 +187,42 @@ func GetProfile(c *gin.Context) {
 	}
 
 	// 组装用户完整资料
-	profile := UserProfile{
+	profile := types.UserProfile{
 		User:        user,
 		Permissions: resources,
 	}
 
 	response.Success(c, profile)
+}
+
+// ListUser godoc
+// @Summary 获取用户列表
+// @Description 获取所有用户信息列表（支持分页）
+// @Tags RBAC-用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request query types.ListUserRequest true "查询参数"
+// @Success 200 {object} response.PaginatedResponse{data=map[string]interface{}} "成功返回用户列表"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user [get]
+func ListUser(c *gin.Context) {
+	// 获取分页参数
+	request := types.ListUserRequest{}
+	err := c.ShouldBindQuery(&request)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+	}
+
+	ctx := c.Request.Context()
+
+	// 获取用户列表
+	users, total, err := service.GetUserService().List(ctx, request)
+	if err != nil {
+		response.Fail(c, 500, "获取用户列表失败: "+err.Error())
+		return
+	}
+
+	response.SuccessPage(c, users, request.Page, request.PageSize, total)
 }

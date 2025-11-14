@@ -17,6 +17,7 @@ type User struct {
 	Password  string            `gorm:"size:100;not null" json:"-" description:"密码"`
 	Email     string            `gorm:"size:100;uniqueIndex" json:"email" example:"john@example.com" description:"邮箱"`
 	Avatar    string            `gorm:"size:255" json:"avatar" example:"https://example.com/avatar.jpg" description:"头像URL"`
+	Gender    consts.Gender     `gorm:"type:tinyint;default:0;not null" json:"gender" example:"1"`
 	Status    consts.UserStatus `gorm:"type:tinyint;default:1;not null" json:"status" example:"1" description:"用户状态"`
 	Roles     []Role            `gorm:"many2many:user_roles;" json:"roles" description:"用户角色"`
 	CreatedAt time.Time         `json:"created_at" example:"2023-01-01T00:00:00Z" description:"创建时间"`

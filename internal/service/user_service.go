@@ -5,6 +5,7 @@ import (
 	"errors"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/utils"
 	"sync"
 
@@ -118,4 +119,22 @@ func (s *userService) Update(ctx context.Context, user *rbac.User) error {
 // Delete 删除用户
 func (s *userService) Delete(ctx context.Context, id uint) error {
 	return core.MustNewDbWithContext(ctx).Delete(&rbac.User{}, id).Error
+}
+
+// List 获取用户列表
+func (s *userService) List(ctx context.Context, request types.ListUserRequest) ([]*rbac.User, int64, error) {
+	db := core.MustNewDbWithContext(ctx)
+
+	var total int64
+	if err := db.Model(&rbac.User{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var users []*rbac.User
+	offset := (request.Page - 1) * request.PageSize
+	if err := db.Offset(offset).Limit(request.PageSize).Order("id desc").Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }

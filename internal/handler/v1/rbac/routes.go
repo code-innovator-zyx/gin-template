@@ -25,7 +25,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		authUserGroup := userGroup.WithMeta("user:manage", "用户管理")
 		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 		{
-			authUserGroup.GET("").WithMeta("list", "查询用户列表")
+			authUserGroup.GET("", rbac.ListUser).WithMeta("list", "查询用户列表")
 			authUserGroup.GET("/profile", rbac.GetProfile).WithMeta("profile", "获取当前用户信息")
 			authUserGroup.GET("/:id").WithMeta("detail", "查询用户详情")
 			authUserGroup.POST("").WithMeta("create", "创建用户")
