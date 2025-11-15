@@ -10,7 +10,7 @@ import (
 // 使用 SetPermission 声明路由组所属的权限组，系统会自动完成资源绑定
 func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 	// 用户模块
-	userGroup := api.Group("/user")
+	userGroup := api.Group("/users")
 	{
 		// 公共接口（不需要权限）
 		userGroup.Public().POST("/register", rbac.Register)
@@ -19,20 +19,21 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		authGroup := userGroup.Group("")
 		authGroup.Use(middleware.JWT())
 		{
+			// 需要登录但是不需要权限控制
 			authGroup.POST("/logout", rbac.Logout)
+			authGroup.GET("/options", rbac.Options)
 		}
 		// 需要认证和权限 - 声明权限组
 		authUserGroup := userGroup.WithMeta("user:manage", "用户管理")
 		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 		{
-			authUserGroup.GET("", rbac.ListUser).WithMeta("list", "查询用户列表")
 			authUserGroup.GET("/profile", rbac.GetProfile).WithMeta("profile", "获取当前用户信息")
-			authUserGroup.GET("/:id").WithMeta("detail", "查询用户详情")
-			authUserGroup.POST("").WithMeta("create", "创建用户")
-			authUserGroup.PUT("/:id").WithMeta("update", "修改用户")
+			authUserGroup.GET("list", rbac.ListUser).WithMeta("list", "查询用户列表")
+			authUserGroup.POST("create").WithMeta("create", "创建用户")
+			authUserGroup.PUT("/update/:id").WithMeta("update", "修改用户")
+			authUserGroup.GET("/detail/:id").WithMeta("detail", "查询用户详情")
+			authUserGroup.DELETE("/delete/:id").WithMeta("delete", "移除用户")
 			authUserGroup.GET("/:id/roles", rbac.GetUserRoles).WithMeta("roles", "获取用户角色")
-			authUserGroup.POST("/:id/roles", rbac.AssignRoleToUser).WithMeta("assign-role", "分配角色给用户")
-			authUserGroup.DELETE("/:id/roles/:role_id", rbac.RemoveRoleFromUser).WithMeta("remove-role", "移除用户角色")
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	types "gin-template/internal/types/rbac"
+	"gin-template/pkg/orm"
 	"gin-template/pkg/utils"
 	"sync"
 
@@ -57,7 +58,7 @@ func (s *userService) Create(ctx context.Context, user *rbac.User) error {
 // GetByID 根据ID获取用户
 func (s *userService) GetByID(ctx context.Context, id uint) (*rbac.User, error) {
 	var user rbac.User
-	if err := core.MustNewDbWithContext(ctx).First(&user, id).Error; err != nil {
+	if err := core.MustNewDbWithContext(ctx).Preload("Roles").First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
 		}
@@ -122,19 +123,20 @@ func (s *userService) Delete(ctx context.Context, id uint) error {
 }
 
 // List 获取用户列表
-func (s *userService) List(ctx context.Context, request types.ListUserRequest) ([]*rbac.User, int64, error) {
-	db := core.MustNewDbWithContext(ctx)
-
-	var total int64
-	if err := db.Model(&rbac.User{}).Count(&total).Error; err != nil {
-		return nil, 0, err
+func (s *userService) List(ctx context.Context, request types.ListUserRequest) (*orm.PageResult[rbac.User], error) {
+	tx := core.MustNewDbWithContext(ctx)
+	if request.Name != "" {
+		tx = tx.Where("name LIKE ?", "%"+request.Name+"%")
 	}
-
-	var users []*rbac.User
-	offset := (request.Page - 1) * request.PageSize
-	if err := db.Offset(offset).Limit(request.PageSize).Order("id desc").Find(&users).Error; err != nil {
-		return nil, 0, err
+	if request.Email != "" {
+		tx = tx.Where("email = ?", request.Email)
 	}
-
-	return users, total, nil
+	if request.Status > 0 {
+		tx = tx.Where("status = ?", request.Status)
+	}
+	return orm.Paginate[rbac.User](ctx, tx, orm.PageQuery{
+		Page:     request.Page,
+		PageSize: request.PageSize,
+		OrderBy:  "-created_at",
+	})
 }

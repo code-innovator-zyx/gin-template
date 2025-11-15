@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/consts"
+	"gin-template/pkg/orm"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"maps"
@@ -32,6 +34,22 @@ func GetRbacService() *rbacService {
 }
 
 // ==================== 角色管理 ====================
+
+// ListRoles 获取所有角色
+func (s *rbacService) ListRoles(ctx context.Context, request types.ListRoleRequest) (*orm.PageResult[rbac.Role], error) {
+	tx := core.MustNewDbWithContext(ctx)
+	if request.Name != "" {
+		tx.Where("name LIKE ?", "%"+request.Name+"%")
+	}
+	if request.Status > 0 {
+		tx.Where("status = ?", request.Status)
+	}
+	return orm.Paginate[rbac.Role](ctx, tx, orm.PageQuery{
+		Page:     request.Page,
+		PageSize: request.PageSize,
+		OrderBy:  "-created_at",
+	})
+}
 
 // GetAllRoles 获取所有角色
 func (s *rbacService) GetAllRoles(ctx context.Context) ([]rbac.Role, error) {

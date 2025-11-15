@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  consts.Gender:
+    enum:
+    - 0
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - GenderUnknown
+    - GenderMale
+    - GenderFemale
   consts.RoleStatus:
     enum:
     - 0
@@ -45,6 +56,12 @@ definitions:
         items:
           type: integer
         type: array
+    type: object
+  rbac.Option:
+    properties:
+      label:
+        type: string
+      value: {}
     type: object
   rbac.Permission:
     properties:
@@ -163,6 +180,17 @@ definitions:
           type: integer
         type: array
     type: object
+  rbac.UpsertUserOptions:
+    properties:
+      gender:
+        items:
+          $ref: '#/definitions/rbac.Option'
+        type: array
+      role:
+        items:
+          $ref: '#/definitions/rbac.Option'
+        type: array
+    type: object
   rbac.User:
     description: 用户信息模型
     properties:
@@ -175,6 +203,10 @@ definitions:
       email:
         example: john@example.com
         type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/consts.Gender'
+        example: 1
       id:
         example: 1
         type: integer
@@ -248,11 +280,6 @@ definitions:
       message:
         description: 提示信息
         type: string
-      pagination:
-        $ref: '#/definitions/response.PaginationParams'
-    type: object
-  response.PaginationParams:
-    properties:
       page:
         type: integer
       page_size:
@@ -418,6 +445,27 @@ paths:
       consumes:
       - application/json
       description: 获取系统中所有角色的列表
+      parameters:
+      - example: johndoe
+        in: query
+        name: name
+        type: string
+      - default: 1
+        example: 1
+        in: query
+        name: page
+        required: true
+        type: integer
+      - default: 10
+        example: 10
+        in: query
+        name: pageSize
+        required: true
+        type: integer
+      - example: 1
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -425,7 +473,7 @@ paths:
           description: 成功获取角色列表
           schema:
             allOf:
-            - $ref: '#/definitions/response.Response'
+            - $ref: '#/definitions/response.PaginatedResponse'
             - properties:
                 data:
                   items:
@@ -687,48 +735,7 @@ paths:
       summary: 分配资源给角色
       tags:
       - RBAC-角色资源管理
-  /user-roles:
-    post:
-      consumes:
-      - application/json
-      description: 为指定用户分配角色
-      parameters:
-      - description: 用户角色信息
-        in: body
-        name: userRole
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.UserRole'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 成功分配角色
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.UserRole'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 分配角色给用户
-      tags:
-      - RBAC-用户角色管理
-  /user/list:
+  /users:
     get:
       consumes:
       - application/json
@@ -784,170 +791,6 @@ paths:
       summary: 获取用户列表
       tags:
       - RBAC-用户管理
-  /user/login:
-    post:
-      consumes:
-      - application/json
-      description: 用户登录并获取JWT令牌（Access Token + Refresh Token）
-      parameters:
-      - description: 用户登录信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.UserLoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 登录成功返回令牌对
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.TokenResponse'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 用户名或密码错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 用户登录
-      tags:
-      - RBAC-用户管理
-  /user/logout:
-    post:
-      consumes:
-      - application/json
-      description: 撤销当前用户的令牌
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 登出成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 用户登出
-      tags:
-      - RBAC-用户管理
-  /user/profile:
-    get:
-      consumes:
-      - application/json
-      description: 获取当前登录用户的完整资料（包括角色、权限和可访问资源）
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功返回用户完整资料
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.UserProfile'
-              type: object
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取用户个人资料
-      tags:
-      - RBAC-用户管理
-  /user/refresh:
-    post:
-      consumes:
-      - application/json
-      description: 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
-      parameters:
-      - description: 刷新令牌信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 刷新成功返回新令牌对
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.TokenResponse'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 刷新令牌无效或已过期
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 刷新令牌
-      tags:
-      - RBAC-用户管理
-  /user/register:
-    post:
-      consumes:
-      - application/json
-      description: 创建新用户账号
-      parameters:
-      - description: 用户注册信息
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.UserRegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 注册成功返回用户信息
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.User'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 用户注册
-      tags:
-      - RBAC-用户管理
   /users/{id}/roles:
     get:
       consumes:
@@ -990,33 +833,83 @@ paths:
       summary: 获取用户角色
       tags:
       - RBAC-用户角色管理
-  /users/{user_id}/roles/{role_id}:
-    delete:
+  /users/login:
+    post:
       consumes:
       - application/json
-      description: 从指定用户移除指定角色
+      description: 用户登录并获取JWT令牌（Access Token + Refresh Token）
       parameters:
-      - description: 用户ID
-        in: path
-        name: user_id
+      - description: 用户登录信息
+        in: body
+        name: data
         required: true
-        type: integer
-      - description: 角色ID
-        in: path
-        name: role_id
-        required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/rbac.UserLoginRequest'
       produces:
       - application/json
       responses:
-        "204":
-          description: 成功移除角色
+        "200":
+          description: 登录成功返回令牌对
           schema:
-            $ref: '#/definitions/response.Response'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.TokenResponse'
+              type: object
         "400":
-          description: 无效的用户ID或角色ID
+          description: 请求参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: 用户名或密码错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户登录
+      tags:
+      - RBAC-用户管理
+  /users/logout:
+    post:
+      consumes:
+      - application/json
+      description: 撤销当前用户的令牌
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 用户登出
+      tags:
+      - RBAC-用户管理
+  /users/options:
+    get:
+      consumes:
+      - application/json
+      description: 用户创建修改的option枚举信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回用户列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.UpsertUserOptions'
+              type: object
         "401":
           description: 未授权
           schema:
@@ -1027,9 +920,113 @@ paths:
             $ref: '#/definitions/response.Response'
       security:
       - ApiKeyAuth: []
-      summary: 从用户移除角色
+      summary: 用户options
       tags:
-      - RBAC-用户角色管理
+      - RBAC-用户管理
+  /users/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的完整资料（包括角色、权限和可访问资源）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回用户完整资料
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.UserProfile'
+              type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户个人资料
+      tags:
+      - RBAC-用户管理
+  /users/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
+      parameters:
+      - description: 刷新令牌信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功返回新令牌对
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.TokenResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 刷新令牌无效或已过期
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 刷新令牌
+      tags:
+      - RBAC-用户管理
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号
+      parameters:
+      - description: 用户注册信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功返回用户信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.User'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户注册
+      tags:
+      - RBAC-用户管理
 schemes:
 - http
 - https

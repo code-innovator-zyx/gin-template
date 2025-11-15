@@ -15,3 +15,17 @@ const (
 	GenderMale
 	GenderFemale
 )
+
+// String 实现 fmt.Stringer 接口
+func (g Gender) String() string {
+	switch g {
+	case GenderMale:
+		return "男"
+	case GenderFemale:
+		return "女"
+	case GenderUnknown:
+		fallthrough
+	default:
+		return "-"
+	}
+}

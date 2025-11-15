@@ -4,6 +4,7 @@ import (
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	types "gin-template/internal/types/rbac"
+	"gin-template/pkg/consts"
 	"gin-template/pkg/response"
 	"gin-template/pkg/utils"
 	"strings"
@@ -21,7 +22,7 @@ import (
 // @Success 200 {object} response.Response{data=rbac.User} "注册成功返回用户信息"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/register [post]
+// @Router /users/register [post]
 func Register(c *gin.Context) {
 	var req types.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -54,7 +55,7 @@ func Register(c *gin.Context) {
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "用户名或密码错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/login [post]
+// @Router /users/login [post]
 func Login(c *gin.Context) {
 	var req types.UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -90,7 +91,7 @@ func Login(c *gin.Context) {
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "刷新令牌无效或已过期"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/refresh [post]
+// @Router /users/refresh [post]
 func RefreshToken(c *gin.Context) {
 	var req types.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -134,7 +135,7 @@ func RefreshToken(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Success 200 {object} response.Response "登出成功"
 // @Failure 401 {object} response.Response "未授权"
-// @Router /user/logout [post]
+// @Router /users/logout [post]
 func Logout(c *gin.Context) {
 	// 获取 Access Token
 	authHeader := c.GetHeader("Authorization")
@@ -167,7 +168,7 @@ func Logout(c *gin.Context) {
 // @Success 200 {object} response.Response{data=UserProfile} "成功返回用户完整资料"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/profile [get]
+// @Router /users/profile [get]
 func GetProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
 	ctx := c.Request.Context()
@@ -195,6 +196,22 @@ func GetProfile(c *gin.Context) {
 	response.Success(c, profile)
 }
 
+// CreateUser godoc
+// @Summary 创建用户
+// @Description 系统内部管理员创建用户，密码默认就是邮箱号
+// @Tags RBAC-用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request query types.ListUserRequest true "查询参数"
+// @Success 200 {object} response.PaginatedResponse{data=map[string]interface{}} "成功返回用户列表"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /users [get]
+func CreateUser(c *gin.Context) {
+
+}
+
 // ListUser godoc
 // @Summary 获取用户列表
 // @Description 获取所有用户信息列表（支持分页）
@@ -206,23 +223,62 @@ func GetProfile(c *gin.Context) {
 // @Success 200 {object} response.PaginatedResponse{data=map[string]interface{}} "成功返回用户列表"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user [get]
+// @Router /users [get]
 func ListUser(c *gin.Context) {
 	// 获取分页参数
 	request := types.ListUserRequest{}
 	err := c.ShouldBindQuery(&request)
 	if err != nil {
 		response.BadRequest(c, err.Error())
+		return
 	}
 
 	ctx := c.Request.Context()
 
 	// 获取用户列表
-	users, total, err := service.GetUserService().List(ctx, request)
+	pageResult, err := service.GetUserService().List(ctx, request)
 	if err != nil {
 		response.Fail(c, 500, "获取用户列表失败: "+err.Error())
 		return
 	}
 
-	response.SuccessPage(c, users, request.Page, request.PageSize, total)
+	response.SuccessPage(c, pageResult.List, pageResult.Page, pageResult.PageSize, pageResult.Total)
+}
+
+// ListUser godoc
+// @Summary 用户options
+// @Description 用户创建修改的option枚举信息
+// @Tags RBAC-用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=types.UpsertUserOptions} "成功返回用户列表"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /users/options [get]
+func Options(c *gin.Context) {
+	roles, err := service.GetRbacService().GetAllRoles(c.Request.Context())
+	if err != nil {
+		response.InternalServerError(c, err.Error())
+		return
+	}
+	options := types.UpsertUserOptions{
+		Gander: []types.Option{
+			{
+				Label: consts.GenderMale.String(),
+				Value: consts.GenderMale,
+			}, {
+				Label: consts.GenderFemale.String(),
+				Value: consts.GenderFemale,
+			},
+		},
+		Role: make([]types.Option, 0, len(roles)),
+	}
+	for _, role := range roles {
+		options.Role = append(options.Role, types.Option{
+			Label: role.Name,
+			Value: role.ID,
+		})
+	}
+	response.Success(c, options)
 }

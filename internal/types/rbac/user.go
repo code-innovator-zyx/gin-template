@@ -48,3 +48,12 @@ type ListUserRequest struct {
 	Page     int    `form:"page,default=1" json:"page" binding:"required" example:"1" default:"1"`
 	PageSize int    `form:"pageSize,default=10" json:"pageSize" binding:"required" example:"10" default:"10"`
 }
+type Option struct {
+	Label string      `json:"label"`
+	Value interface{} `json:"value"`
+}
+
+type UpsertUserOptions struct {
+	Gander []Option `json:"gander"`
+	Role   []Option `json:"role"`
+}

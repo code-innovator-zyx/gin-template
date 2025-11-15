@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
+	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/response"
 	"gin-template/pkg/transaction"
 	"github.com/sirupsen/logrus"
@@ -21,17 +22,24 @@ import (
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Success 200 {object} response.Response{data=[]rbac.Role} "成功获取角色列表"
+// @Param request query types.ListRoleRequest true "查询参数"
+// @Success 200 {object} response.PaginatedResponse{data=[]rbac.Role} "成功获取角色列表"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [get]
 func GetRoles(c *gin.Context) {
-	roles, err := service.GetRbacService().GetAllRoles(c.Request.Context())
+	// 获取分页参数
+	request := types.ListRoleRequest{}
+	err := c.ShouldBindQuery(&request)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+	}
+	result, err := service.GetRbacService().ListRoles(c.Request.Context(), request)
 	if err != nil {
 		response.InternalServerError(c, "获取角色列表失败")
 		return
 	}
-	response.Success(c, roles)
+	response.SuccessPage(c, result.List, result.Page, result.PageSize, result.Total)
 }
 
 // CreateRole godoc
@@ -41,14 +49,14 @@ func GetRoles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param role body CreateRoleRequest true "角色信息"
+// @Param role body types.CreateRoleRequest true "角色信息"
 // @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /roles [post]
 func CreateRole(c *gin.Context) {
-	var request CreateRoleRequest
+	var request types.CreateRoleRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -108,7 +116,7 @@ func GetRole(c *gin.Context) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Param id path int true "角色ID"
-// @Param role body UpdateRoleRequest true "角色信息"
+// @Param role body types.UpdateRoleRequest true "角色信息"
 // @Success 200 {object} response.Response{data=nil} "成功更新角色"
 // @Failure 400 {object} response.Response "无效的角色ID或请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
@@ -122,7 +130,7 @@ func UpdateRole(c *gin.Context) {
 		return
 	}
 
-	var request UpdateRoleRequest
+	var request types.UpdateRoleRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -267,69 +275,6 @@ func GetUserRoles(c *gin.Context) {
 	}
 
 	response.Success(c, userRoles)
-}
-
-// AssignRoleToUser godoc
-// @Summary 分配角色给用户
-// @Description 为指定用户分配角色
-// @Tags RBAC-用户角色管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param userRole body rbac.UserRole true "用户角色信息"
-// @Success 201 {object} response.Response{data=rbac.UserRole} "成功分配角色"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user-roles [post]
-func AssignRoleToUser(c *gin.Context) {
-	var userRole rbac.UserRole
-	if err := c.ShouldBindJSON(&userRole); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	if err := service.GetRbacService().CreateUserRole(c.Request.Context(), &userRole); err != nil {
-		response.InternalServerError(c, "分配角色失败")
-		return
-	}
-
-	response.Created(c, userRole)
-}
-
-// RemoveRoleFromUser godoc
-// @Summary 从用户移除角色
-// @Description 从指定用户移除指定角色
-// @Tags RBAC-用户角色管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param user_id path int true "用户ID"
-// @Param role_id path int true "角色ID"
-// @Success 204 {object} response.Response "成功移除角色"
-// @Failure 400 {object} response.Response "无效的用户ID或角色ID"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/{user_id}/roles/{role_id} [delete]
-func RemoveRoleFromUser(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("user_id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
-		return
-	}
-
-	roleID, err := strconv.ParseUint(c.Param("role_id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "无效的角色ID")
-		return
-	}
-
-	if err := service.GetRbacService().RemoveRoleFromUser(c.Request.Context(), uint(userID), uint(roleID)); err != nil {
-		response.InternalServerError(c, "移除角色失败")
-		return
-	}
-
-	response.NoContent(c)
 }
 
 // AssignResourceToRole godoc

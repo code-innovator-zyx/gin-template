@@ -126,13 +126,43 @@
                     "RBAC-角色管理"
                 ],
                 "summary": "获取角色列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "johndoe",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "example": 1,
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "example": 10,
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功获取角色列表",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/response.PaginatedResponse"
                                 },
                                 {
                                     "type": "object",
@@ -552,76 +582,7 @@
                 }
             }
         },
-        "/user-roles": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "为指定用户分配角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "RBAC-用户角色管理"
-                ],
-                "summary": "分配角色给用户",
-                "parameters": [
-                    {
-                        "description": "用户角色信息",
-                        "name": "userRole",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/rbac.UserRole"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "成功分配角色",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/rbac.UserRole"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/list": {
+        "/users": {
             "get": {
                 "security": [
                     {
@@ -710,7 +671,7 @@
                 }
             }
         },
-        "/user/login": {
+        "/users/login": {
             "post": {
                 "description": "用户登录并获取JWT令牌（Access Token + Refresh Token）",
                 "consumes": [
@@ -774,7 +735,7 @@
                 }
             }
         },
-        "/user/logout": {
+        "/users/logout": {
             "post": {
                 "security": [
                     {
@@ -808,7 +769,59 @@
                 }
             }
         },
-        "/user/profile": {
+        "/users/options": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "用户创建修改的option枚举信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-用户管理"
+                ],
+                "summary": "用户options",
+                "responses": {
+                    "200": {
+                        "description": "成功返回用户列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/rbac.UpsertUserOptions"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/profile": {
             "get": {
                 "security": [
                     {
@@ -860,7 +873,7 @@
                 }
             }
         },
-        "/user/refresh": {
+        "/users/refresh": {
             "post": {
                 "description": "使用 Refresh Token 获取新的 Access Token 和 Refresh Token",
                 "consumes": [
@@ -924,7 +937,7 @@
                 }
             }
         },
-        "/user/register": {
+        "/users/register": {
             "post": {
                 "description": "创建新用户账号",
                 "consumes": [
@@ -1051,71 +1064,23 @@
                     }
                 }
             }
-        },
-        "/users/{user_id}/roles/{role_id}": {
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "从指定用户移除指定角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "RBAC-用户角色管理"
-                ],
-                "summary": "从用户移除角色",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "用户ID",
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "角色ID",
-                        "name": "role_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "成功移除角色",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "无效的用户ID或角色ID",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
+        "consts.Gender": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "GenderUnknown",
+                "GenderMale",
+                "GenderFemale"
+            ]
+        },
         "consts.RoleStatus": {
             "type": "integer",
             "format": "int32",
@@ -1174,6 +1139,15 @@
                         "type": "integer"
                     }
                 }
+            }
+        },
+        "rbac.Option": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "value": {}
             }
         },
         "rbac.Permission": {
@@ -1344,6 +1318,23 @@
                 }
             }
         },
+        "rbac.UpsertUserOptions": {
+            "type": "object",
+            "properties": {
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Option"
+                    }
+                },
+                "role": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Option"
+                    }
+                }
+            }
+        },
         "rbac.User": {
             "description": "用户信息模型",
             "type": "object",
@@ -1359,6 +1350,14 @@
                 "email": {
                     "type": "string",
                     "example": "john@example.com"
+                },
+                "gender": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.Gender"
+                        }
+                    ],
+                    "example": 1
                 },
                 "id": {
                     "type": "integer",
@@ -1467,14 +1466,6 @@
                     "description": "提示信息",
                     "type": "string"
                 },
-                "pagination": {
-                    "$ref": "#/definitions/response.PaginationParams"
-                }
-            }
-        },
-        "response.PaginationParams": {
-            "type": "object",
-            "properties": {
                 "page": {
                     "type": "integer"
                 },
