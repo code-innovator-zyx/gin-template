@@ -6,7 +6,7 @@ import (
 	v1 "gin-template/internal/handler/v1"
 	"gin-template/internal/middleware"
 	"gin-template/internal/routegroup"
-	"gin-template/internal/service"
+	"gin-template/internal/service/rbac"
 
 	"github.com/sirupsen/logrus"
 
@@ -39,7 +39,7 @@ func Init() *gin.Engine {
 
 	rbacConfig := buildRBACConfig()
 	// 使用 Service 层来处理 RBAC 初始化业务逻辑（应用启动时使用 Background context）
-	if err := service.GetRbacService().InitializeRBAC(context.Background(), protectedRoutes, rbacConfig); err != nil {
+	if err := rbac.NewRbacService(context.TODO()).InitializeRBAC(protectedRoutes, rbacConfig); err != nil {
 		logrus.Fatalf("RBAC 权限系统初始化失败: %v", err)
 	}
 
@@ -47,10 +47,10 @@ func Init() *gin.Engine {
 }
 
 // convertRoutes 转换路由格式（从 routegroup 到 service 层）
-func convertRoutes(routes []*routegroup.ProtectedRoute) []service.ProtectedRoute {
-	result := make([]service.ProtectedRoute, len(routes))
+func convertRoutes(routes []*routegroup.ProtectedRoute) []rbac.ProtectedRoute {
+	result := make([]rbac.ProtectedRoute, len(routes))
 	for i, route := range routes {
-		result[i] = service.ProtectedRoute{
+		result[i] = rbac.ProtectedRoute{
 			Resource:       route.Resource,
 			PermissionCode: route.PermissionCode,
 			PermissionName: route.PermissionName,
@@ -61,7 +61,7 @@ func convertRoutes(routes []*routegroup.ProtectedRoute) []service.ProtectedRoute
 }
 
 // buildRBACConfig 从配置文件构建 RBAC 初始化配置
-func buildRBACConfig() *service.RBACInitConfig {
+func buildRBACConfig() *rbac.RBACInitConfig {
 	cfg := core.MustGetConfig()
 
 	// 如果没有配置 RBAC 或未启用自动初始化，返回 nil 使用默认配置
@@ -69,7 +69,7 @@ func buildRBACConfig() *service.RBACInitConfig {
 		return nil
 	}
 
-	return &service.RBACInitConfig{
+	return &rbac.RBACInitConfig{
 		AdminUsername:  cfg.RBAC.AdminUser.Username,
 		AdminPassword:  cfg.RBAC.AdminUser.Password,
 		AdminEmail:     cfg.RBAC.AdminUser.Email,

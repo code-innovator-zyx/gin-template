@@ -23,7 +23,7 @@ import (
 // CacheService 缓存服务接口
 type CacheService interface {
 	// 权限相关缓存
-	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error)
+	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(uid uint) ([]rbac.Resource, error)) (bool, error)
 	ClearUserPermissions(ctx context.Context, userID uint) error
 	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error
 	SetUserPermissions(ctx context.Context, userID uint, resources []rbac.Resource) error
@@ -92,7 +92,7 @@ const (
 // 1. 防穿透：缓存空权限（用户没有任何权限时也缓存）
 // 2. 防击穿：使用 singleflight 确保同一个 key 只有一个请求去查询数据库
 // 3. 防雪崩：TTL 添加随机偏移
-func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error) {
+func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(uid uint) ([]rbac.Resource, error)) (bool, error) {
 	if s.client == nil {
 		// 缓存不可用
 		return false, cache.ErrUnreachable
@@ -123,7 +123,7 @@ func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, pat
 			return nil, nil // 缓存已存在，直接返回
 		}
 		// 从数据库加载用户所有权限
-		resources, err := fn(ctx, userID)
+		resources, err := fn(userID)
 		if err != nil {
 			return nil, err
 		}

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"gin-template/internal/service"
+	"gin-template/internal/service/rbac"
 	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -18,7 +18,7 @@ func PermissionMiddleware() gin.HandlerFunc {
 			return
 		}
 		// 使用缓存服务检查权限
-		hasPermission, err := service.GetRbacService().CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method)
+		hasPermission, err := rbac.NewResourceService(c.Request.Context()).CheckUserPermission(userID.(uint), c.FullPath(), c.Request.Method)
 		if err != nil {
 			logrus.Error("failed check user permission: ", err)
 			response.InternalServerError(c, "权限检查失败")

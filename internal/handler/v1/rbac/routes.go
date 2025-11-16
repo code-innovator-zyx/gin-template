@@ -44,9 +44,6 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		roleGroup.GET("/:id", rbac.GetRole).WithMeta("detail", "获取角色详情")
 		roleGroup.PUT("/:id", rbac.UpdateRole).WithMeta("update", "更新角色")
 		roleGroup.DELETE("/:id", rbac.DeleteRole).WithMeta("delete", "删除角色")
-		// 角色-资源绑定（实际授权）
-		roleGroup.POST("/:id/resources/:resource_id", rbac.AssignResourceToRole).WithMeta("assign-resource", "分配资源给角色")
-		roleGroup.DELETE("/:id/resources/:resource_id", rbac.RemoveResourceFromRole).WithMeta("remove-resource", "移除角色资源")
 	}
 
 	// 权限模块 - 声明权限组

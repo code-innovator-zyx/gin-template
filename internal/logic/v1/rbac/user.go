@@ -3,6 +3,7 @@ package rbac
 import (
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
+	rbac2 "gin-template/internal/service/rbac"
 	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/consts"
 	"gin-template/pkg/response"
@@ -37,7 +38,7 @@ func Register(c *gin.Context) {
 		Email:    req.Email,
 	}
 
-	if err := service.GetUserService().Register(c.Request.Context(), user); err != nil {
+	if err := rbac2.NewUserService(c.Request.Context()).Register(user); err != nil {
 		response.Fail(c, 400, err.Error())
 		return
 	}
@@ -64,7 +65,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := service.GetUserService().Login(c.Request.Context(), req.Account, req.Password)
+	tokenPair, err := rbac2.NewUserService(c.Request.Context()).Login(req.Account, req.Password)
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
@@ -175,14 +176,14 @@ func GetProfile(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取用户基础信息
-	user, err := service.GetUserService().GetByID(ctx, userID)
+	user, err := rbac2.NewUserService(ctx).FindByID(userID, "Roles")
 	if err != nil {
 		response.Fail(c, 500, "获取用户信息失败: "+err.Error())
 		return
 	}
 
 	// 获取用户可访问的资源列表
-	resources, err := service.GetRbacService().GetUserPermissionGroups(ctx, userID)
+	resources, err := rbac2.NewPermissionService(ctx).GetUserPerms(userID)
 	if err != nil {
 		response.Fail(c, 500, "获取用户资源失败: "+err.Error())
 		return
@@ -217,7 +218,7 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	// 获取用户基础信息
-	err = service.GetUserService().Delete(c.Request.Context(), uint(userID))
+	err = rbac2.NewUserService(c.Request.Context()).DeleteByID(uint(userID))
 	if err != nil {
 		response.Fail(c, 500, "删除用户失败: "+err.Error())
 		return
@@ -242,11 +243,8 @@ func CreateUser(c *gin.Context) {
 	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 	}
-
-	ctx := c.Request.Context()
-
 	// 获取用户列表
-	err := service.GetUserService().UpsertUser(ctx, request)
+	err := rbac2.NewUserService(c.Request.Context()).Create(request)
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -282,10 +280,9 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	request.Id = uint(userID)
-	ctx := c.Request.Context()
 
 	// 更新用户
-	err = service.GetUserService().UpsertUser(ctx, request)
+	err = rbac2.NewUserService(c.Request.Context()).Update(request)
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -317,7 +314,7 @@ func ListUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取用户列表
-	pageResult, err := service.GetUserService().List(ctx, request)
+	pageResult, err := rbac2.NewUserService(ctx).List(request)
 	if err != nil {
 		response.Fail(c, 500, "获取用户列表失败: "+err.Error())
 		return

@@ -1,339 +1,23 @@
-package service
+package rbac
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
-	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/consts"
-	"gin-template/pkg/orm"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"maps"
-	"slices"
-	"sync"
 )
 
 // rbacService RBAC权限服务
-type rbacService struct{}
-
-var (
-	rbacServiceOnce   sync.Once
-	globalRbacService *rbacService
-)
-
-// GetRbacService 获取RBAC服务单例（懒加载，线程安全）
-func GetRbacService() *rbacService {
-	rbacServiceOnce.Do(func() {
-		globalRbacService = &rbacService{}
-	})
-	return globalRbacService
+type rbacService struct {
+	ctx context.Context
 }
 
-// ==================== 角色管理 ====================
-
-// ListRoles 获取所有角色
-func (s *rbacService) ListRoles(ctx context.Context, request types.ListRoleRequest) (*orm.PageResult[rbac.Role], error) {
-	tx := core.MustNewDbWithContext(ctx)
-	if request.Name != "" {
-		tx.Where("name LIKE ?", "%"+request.Name+"%")
-	}
-	if request.Status > 0 {
-		tx.Where("status = ?", request.Status)
-	}
-	return orm.Paginate[rbac.Role](ctx, tx, orm.PageQuery{
-		Page:     request.Page,
-		PageSize: request.PageSize,
-		OrderBy:  "-created_at",
-	})
-}
-
-// GetAllRoles 获取所有角色
-func (s *rbacService) GetAllRoles(ctx context.Context, ids ...uint) ([]rbac.Role, error) {
-	var roles []rbac.Role
-	tx := core.MustNewDbWithContext(ctx)
-	if len(ids) > 0 {
-		tx.Where("id IN (?)", ids)
-	}
-	if err := tx.Find(&roles).Error; err != nil {
-		return nil, err
-	}
-	return roles, nil
-}
-
-// GetRoleByID 根据ID获取角色
-func (s *rbacService) GetRoleByID(ctx context.Context, id uint, preloads ...string) (*rbac.Role, error) {
-	var role rbac.Role
-	db := core.MustNewDbWithContext(ctx)
-
-	for _, preload := range preloads {
-		db = db.Preload(preload)
-	}
-
-	if err := db.First(&role, id).Error; err != nil {
-		return nil, err
-	}
-	return &role, nil
-}
-
-// CreateRole 创建角色
-func (s *rbacService) CreateRole(ctx context.Context, role *rbac.Role) error {
-	return core.MustNewDbWithContext(ctx).Create(role).Error
-}
-
-// UpdateRole 更新角色（使用事务）
-func (s *rbacService) UpdateRole(ctx context.Context, tx *gorm.DB, role *rbac.Role) error {
-	if tx == nil {
-		tx = core.MustNewDbWithContext(ctx)
-	}
-	return tx.Save(role).Error
-}
-
-// CheckRoleNameExists 检查角色名称是否存在
-func (s *rbacService) CheckRoleNameExists(ctx context.Context, name string, excludeID uint) (bool, error) {
-	db := core.MustNewDbWithContext(ctx)
-	query := db.Model(&rbac.Role{}).
-		Select("1").
-		Where("name = ?", name).
-		Limit(1)
-
-	if excludeID > 0 {
-		query = query.Where("id != ?", excludeID)
-	}
-
-	var exists int
-	err := query.Scan(&exists).Error
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	return exists == 1, nil
-}
-
-// UpdateRoleResources 更新角色的资源绑定
-func (s *rbacService) UpdateRoleResources(ctx context.Context, tx *gorm.DB, role *rbac.Role, resourceIDs []uint) error {
-	if tx == nil {
-		tx = core.MustNewDbWithContext(ctx)
-	}
-	var resources []rbac.Resource
-	if len(resourceIDs) > 0 {
-		rs, err := GetRbacService().GetResources(ctx, resourceIDs)
-		if err != nil {
-			return err
-		}
-		resources = rs
-	}
-	// ==== 处理角色资源====
-	if err := tx.Model(&role).Association("Resources").Replace(resources); err != nil {
-		return err
-	}
-	return nil
-
-}
-
-// DeleteRole 删除角色
-func (s *rbacService) DeleteRole(ctx context.Context, id uint) error {
-	return core.MustNewDbWithContext(ctx).Delete(&rbac.Role{}, id).Error
-}
-
-// ==================== 权限分组管理（仅用于UI展示） ====================
-
-// GetAllPermissions 获取所有权限分组（带资源列表）
-func (s *rbacService) GetAllPermissions(ctx context.Context) ([]rbac.Permission, error) {
-	var permissions []rbac.Permission
-	if err := core.MustNewDbWithContext(ctx).Preload("Resources").Find(&permissions).Error; err != nil {
-		return nil, err
-	}
-	return permissions, nil
-}
-
-// CreatePermission 创建权限分组
-func (s *rbacService) CreatePermission(ctx context.Context, permission *rbac.Permission) error {
-	return core.MustNewDbWithContext(ctx).Create(permission).Error
-}
-
-// CheckUserPermission 检查用户是否有权限访问指定路径和方法
-// 新架构：Permission 仅作为逻辑分组，实际授权通过 role_resources
-func (s *rbacService) CheckUserPermission(ctx context.Context, userID uint, path string, method string) (bool, error) {
-	// cache check First
-	exist, err := GetCacheService().CheckUserPermission(ctx, userID, path, method, s.GetUserResources)
-	if err == nil {
-		return exist, nil
-	}
-
-	// 直接检查 role_resources（不再查询 role_permissions）
-	var count int64
-	err = core.MustNewDbWithContext(ctx).Raw(`
-		SELECT COUNT(*) FROM resources res
-		JOIN role_resources rr ON res.id = rr.resource_id
-		JOIN user_roles ur ON rr.role_id = ur.role_id
-		WHERE ur.user_id = ? AND res.path = ? AND res.method = ?
-	`, userID, path, method).Scan(&count).Error
-
-	return count > 0, err
-}
-
-// GetUserRoles 获取用户角色列表（完整角色信息）
-func (s *rbacService) GetUserRoles(ctx context.Context, userID uint) ([]rbac.Role, error) {
-	var roles []rbac.Role
-	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT r.* FROM roles r
-		JOIN user_roles ur ON r.id = ur.role_id
-		WHERE ur.user_id = ?
-	`, userID).Find(&roles).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return roles, nil
-}
-
-// GetUserPermissionGroups 获取用户的权限分组（基于用户拥有的资源）
-// 返回用户有资源的 Permission
-func (s *rbacService) GetUserPermissionGroups(ctx context.Context, userID uint) ([]rbac.Permission, error) {
-	var rows []struct {
-		PermissionID   uint   `json:"permission_id"`
-		PermissionName string `json:"permission_name"`
-		PermissionCode string `json:"permission_code"`
-		ResourceID     uint   `json:"resource_id"`
-		Path           string `json:"path"`
-		Code           string `json:"code"`
-		Method         string `json:"method"`
-		Description    string `json:"description"`
-	}
-	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT DISTINCT
-			p.id   AS permission_id,
-			p.name AS permission_name,
-			p.code AS permission_code,
-			res.id AS resource_id,
-			res.path,
-			res.method,
-			res.code,
-			res.description
-		FROM permissions p
-		JOIN resources res ON p.id = res.permission_id
-		JOIN role_resources rr ON res.id = rr.resource_id
-		JOIN user_roles ur ON rr.role_id = ur.role_id
-		WHERE ur.user_id = ?
-		ORDER BY p.code, res.path, res.method
-	`, userID).Scan(&rows).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	permMap := make(map[uint]rbac.Permission)
-	for _, row := range rows {
-		p, ok := permMap[row.PermissionID]
-		if !ok {
-			p = rbac.Permission{
-				ID:   row.PermissionID,
-				Name: row.PermissionName,
-				Code: row.PermissionCode,
-			}
-			permMap[row.PermissionID] = p
-		}
-		p.Resources = append(p.Resources, rbac.Resource{
-			ID:          row.ResourceID,
-			Path:        row.Path,
-			Method:      row.Method,
-			Code:        row.Code,
-			Description: row.Description,
-		})
-		permMap[row.PermissionID] = p
-	}
-	return slices.SortedFunc(maps.Values(permMap), func(permission rbac.Permission, permission2 rbac.Permission) int {
-		return cmp.Compare(permission.ID, permission2.ID)
-	}), nil
-}
-
-// GetUserResources 获取用户可访问的资源列表（直接通过 role_resources）
-func (s *rbacService) GetUserResources(ctx context.Context, userID uint) ([]rbac.Resource, error) {
-	var resources []rbac.Resource
-	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT DISTINCT res.* FROM resources res
-		JOIN role_resources rr ON res.id = rr.resource_id
-		JOIN user_roles ur ON rr.role_id = ur.role_id
-		WHERE ur.user_id = ?
-		ORDER BY res.path, res.method
-	`, userID).Find(&resources).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
-}
-
-// AssignRoleToUser 为用户分配角色（通过ID）
-func (s *rbacService) AssignRoleToUser(ctx context.Context, userID uint, roleID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", userID, roleID).Error
-}
-
-// RemoveRoleFromUser 从用户移除角色
-func (s *rbacService) RemoveRoleFromUser(ctx context.Context, userID uint, roleID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM user_roles WHERE user_id = ? AND role_id = ?", userID, roleID).Error
-}
-
-// AssignResourceToRole 为角色分配资源
-func (s *rbacService) AssignResourceToRole(ctx context.Context, roleID uint, resourceID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)", roleID, resourceID).Error
-}
-
-// RemoveResourceFromRole 从角色移除资源
-func (s *rbacService) RemoveResourceFromRole(ctx context.Context, roleID uint, resourceID uint) error {
-	return core.MustNewDbWithContext(ctx).Exec("DELETE FROM role_resources WHERE role_id = ? AND resource_id = ?", roleID, resourceID).Error
-}
-
-// GetRoleResources 获取角色的所有资源
-func (s *rbacService) GetRoleResources(ctx context.Context, roleID uint) ([]rbac.Resource, error) {
-	var resources []rbac.Resource
-	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT res.* FROM resources res
-		JOIN role_resources rr ON res.id = rr.resource_id
-		WHERE rr.role_id = ?
-		ORDER BY res.permission_id, res.path, res.method
-	`, roleID).Find(&resources).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
-}
-
-// GetUsersWithRole 获取拥有指定角色的所有用户ID
-func (s *rbacService) GetUsersWithRole(ctx context.Context, roleID uint) ([]uint, error) {
-	var userIDs []uint
-	err := core.MustNewDbWithContext(ctx).
-		Table("user_roles").
-		Select("user_id").
-		Where("role_id = ?", roleID).
-		Find(&userIDs).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return userIDs, nil
-}
-
-// GetResources 获取资源列表
-func (s *rbacService) GetResources(ctx context.Context, ids []uint) ([]rbac.Resource, error) {
-	var resources []rbac.Resource
-	err := core.MustNewDbWithContext(ctx).Raw(`
-		SELECT * FROM resources where id IN ?
-	`, ids).Find(&resources).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
+func NewRbacService(ctx context.Context) *rbacService {
+	return &rbacService{ctx: ctx}
 }
 
 // ==================== RBAC 系统初始化 ====================
@@ -367,13 +51,13 @@ type RBACInitConfig struct {
 // 4. 创建超级管理员角色
 // 5. 绑定所有资源到超级管理员角色（role_resources - 实际授权）
 // 6. 创建默认管理员用户并分配角色
-func (s *rbacService) InitializeRBAC(ctx context.Context, routes []ProtectedRoute, config *RBACInitConfig) error {
+func (s *rbacService) InitializeRBAC(routes []ProtectedRoute, config *RBACInitConfig) error {
 	// 如果配置为空或禁用自动初始化，则跳过
 	if config != nil && !config.EnableAutoInit {
 		logrus.Info("RBAC 自动初始化已禁用")
 		return nil
 	}
-	db := core.MustNewDbWithContext(ctx)
+	db := core.MustNewDbWithContext(s.ctx)
 
 	logrus.Info("开始初始化 RBAC 权限系统...")
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -700,6 +384,5 @@ func (s *rbacService) initializeAdminUser(tx *gorm.DB, roleID uint, config *RBAC
 			logrus.Info("    ✓ 补充分配超级管理员角色")
 		}
 	}
-
 	return nil
 }
