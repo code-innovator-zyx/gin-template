@@ -25,6 +25,9 @@ func (status RoleStatus) String() string {
 	}
 	return "invalid"
 }
+func AllRoleStatus() []RoleStatus {
+	return []RoleStatus{ROLESTATUS_ACTIVE, ROLESTATUS_INACTIVE}
+}
 
 // 用户状态
 type UserStatus uint8
@@ -41,10 +44,14 @@ func (s UserStatus) String() string {
 	case UserStatusActive:
 		return "正常"
 	case UserStatusDisabled:
-		return "禁用"
+		return "禁用登录"
 	case UserStatusLocked:
 		return "锁定"
 	default:
 		return "未知"
 	}
+}
+
+func AllUserStatus() []UserStatus {
+	return []UserStatus{UserStatusActive, UserStatusDisabled, UserStatusLocked}
 }

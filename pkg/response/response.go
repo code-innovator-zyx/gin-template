@@ -8,9 +8,9 @@ import (
 
 // Response 统一响应结构
 type Response struct {
-	Code    int         `json:"code"`    // 业务状态码
-	Message string      `json:"message"` // 提示信息
-	Data    interface{} `json:"data"`    // 数据
+	Code    int         `json:"code"` // 业务状态码
+	Message string      `json:"msg"`  // 提示信息
+	Data    interface{} `json:"data"` // 数据
 }
 type PaginatedResponse struct {
 	Code     int    `json:"code"`    // 业务状态码

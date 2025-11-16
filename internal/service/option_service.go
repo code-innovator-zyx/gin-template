@@ -1,0 +1,56 @@
+package service
+
+import (
+	"context"
+	"gin-template/internal/core"
+	"gin-template/internal/model/rbac"
+	types "gin-template/internal/types/rbac"
+)
+
+/*
+* @Author: zouyx
+* @Email: zouyx@knowsec.com
+* @Date:   2025/11/15 下午7:43
+* @Package:
+ */
+
+type OptionField string
+
+const (
+	FieldRole OptionField = "role"
+	FieldUser OptionField = "user"
+)
+
+// OptionGenerators 给每个常量定义生成 Option 的方法
+var OptionGenerators = map[OptionField]func(ctx context.Context) ([]types.Option, error){
+	FieldRole: func(ctx context.Context) ([]types.Option, error) {
+		roles := []rbac.Role{}
+		tx := core.MustNewDbWithContext(ctx)
+		if err := tx.Find(&roles).Error; err != nil {
+			return nil, err
+		}
+		opts := make([]types.Option, len(roles))
+		for i, r := range roles {
+			opts[i] = types.Option{
+				Label: r.Name,
+				Value: r.ID,
+			}
+		}
+		return opts, nil
+	},
+	FieldUser: func(ctx context.Context) ([]types.Option, error) {
+		roles := []rbac.User{}
+		tx := core.MustNewDbWithContext(ctx)
+		if err := tx.Find(&roles).Error; err != nil {
+			return nil, err
+		}
+		opts := make([]types.Option, len(roles))
+		for i, r := range roles {
+			opts[i] = types.Option{
+				Label: r.Username,
+				Value: r.ID,
+			}
+		}
+		return opts, nil
+	},
+}

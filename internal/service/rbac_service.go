@@ -52,9 +52,13 @@ func (s *rbacService) ListRoles(ctx context.Context, request types.ListRoleReque
 }
 
 // GetAllRoles 获取所有角色
-func (s *rbacService) GetAllRoles(ctx context.Context) ([]rbac.Role, error) {
+func (s *rbacService) GetAllRoles(ctx context.Context, ids ...uint) ([]rbac.Role, error) {
 	var roles []rbac.Role
-	if err := core.MustNewDbWithContext(ctx).Find(&roles).Error; err != nil {
+	tx := core.MustNewDbWithContext(ctx)
+	if len(ids) > 0 {
+		tx.Where("id IN (?)", ids)
+	}
+	if err := tx.Find(&roles).Error; err != nil {
 		return nil, err
 	}
 	return roles, nil
@@ -80,48 +84,55 @@ func (s *rbacService) CreateRole(ctx context.Context, role *rbac.Role) error {
 	return core.MustNewDbWithContext(ctx).Create(role).Error
 }
 
-// UpdateRole 更新角色（不使用事务）
-func (s *rbacService) UpdateRole(ctx context.Context, role *rbac.Role) error {
-	return core.MustNewDbWithContext(ctx).Save(role).Error
-}
-
-// UpdateRoleWithTx 更新角色（使用事务）
-func (s *rbacService) UpdateRoleWithTx(tx *gorm.DB, role *rbac.Role) error {
+// UpdateRole 更新角色（使用事务）
+func (s *rbacService) UpdateRole(ctx context.Context, tx *gorm.DB, role *rbac.Role) error {
+	if tx == nil {
+		tx = core.MustNewDbWithContext(ctx)
+	}
 	return tx.Save(role).Error
 }
 
 // CheckRoleNameExists 检查角色名称是否存在
 func (s *rbacService) CheckRoleNameExists(ctx context.Context, name string, excludeID uint) (bool, error) {
-	var count int64
-	query := core.MustNewDbWithContext(ctx).Model(&rbac.Role{}).Where("name = ?", name)
+	db := core.MustNewDbWithContext(ctx)
+	query := db.Model(&rbac.Role{}).
+		Select("1").
+		Where("name = ?", name).
+		Limit(1)
+
 	if excludeID > 0 {
 		query = query.Where("id != ?", excludeID)
 	}
-	if err := query.Count(&count).Error; err != nil {
+
+	var exists int
+	err := query.Scan(&exists).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
 		return false, err
 	}
-	return count > 0, nil
+
+	return exists == 1, nil
 }
 
-// UpdateRoleResourcesWithTx 更新角色的资源绑定（使用事务）
-func (s *rbacService) UpdateRoleResourcesWithTx(tx *gorm.DB, roleID uint, resourceIDs []uint) error {
-	// 1. 删除角色的所有旧资源绑定
-	if err := tx.Exec("DELETE FROM role_resources WHERE role_id = ?", roleID).Error; err != nil {
-		return err
+// UpdateRoleResources 更新角色的资源绑定
+func (s *rbacService) UpdateRoleResources(ctx context.Context, tx *gorm.DB, role *rbac.Role, resourceIDs []uint) error {
+	if tx == nil {
+		tx = core.MustNewDbWithContext(ctx)
 	}
-
-	// 2. 批量插入新的资源绑定
+	var resources []rbac.Resource
 	if len(resourceIDs) > 0 {
-		roleResources := make([]rbac.RoleResource, 0, len(resourceIDs))
-		for _, resID := range resourceIDs {
-			roleResources = append(roleResources, rbac.RoleResource{
-				RoleID:     roleID,
-				ResourceID: resID,
-			})
-		}
-		if err := tx.CreateInBatches(&roleResources, 100).Error; err != nil {
+		rs, err := GetRbacService().GetResources(ctx, resourceIDs)
+		if err != nil {
 			return err
 		}
+		resources = rs
+	}
+	// ==== 处理角色资源====
+	if err := tx.Model(&role).Association("Resources").Replace(resources); err != nil {
+		return err
 	}
 	return nil
 
@@ -259,21 +270,6 @@ func (s *rbacService) GetUserResources(ctx context.Context, userID uint) ([]rbac
 		return nil, err
 	}
 	return resources, nil
-}
-
-// GetUserRoleRelations 获取用户角色关联记录
-func (s *rbacService) GetUserRoleRelations(ctx context.Context, userID uint) ([]rbac.UserRole, error) {
-	var userRoles []rbac.UserRole
-	err := core.MustNewDbWithContext(ctx).Where("user_id = ?", userID).Find(&userRoles).Error
-	if err != nil {
-		return nil, err
-	}
-	return userRoles, nil
-}
-
-// CreateUserRole 创建用户角色关联
-func (s *rbacService) CreateUserRole(ctx context.Context, userRole *rbac.UserRole) error {
-	return core.MustNewDbWithContext(ctx).Create(userRole).Error
 }
 
 // AssignRoleToUser 为用户分配角色（通过ID）
@@ -672,6 +668,7 @@ func (s *rbacService) initializeAdminUser(tx *gorm.DB, roleID uint, config *RBAC
 			Password: config.AdminPassword,
 			Email:    config.AdminEmail,
 			Status:   consts.UserStatusActive,
+			BuiltIn:  true,
 		}
 		if err := tx.Create(&user).Error; err != nil {
 			return err

@@ -3,15 +3,17 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	types "gin-template/internal/types/rbac"
+	"gin-template/pkg/consts"
 	"gin-template/pkg/orm"
 	"gin-template/pkg/utils"
-	"sync"
-
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"strings"
+	"sync"
 )
 
 // userService 用户服务
@@ -30,8 +32,8 @@ func GetUserService() *userService {
 	return globalUserService
 }
 
-// Create 创建用户
-func (s *userService) Create(ctx context.Context, user *rbac.User) error {
+// Register 注册用户
+func (s *userService) Register(ctx context.Context, user *rbac.User) error {
 	// 检查用户名是否已存在
 	var count int64
 	if err := core.MustNewDbWithContext(ctx).Model(&rbac.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
@@ -125,8 +127,8 @@ func (s *userService) Delete(ctx context.Context, id uint) error {
 // List 获取用户列表
 func (s *userService) List(ctx context.Context, request types.ListUserRequest) (*orm.PageResult[rbac.User], error) {
 	tx := core.MustNewDbWithContext(ctx)
-	if request.Name != "" {
-		tx = tx.Where("name LIKE ?", "%"+request.Name+"%")
+	if request.Username != "" {
+		tx = tx.Where("username LIKE ?", request.Username+"%")
 	}
 	if request.Email != "" {
 		tx = tx.Where("email = ?", request.Email)
@@ -134,9 +136,78 @@ func (s *userService) List(ctx context.Context, request types.ListUserRequest) (
 	if request.Status > 0 {
 		tx = tx.Where("status = ?", request.Status)
 	}
+	if request.Gender > 0 {
+		tx = tx.Where("gender = ?", request.Gender)
+	}
+	tx = tx.Preload("Roles")
+
 	return orm.Paginate[rbac.User](ctx, tx, orm.PageQuery{
 		Page:     request.Page,
 		PageSize: request.PageSize,
 		OrderBy:  "-created_at",
+	})
+}
+func (s *userService) UpsertUser(ctx context.Context, req types.UpsertUserRequest) error {
+	db := core.MustNewDbWithContext(ctx)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var count int64
+		tx.Model(&rbac.User{}).
+			Where("username = ? AND id <> ?", req.Username, req.Id).
+			Count(&count)
+		if count > 0 {
+			return fmt.Errorf("用户名 %s 已存在", req.Username)
+		}
+
+		tx.Model(&rbac.User{}).
+			Where("email = ? AND id <> ?", req.Email, req.Id).
+			Count(&count)
+		if count > 0 {
+			return fmt.Errorf("邮箱 %s 已存在", req.Email)
+		}
+
+		// ==== 加载角色 ====
+		var roles []rbac.Role
+		if len(req.Roles) > 0 {
+			rs, err := GetRbacService().GetAllRoles(ctx, req.Roles...)
+			if err != nil {
+				return err
+			}
+			roles = rs
+		}
+
+		var user rbac.User
+		// ==== 更新 ====
+		if req.Id != 0 {
+			if err := tx.First(&user, req.Id).Error; err != nil {
+				return fmt.Errorf("用户不存在: %w", err)
+			}
+			updates := map[string]interface{}{
+				"username": req.Username,
+				"email":    req.Email,
+				"gender":   req.Gender,
+			}
+			if err := tx.Model(&user).Updates(updates).Error; err != nil {
+				return fmt.Errorf("更新用户失败: %w", err)
+			}
+		} else {
+			// ==== 创建 ====
+			user = rbac.User{
+				Username: req.Username,
+				Password: strings.Split(req.Email, "@")[0],
+				Email:    req.Email,
+				Gender:   req.Gender,
+				Status:   consts.UserStatusActive,
+			}
+			if err := tx.Create(&user).Error; err != nil {
+				return fmt.Errorf("创建用户失败: %w", err)
+			}
+		}
+		// ==== 处理用户角色 ====
+		if err := tx.Model(&user).Association("Roles").Replace(roles); err != nil {
+			return fmt.Errorf("更新用户角色失败: %w", err)
+		}
+
+		return nil
 	})
 }

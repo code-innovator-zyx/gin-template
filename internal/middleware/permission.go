@@ -11,7 +11,7 @@ import (
 func PermissionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取当前用户ID
-		userID, exists := c.Get("userID")
+		userID, exists := c.Get("uid")
 		if !exists {
 			response.Unauthorized(c, "未登录")
 			c.Abort()

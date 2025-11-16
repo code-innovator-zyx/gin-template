@@ -1,7 +1,6 @@
 package rbac
 
 import (
-	"gin-template/internal/core"
 	"time"
 )
 
@@ -18,9 +17,4 @@ type Permission struct {
 // TableName 设置表名
 func (Permission) TableName() string {
 	return "permissions"
-}
-
-// CreatePermission 创建权限
-func CreatePermission(permission *Permission) error {
-	return core.MustNewDb().Create(permission).Error
 }

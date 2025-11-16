@@ -29,7 +29,7 @@ var (
 	dbErr  error
 
 	migrateFuncs []func(*gorm.DB) error // 存储所有迁移函数
-	migrateMu    sync.Mutex             // 保护 migrateFuncs
+	migrateMu    sync.Mutex
 )
 
 // ================================
@@ -99,7 +99,7 @@ func MustNewDbWithContext(ctx context.Context) *gorm.DB {
 // 数据库迁移
 // ================================
 
-// RegisterMigrate 注册数据库迁移函数（线程安全）
+// RegisterMigrate 注册数据库迁移函数
 func RegisterMigrate(fn func(*gorm.DB) error) {
 	migrateMu.Lock()
 	defer migrateMu.Unlock()

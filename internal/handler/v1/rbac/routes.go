@@ -29,11 +29,9 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		{
 			authUserGroup.GET("/profile", rbac.GetProfile).WithMeta("profile", "获取当前用户信息")
 			authUserGroup.GET("list", rbac.ListUser).WithMeta("list", "查询用户列表")
-			authUserGroup.POST("create").WithMeta("create", "创建用户")
-			authUserGroup.PUT("/update/:id").WithMeta("update", "修改用户")
-			authUserGroup.GET("/detail/:id").WithMeta("detail", "查询用户详情")
-			authUserGroup.DELETE("/delete/:id").WithMeta("delete", "移除用户")
-			authUserGroup.GET("/:id/roles", rbac.GetUserRoles).WithMeta("roles", "获取用户角色")
+			authUserGroup.POST("create", rbac.CreateUser).WithMeta("create", "创建用户")
+			authUserGroup.PUT("/update/:id", rbac.UpdateUser).WithMeta("update", "修改用户")
+			authUserGroup.DELETE("/delete/:id", rbac.DeleteUser).WithMeta("delete", "移除用户")
 		}
 	}
 

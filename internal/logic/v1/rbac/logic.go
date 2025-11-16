@@ -110,7 +110,7 @@ func GetRole(c *gin.Context) {
 
 // UpdateRole godoc
 // @Summary 更新角色
-// @Description 根据ID更新角色信息
+// @Description 根据ID更新角色信息,修改角色资源
 // @Tags RBAC-角色管理
 // @Accept json
 // @Produce json
@@ -164,21 +164,22 @@ func UpdateRole(c *gin.Context) {
 
 	roleID := uint(id)
 
-	// 使用事务管理器执行：更新基础信息 + 更新资源绑定 + 清除权限缓存
+	// 更新基础信息 + 更新资源绑定 + 清除权限缓存
 	err = transaction.WithTransaction(ctx, "UpdateRole",
 		// 执行事务
 		func(tx *gorm.DB) error {
 			// 1. 更新角色基础信息
-			if err = service.GetRbacService().UpdateRoleWithTx(tx, role); err != nil {
+			if err = service.GetRbacService().UpdateRole(ctx, tx, role); err != nil {
 				return fmt.Errorf("更新角色基础信息失败: %w", err)
 			}
 
-			// 2. 更新角色资源绑定（如果有）
+			// 2. 更新角色资源绑定
 			if len(request.Resources) > 0 {
-				if err = service.GetRbacService().UpdateRoleResourcesWithTx(tx, roleID, request.Resources); err != nil {
+				if err = service.GetRbacService().UpdateRoleResources(ctx, tx, role, request.Resources); err != nil {
 					return fmt.Errorf("更新角色资源绑定失败: %w", err)
 				}
 			}
+
 			// 3. 移除所有相关用户的权限
 			// 事务提交后 清除所有拥有该角色的用户的权限缓存
 			userIDs, err := service.GetRbacService().GetUsersWithRole(ctx, roleID)
@@ -196,6 +197,7 @@ func UpdateRole(c *gin.Context) {
 			return nil
 		})
 	if err != nil {
+		logrus.Errorf("failed to update role: %v", err)
 		response.InternalServerError(c, err.Error())
 		return
 	}
@@ -246,35 +248,6 @@ func GetPermissions(c *gin.Context) {
 		return
 	}
 	response.Success(c, permissions)
-}
-
-// GetUserRoles godoc
-// @Summary 获取用户角色
-// @Description 获取指定用户的所有角色
-// @Tags RBAC-用户角色管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param id path int true "用户ID"
-// @Success 200 {object} response.Response{data=[]rbac.UserRole} "成功获取用户角色"
-// @Failure 400 {object} response.Response "无效的用户ID"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/{id}/roles [get]
-func GetUserRoles(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
-		return
-	}
-
-	userRoles, err := service.GetRbacService().GetUserRoleRelations(c.Request.Context(), uint(userID))
-	if err != nil {
-		response.InternalServerError(c, "获取用户角色失败")
-		return
-	}
-
-	response.Success(c, userRoles)
 }
 
 // AssignResourceToRole godoc

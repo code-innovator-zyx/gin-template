@@ -29,3 +29,6 @@ func (g Gender) String() string {
 		return "-"
 	}
 }
+func AllGender() []Gender {
+	return []Gender{GenderMale, GenderFemale}
+}
