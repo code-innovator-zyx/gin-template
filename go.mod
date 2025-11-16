@@ -20,6 +20,7 @@ require (
 	golang.org/x/crypto v0.43.0
 	golang.org/x/sync v0.17.0
 	gorm.io/driver/mysql v1.6.0
+	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.30.0
 )
 

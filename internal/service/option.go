@@ -21,6 +21,7 @@ const (
 	FieldUser OptionField = "user"
 )
 
+// TODO 增加缓存
 // OptionGenerators 给每个常量定义生成 Option 的方法
 var OptionGenerators = map[OptionField]func(ctx context.Context) ([]types.Option, error){
 	FieldRole: func(ctx context.Context) ([]types.Option, error) {
