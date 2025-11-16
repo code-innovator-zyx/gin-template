@@ -4,11 +4,43 @@ import (
 	"gin-template/internal/service/rbac"
 	types "gin-template/internal/types/rbac"
 	"gin-template/pkg/response"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
 )
+
+// CreateRole godoc
+// @Summary 创建角色
+// @Description 创建新的系统角色
+// @Tags RBAC-角色管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param role body types.CreateRoleRequest true "角色信息"
+// @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /roles [post]
+func CreateRole(c *gin.Context) {
+	var request types.CreateRoleRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := rbac.NewRoleService(c.Request.Context()).Create(request); err != nil {
+		response.InternalServerError(c, "创建角色失败")
+		return
+	}
+	response.Success(c, nil)
+}
+
+/*
+* @Author: zouyx
+* @Email: zouyx@knowsec.com
+* @Date:   2025/11/16 下午4:40
+* @Package:
+ */
 
 // GetRoles godoc
 // @Summary 获取角色列表
@@ -35,32 +67,6 @@ func GetRoles(c *gin.Context) {
 		return
 	}
 	response.SuccessPage(c, result.List, result.Page, result.PageSize, result.Total)
-}
-
-// CreateRole godoc
-// @Summary 创建角色
-// @Description 创建新的系统角色
-// @Tags RBAC-角色管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param role body types.CreateRoleRequest true "角色信息"
-// @Success 201 {object} response.Response{data=rbac.Role} "成功创建角色"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /roles [post]
-func CreateRole(c *gin.Context) {
-	var request types.CreateRoleRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	if err := rbac.NewRoleService(c.Request.Context()).Create(request); err != nil {
-		response.InternalServerError(c, "创建角色失败")
-		return
-	}
-	response.Success(c, nil)
 }
 
 // GetRole godoc
@@ -150,24 +156,4 @@ func DeleteRole(c *gin.Context) {
 		return
 	}
 	response.NoContent(c)
-}
-
-// GetPermissions godoc
-// @Summary 获取权限列表
-// @Description 获取系统中所有权限的列表
-// @Tags RBAC-权限管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Success 200 {object} response.Response{data=[]rbac.Permission} "成功获取权限列表"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /permissions [get]
-func GetPermissions(c *gin.Context) {
-	permissions, err := rbac.NewPermissionService(c.Request.Context()).FindAll(0)
-	if err != nil {
-		response.InternalServerError(c, "获取权限列表失败")
-		return
-	}
-	response.Success(c, permissions)
 }
