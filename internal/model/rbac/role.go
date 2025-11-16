@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type RoleResource struct {
+	RoleId     uint `json:"role_id"`
+	ResourceId uint `json:"resource_id"`
+}
+
 // Role 角色模型
 // @Description 角色信息模型
 type Role struct {

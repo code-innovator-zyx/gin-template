@@ -3,7 +3,6 @@ package rbac
 import (
 	"cmp"
 	"context"
-	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	"maps"
@@ -25,7 +24,7 @@ type permissionService struct {
 func NewPermissionService(ctx context.Context) *permissionService {
 	return &permissionService{
 		ctx:      ctx,
-		BaseRepo: service.NewBaseRepo[rbac.Permission](ctx, core.MustNewDbWithContext(ctx)),
+		BaseRepo: service.NewBaseRepo[rbac.Permission](ctx),
 	}
 }
 

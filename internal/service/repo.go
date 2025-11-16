@@ -22,11 +22,8 @@ type BaseRepo[T any] struct {
 // NewBaseRepo 构造函数，可传入事务
 // ctx: 上下文，可用于绑定请求生命周期
 // tx: 可传入事务，如果不传则自动创建数据库连接
-func NewBaseRepo[T any](ctx context.Context, tx *gorm.DB) *BaseRepo[T] {
-	if tx == nil {
-		tx = core.MustNewDbWithContext(ctx)
-	}
-	return &BaseRepo[T]{Tx: tx}
+func NewBaseRepo[T any](ctx context.Context) *BaseRepo[T] {
+	return &BaseRepo[T]{Tx: core.MustNewDbWithContext(ctx)}
 }
 
 // WithTx 返回带事务的 BaseRepo，可链式调用
@@ -51,6 +48,9 @@ func (r *BaseRepo[T]) FindByID(id uint, preloads ...string) (*T, error) {
 
 // FindByIDs 根据 ID 列表批量查询
 func (r *BaseRepo[T]) FindByIDs(ids []uint) ([]T, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
 	var list []T
 	if err := r.Tx.Where("id IN ?", ids).Find(&list).Error; err != nil {
 		return nil, err

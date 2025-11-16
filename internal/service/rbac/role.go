@@ -3,7 +3,6 @@ package rbac
 import (
 	"context"
 	"fmt"
-	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	types "gin-template/internal/types/rbac"
@@ -26,7 +25,7 @@ type roleService struct {
 func NewRoleService(ctx context.Context) *roleService {
 	return &roleService{
 		ctx:      ctx,
-		BaseRepo: service.NewBaseRepo[rbac.Role](ctx, core.MustNewDbWithContext(ctx)),
+		BaseRepo: service.NewBaseRepo[rbac.Role](ctx),
 	}
 }
 
@@ -34,7 +33,7 @@ func (s *roleService) List(request types.ListRoleRequest) (*service.PageResult[r
 	return s.BaseRepo.List(service.PageQuery{
 		Page:     request.Page,
 		PageSize: request.PageSize,
-		OrderBy:  "-created_at",
+		OrderBy:  "created_at DESC",
 	}, func(db *gorm.DB) *gorm.DB {
 		if request.Name != "" {
 			db = db.Where("name LIKE ?", request.Name+"%")
@@ -42,7 +41,7 @@ func (s *roleService) List(request types.ListRoleRequest) (*service.PageResult[r
 		if request.Status > 0 {
 			db = db.Where("status = ?", request.Status)
 		}
-		return db.Preload("Roles")
+		return db
 	})
 }
 

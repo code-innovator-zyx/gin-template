@@ -2,13 +2,13 @@ package rbac
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/pkg/consts"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // rbacService RBAC权限服务
@@ -239,37 +239,109 @@ func (s *rbacService) syncRouteResources(tx *gorm.DB, routes []ProtectedRoute) e
 func (s *rbacService) autoBindResourcesToPermissions(tx *gorm.DB, routes []ProtectedRoute) error {
 	logrus.Info("  - 自动绑定资源到权限分组（仅用于UI展示）...")
 
-	boundCount := 0
-	for _, route := range routes {
-		// 如果路由声明了权限分组
-		if route.PermissionCode != "" {
-			// 查找对应的权限分组
-			var permission rbac.Permission
-			if err := tx.Where("code = ?", route.PermissionCode).First(&permission).Error; err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					logrus.Warnf("    ! 路由 %s %s 指定的权限分组 %s 不存在，跳过绑定",
-						route.Resource.Method, route.Resource.Path, route.PermissionCode)
-					continue
-				}
-				return err
-			}
-			// 更新资源的权限分组绑定（仅用于UI展示）
-			result := tx.Model(&rbac.Resource{}).
-				Where("path = ? AND method = ?", route.Resource.Path, route.Resource.Method).
-				Updates(map[string]interface{}{
-					"permission_id": permission.ID,
-				})
-			if result.Error != nil {
-				return fmt.Errorf("绑定资源到权限分组失败: %w", result.Error)
-			}
-			if result.RowsAffected > 0 {
-				boundCount++
-				logrus.Debugf("    ✓ 绑定资源 %s %s 到权限分组 %s（用于UI展示）",
-					route.Resource.Method, route.Resource.Path, route.PermissionCode)
-			}
+	// -------- 1) 收集唯一权限 code 和唯一资源 key --------
+	permCodesSet := make(map[string]struct{})
+	routeKeySet := make(map[string]struct{})
+	pathSet := make(map[string]struct{})
+
+	for _, rt := range routes {
+		if rt.PermissionCode != "" {
+			permCodesSet[rt.PermissionCode] = struct{}{}
+		}
+		key := rt.Resource.Path + "|" + rt.Resource.Method
+		routeKeySet[key] = struct{}{}
+		pathSet[rt.Resource.Path] = struct{}{}
+	}
+
+	if len(permCodesSet) == 0 || len(routeKeySet) == 0 {
+		logrus.Warn("    ! 未发现需要绑定的权限分组或资源")
+		return nil
+	}
+
+	// -------- 2) 查询权限分组 --------
+	permCodes := make([]string, 0, len(permCodesSet))
+	for code := range permCodesSet {
+		permCodes = append(permCodes, code)
+	}
+
+	var permissions []rbac.Permission
+	if err := tx.Where("code IN ?", permCodes).Find(&permissions).Error; err != nil {
+		return fmt.Errorf("查询权限分组失败: %w", err)
+	}
+
+	permCodeToID := make(map[string]uint, len(permissions))
+	for _, p := range permissions {
+		permCodeToID[p.Code] = p.ID
+	}
+
+	// -------- 3) 查询相关资源（按 path 过滤）--------
+	paths := make([]string, 0, len(pathSet))
+	for p := range pathSet {
+		paths = append(paths, p)
+	}
+
+	var dbResources []rbac.Resource
+	if err := tx.Where("path IN ?", paths).Find(&dbResources).Error; err != nil {
+		return fmt.Errorf("查询资源失败: %w", err)
+	}
+
+	resKeyToID := make(map[string]uint, len(dbResources))
+	for _, r := range dbResources {
+		key := r.Path + "|" + r.Method
+		if _, ok := routeKeySet[key]; ok {
+			resKeyToID[key] = r.ID
 		}
 	}
-	logrus.Infof("    ✓ 成功绑定 %d 个资源到权限分组", boundCount)
+
+	// -------- 4) 构建 updates 映射表 --------
+	updates := make(map[uint]uint)
+	for _, rt := range routes {
+		if rt.PermissionCode == "" {
+			continue
+		}
+		pid, ok := permCodeToID[rt.PermissionCode]
+		if !ok {
+			logrus.Warnf("    ! 路由 %s %s 指定的权限分组 %s 不存在，跳过绑定",
+				rt.Resource.Method, rt.Resource.Path, rt.PermissionCode)
+			continue
+		}
+		key := rt.Resource.Path + "|" + rt.Resource.Method
+		rid, ok := resKeyToID[key]
+		if !ok {
+			logrus.Warnf("    ! 资源 %s %s 不存在，跳过绑定", rt.Resource.Method, rt.Resource.Path)
+			continue
+		}
+		updates[rid] = pid
+	}
+
+	if len(updates) == 0 {
+		logrus.Info("    - 无需要绑定的资源")
+		return nil
+	}
+
+	// -------- 5) 构建 CASE WHEN 批量 UPDATE --------
+	ids := make([]uint, 0, len(updates))
+	caseSQL := "CASE resources.id "
+	args := make([]interface{}, 0, len(updates)*2+1)
+
+	for id, pid := range updates {
+		caseSQL += "WHEN ? THEN ? "
+		args = append(args, id, pid)
+		ids = append(ids, id)
+	}
+
+	caseSQL += "END"
+
+	// 注意：这里必须使用 IN ? 而不是 IN (?)！
+	args = append(args, ids)
+
+	sql := "UPDATE resources SET permission_id = " + caseSQL + " WHERE id IN ?"
+
+	if err := tx.Exec(sql, args...).Error; err != nil {
+		return fmt.Errorf("批量绑定资源到权限分组失败: %w", err)
+	}
+
+	logrus.Infof("    ✓ 成功绑定 %d 个资源到权限分组", len(updates))
 	return nil
 }
 
@@ -316,25 +388,20 @@ func (s *rbacService) bindAllResourcesToRole(tx *gorm.DB, roleID uint) error {
 		return nil
 	}
 
-	boundCount := 0
+	var list = make([]rbac.RoleResource, 0, len(resources))
 	for _, res := range resources {
-		// 检查是否已经绑定
-		var count int64
-		tx.Table("role_resources").
-			Where("role_id = ? AND resource_id = ?", roleID, res.ID).
-			Count(&count)
-
-		if count == 0 {
-			// 创建绑定关系
-			if err := tx.Exec("INSERT INTO role_resources (role_id, resource_id) VALUES (?, ?)",
-				roleID, res.ID).Error; err != nil {
-				return fmt.Errorf("绑定资源 %s %s 到角色失败: %w", res.Method, res.Path, err)
-			}
-			boundCount++
-			logrus.Debugf("    ✓ 绑定资源: %s %s", res.Method, res.Path)
-		}
+		list = append(list, rbac.RoleResource{
+			RoleId:     roleID,
+			ResourceId: res.ID,
+		})
 	}
-	logrus.Infof("    ✓ 成功绑定 %d 个资源到超级管理员", boundCount)
+	if err := tx.Table("role_resources").Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "role_id"}, {Name: "resource_id"}},
+		DoNothing: true,
+	}).Create(&list).Error; err != nil {
+		return err
+	}
+	logrus.Infof("    ✓ 成功绑定 %d 个资源到超级管理员", len(list))
 	return nil
 }
 

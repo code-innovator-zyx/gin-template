@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"context"
-	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 )
@@ -22,7 +21,7 @@ type resourceService struct {
 func NewResourceService(ctx context.Context) *resourceService {
 	return &resourceService{
 		ctx:      ctx,
-		BaseRepo: service.NewBaseRepo[rbac.Resource](ctx, core.MustNewDbWithContext(ctx)),
+		BaseRepo: service.NewBaseRepo[rbac.Resource](ctx),
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
 	"gin-template/internal/service"
 	types "gin-template/internal/types/rbac"
@@ -25,7 +24,7 @@ type userService struct {
 func NewUserService(ctx context.Context) *userService {
 	return &userService{
 		ctx:      ctx,
-		BaseRepo: service.NewBaseRepo[rbac.User](ctx, core.MustNewDbWithContext(ctx)),
+		BaseRepo: service.NewBaseRepo[rbac.User](ctx),
 	}
 }
 
@@ -80,7 +79,7 @@ func (s *userService) List(request types.ListUserRequest) (*service.PageResult[r
 	return s.BaseRepo.List(service.PageQuery{
 		Page:     request.Page,
 		PageSize: request.PageSize,
-		OrderBy:  "-created_at",
+		OrderBy:  "created_at DESC",
 	}, func(db *gorm.DB) *gorm.DB {
 		if request.Username != "" {
 			db = db.Where("username LIKE ?", request.Username+"%")
