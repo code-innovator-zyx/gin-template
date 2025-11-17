@@ -95,6 +95,20 @@ func (m *memoryCache) Delete(ctx context.Context, keys ...string) error {
 	}
 	return nil
 }
+func (m *memoryCache) DeletePrefix(ctx context.Context, prefix string) error {
+	if prefix == "" {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for key := range m.data {
+		if len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			delete(m.data, key)
+		}
+	}
+
+	return nil
+}
 
 // Exists 检查key是否存在
 func (m *memoryCache) Exists(ctx context.Context, key string) (bool, error) {

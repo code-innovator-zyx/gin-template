@@ -73,6 +73,21 @@ func (r *redisCache) Set(ctx context.Context, key string, value interface{}, ttl
 func (r *redisCache) Delete(ctx context.Context, keys ...string) error {
 	return r.client.Del(ctx, keys...).Err()
 }
+func (r *redisCache) DeletePrefix(ctx context.Context, prefix string) error {
+	if r.client == nil || prefix == "" {
+		return nil
+	}
+
+	luaScript := `
+local keys = redis.call('keys', ARGV[1])
+for i=1,#keys,5000 do
+    redis.call('del', unpack(keys, i, math.min(i+4999, #keys)))
+end
+return #keys
+`
+	pattern := prefix + "*"
+	return r.client.Eval(ctx, luaScript, []string{}, pattern).Err()
+}
 
 // Exists 检查key是否存在
 func (r *redisCache) Exists(ctx context.Context, key string) (bool, error) {
@@ -96,7 +111,7 @@ func (r *redisCache) SMembers(ctx context.Context, key string) ([]interface{}, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	members := make([]interface{}, len(result))
 	for i, v := range result {
 		members[i] = v

@@ -1,5 +1,7 @@
 package rbac
 
+import "gin-template/pkg/consts"
+
 /*
 * @Author: zouyx
 * @Email: 1003941268@qq.com
@@ -13,16 +15,20 @@ type ListRoleRequest struct {
 	PageSize int    `form:"pageSize,default=10" json:"pageSize" binding:"required" example:"10" default:"10"`
 }
 
-type CreateRoleRequest struct {
-	Name        string `json:"name,omitempty" example:"管理员"`
-	Description string `json:"description,omitempty" example:"系统管理员"`
-	Resources   []uint `json:"resources,omitempty" description:"角色绑定的资源ID列表"`
+// UpsertRoleRequest 更新角色
+type UpsertRoleRequest struct {
+	Id          uint
+	Name        string            `json:"name,omitempty" example:"管理员"`
+	Description string            `json:"description,omitempty" example:"系统管理员"`
+	Status      consts.RoleStatus `json:"status" example:"1"`
 }
 
-// UpdateRoleRequest 更新角色
-type UpdateRoleRequest struct {
+type RoleOptions struct {
+	Status            []Option            `json:"status"`
+	SupplementOptions map[string][]Option `json:"supplement_options"`
+}
+
+type AssignResource struct {
 	Id          uint
-	Name        string `json:"name,omitempty" example:"管理员"`
-	Description string `json:"description,omitempty" example:"系统管理员"`
-	Resources   []uint `json:"resources,omitempty" description:"角色绑定的资源ID列表"`
+	ResourceIds []uint `json:"resource_ids"`
 }

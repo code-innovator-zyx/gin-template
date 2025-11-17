@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gin-template/internal/core"
 	"gin-template/internal/model/rbac"
+	"gin-template/internal/service"
 	"gin-template/pkg/consts"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -91,7 +92,7 @@ func (s *rbacService) InitializeRBAC(routes []ProtectedRoute, config *RBACInitCo
 		if err := s.initializeAdminUser(tx, adminRole.ID, config); err != nil {
 			return fmt.Errorf("初始化管理员用户失败: %w", err)
 		}
-
+		service.GetCacheService().ClearAllPermissions(context.TODO())
 		return nil
 	})
 

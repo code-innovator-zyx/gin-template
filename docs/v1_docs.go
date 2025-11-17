@@ -110,7 +110,76 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/roles": {
+        "/roles/create": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建新的系统角色",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RBAC-角色管理"
+                ],
+                "summary": "创建角色",
+                "parameters": [
+                    {
+                        "description": "角色信息",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功创建角色",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/rbac.Role"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/list": {
             "get": {
                 "security": [
                     {
@@ -178,73 +247,6 @@ const docTemplatev1 = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "创建新的系统角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "RBAC-角色管理"
-                ],
-                "summary": "创建角色",
-                "parameters": [
-                    {
-                        "description": "角色信息",
-                        "name": "role",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/rbac.CreateRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "成功创建角色",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/rbac.Role"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
@@ -334,7 +336,7 @@ const docTemplatev1 = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "根据ID更新角色信息",
+                "description": "根据ID更新角色信息,修改角色资源",
                 "consumes": [
                     "application/json"
                 ],
@@ -462,14 +464,14 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/roles/{role_id}/resources/{resource_id}": {
+        "/users/create": {
             "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "为指定角色分配资源（细粒度权限控制）",
+                "description": "系统内部管理员创建用户，密码默认就是邮箱号",
                 "consumes": [
                     "application/json"
                 ],
@@ -477,96 +479,25 @@ const docTemplatev1 = `{
                     "application/json"
                 ],
                 "tags": [
-                    "RBAC-角色资源管理"
+                    "RBAC-用户管理"
                 ],
-                "summary": "分配资源给角色",
+                "summary": "创建用户",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "角色ID",
-                        "name": "role_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "资源ID",
-                        "name": "resource_id",
-                        "in": "path",
-                        "required": true
+                        "description": "创建参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.UpsertUserRequest"
+                        }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "成功分配资源",
+                    "200": {
+                        "description": "成功返回用户列表",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "从指定角色移除指定资源",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "RBAC-角色资源管理"
-                ],
-                "summary": "从角色移除资源",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "角色ID",
-                        "name": "role_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "资源ID",
-                        "name": "resource_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "成功移除资源",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "无效的角色ID或资源ID",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/response.PaginatedResponse"
                         }
                     },
                     "401": {
@@ -584,7 +515,7 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/users": {
+        "/users/list": {
             "get": {
                 "security": [
                     {
@@ -610,9 +541,9 @@ const docTemplatev1 = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "example": "johndoe",
-                        "name": "name",
+                        "type": "integer",
+                        "example": 1,
+                        "name": "gender",
                         "in": "query"
                     },
                     {
@@ -636,26 +567,19 @@ const docTemplatev1 = `{
                         "example": 1,
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "johndoe",
+                        "name": "username",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功返回用户列表",
+                        "description": "成功返回",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.PaginatedResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "additionalProperties": true
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
@@ -789,6 +713,17 @@ const docTemplatev1 = `{
                     "RBAC-用户管理"
                 ],
                 "summary": "用户options",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "name": "include_fields",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功返回用户列表",
@@ -801,7 +736,7 @@ const docTemplatev1 = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/rbac.UpsertUserOptions"
+                                            "$ref": "#/definitions/rbac.UserOptions"
                                         }
                                     }
                                 }
@@ -830,7 +765,7 @@ const docTemplatev1 = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取当前登录用户的完整资料（包括角色、权限和可访问资源）",
+                "description": "从系统移除用户",
                 "consumes": [
                     "application/json"
                 ],
@@ -840,24 +775,12 @@ const docTemplatev1 = `{
                 "tags": [
                     "RBAC-用户管理"
                 ],
-                "summary": "获取用户个人资料",
+                "summary": "移除用户",
                 "responses": {
                     "200": {
-                        "description": "成功返回用户完整资料",
+                        "description": "成功返回",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/rbac.UserProfile"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
@@ -997,14 +920,14 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "/users/{id}/roles": {
-            "get": {
+        "/users/{id}": {
+            "put": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取指定用户的所有角色",
+                "description": "管理员更新用户信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -1012,9 +935,9 @@ const docTemplatev1 = `{
                     "application/json"
                 ],
                 "tags": [
-                    "RBAC-用户角色管理"
+                    "RBAC-用户管理"
                 ],
-                "summary": "获取用户角色",
+                "summary": "更新用户",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1022,32 +945,26 @@ const docTemplatev1 = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.UpsertUserRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功获取用户角色",
+                        "description": "更新成功",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/rbac.UserRole"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
-                        "description": "无效的用户ID",
+                        "description": "请求格式错误",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -1135,11 +1052,13 @@ const docTemplatev1 = `{
                     "type": "string",
                     "example": "管理员"
                 },
-                "resources": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.RoleStatus"
+                        }
+                    ],
+                    "example": 1
                 }
             }
         },
@@ -1308,6 +1227,9 @@ const docTemplatev1 = `{
                     "type": "string",
                     "example": "系统管理员"
                 },
+                "id": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string",
                     "example": "管理员"
@@ -1320,20 +1242,39 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "rbac.UpsertUserOptions": {
+        "rbac.UpsertUserRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "gender",
+                "roles",
+                "username"
+            ],
             "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
                 "gender": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.Gender"
+                        }
+                    ],
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/rbac.Option"
+                        "type": "integer"
                     }
                 },
-                "role": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/rbac.Option"
-                    }
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         },
@@ -1344,6 +1285,9 @@ const docTemplatev1 = `{
                 "avatar": {
                     "type": "string",
                     "example": "https://example.com/avatar.jpg"
+                },
+                "built_in": {
+                    "type": "boolean"
                 },
                 "created_at": {
                     "type": "string",
@@ -1406,6 +1350,32 @@ const docTemplatev1 = `{
                 }
             }
         },
+        "rbac.UserOptions": {
+            "type": "object",
+            "properties": {
+                "gender": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Option"
+                    }
+                },
+                "status": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Option"
+                    }
+                },
+                "supplement_options": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/rbac.Option"
+                        }
+                    }
+                }
+            }
+        },
         "rbac.UserProfile": {
             "type": "object",
             "properties": {
@@ -1442,20 +1412,6 @@ const docTemplatev1 = `{
                 }
             }
         },
-        "rbac.UserRole": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "role_id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "response.PaginatedResponse": {
             "type": "object",
             "properties": {
@@ -1489,7 +1445,7 @@ const docTemplatev1 = `{
                 "data": {
                     "description": "数据"
                 },
-                "message": {
+                "msg": {
                     "description": "提示信息",
                     "type": "string"
                 }

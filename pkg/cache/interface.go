@@ -48,6 +48,9 @@ type Cache interface {
 
 	// 类型标识
 	Type() string
+
+	// 移除前缀key
+	DeletePrefix(ctx context.Context, prefix string) error
 }
 
 // Pipeline 管道操作接口

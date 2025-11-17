@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"gin-template/internal/core"
 	"gorm.io/gorm"
 )
@@ -83,15 +82,16 @@ func (r *BaseRepo[T]) FindOne(scopes ...func(*gorm.DB) *gorm.DB) (*T, error) {
 // Exists 判断是否存在记录，支持传入多个查询条件（scope）
 // 返回 true: 存在, false: 不存在
 func (r *BaseRepo[T]) Exists(scopes ...func(*gorm.DB) *gorm.DB) (bool, error) {
-	var t T
-	err := r.Tx.Scopes(scopes...).Select("1").Limit(1).Take(&t).Error
+	var exists bool
+	err := r.Tx.Model(new(T)).
+		Scopes(scopes...).
+		Select("1").
+		Limit(1).
+		Scan(&exists).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
 		return false, err
 	}
-	return true, nil
+	return exists, nil
 }
 
 // Create 插入单条记录

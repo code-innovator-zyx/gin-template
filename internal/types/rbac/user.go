@@ -65,7 +65,7 @@ type UpsertUserRequest struct {
 	Roles    []uint        `json:"roles" binding:"required"`
 }
 
-type UserOptionParams struct {
+type OptionParams struct {
 	IncludeFields []string `form:"include_fields,optional" json:"include_fields" binding:"-" description:"需要从数据库获取的补充字段"`
 }
 type UserOptions struct {

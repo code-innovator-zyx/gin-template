@@ -208,7 +208,7 @@ func GetProfile(c *gin.Context) {
 // @Success 200 {object} response.Response "成功返回"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/profile [get]
+// @Router /users/{id}[delete]
 func DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	userID, err := strconv.ParseUint(idStr, 10, 64)
@@ -237,13 +237,13 @@ func DeleteUser(c *gin.Context) {
 // @Success 200 {object} response.PaginatedResponse "成功返回用户列表"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/create [post]
+// @Router /users [post]
 func CreateUser(c *gin.Context) {
 	request := types.UpsertUserRequest{}
 	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 	}
-	// 获取用户列表
+	// 创建用户
 	err := rbac2.NewUserService(c.Request.Context()).Create(request)
 	if err != nil {
 		response.Fail(c, 500, err.Error())
@@ -323,7 +323,7 @@ func ListUser(c *gin.Context) {
 	response.SuccessPage(c, pageResult.List, pageResult.Page, pageResult.PageSize, pageResult.Total)
 }
 
-// Options godoc
+// UserOptions godoc
 // @Summary 用户options
 // @Description 用户创建修改的option枚举信息
 // @Tags RBAC-用户管理
@@ -335,8 +335,8 @@ func ListUser(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /users/options [get]
-func Options(c *gin.Context) {
-	params := types.UserOptionParams{}
+func UserOptions(c *gin.Context) {
+	params := types.OptionParams{}
 	err := c.ShouldBindQuery(&params)
 	if err != nil {
 		response.BadRequest(c, err.Error())

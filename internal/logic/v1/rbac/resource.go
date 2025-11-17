@@ -4,6 +4,7 @@ import (
 	"gin-template/internal/service/rbac"
 	"gin-template/pkg/response"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 /*
@@ -25,7 +26,9 @@ import (
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [get]
 func GetPermissions(c *gin.Context) {
-	permissions, err := rbac.NewPermissionService(c.Request.Context()).FindAll(0)
+	permissions, err := rbac.NewPermissionService(c.Request.Context()).FindAll(0, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Resources")
+	})
 	if err != nil {
 		response.InternalServerError(c, "获取权限列表失败")
 		return

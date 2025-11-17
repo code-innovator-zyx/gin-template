@@ -45,32 +45,30 @@ func (s *roleService) List(request types.ListRoleRequest) (*service.PageResult[r
 	})
 }
 
-func (s *roleService) Create(request types.CreateRoleRequest) error {
+func (s *roleService) Create(request types.UpsertRoleRequest) error {
 	exist, err := s.Exists(func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ?", request.Name)
 	})
 	if err != nil {
+		logrus.Errorf("failed to check role exist %s", err)
 		return err
 	}
 	if exist {
 		return fmt.Errorf("角色名 %s 已存在", request.Name)
 	}
-	resources, err := NewResourceService(s.ctx).FindByIDs(request.Resources)
-	if err != nil {
-		return err
-	}
 	role := rbac.Role{
 		Name:        request.Name,
 		Description: request.Description,
-		Resources:   resources,
+		Status:      request.Status,
 	}
 	return s.BaseRepo.Create(&role)
 }
 
 // Update 更新角色
-func (s *roleService) Update(request types.UpdateRoleRequest) error {
+func (s *roleService) Update(request types.UpsertRoleRequest) error {
 	role, err := s.FindByID(request.Id)
 	if err != nil {
+		logrus.Errorf("failed to find role: %v", err)
 		return err
 	}
 	if request.Name != "" && request.Name != role.Name {
@@ -78,47 +76,18 @@ func (s *roleService) Update(request types.UpdateRoleRequest) error {
 			return db.Where("name = ? AND id <> ?", request.Name, request.Id)
 		})
 		if err != nil {
+			logrus.Errorf("failed to check role exist %s", err)
 			return err
 		}
 		if exist {
 			return fmt.Errorf("角色名 %s 已存在", request.Name)
 		}
 	}
-	return s.Tx.Transaction(func(tx *gorm.DB) error {
-		err = s.WithTx(tx).UpdateByID(request.Id, map[string]interface{}{
-			"name":        request.Name,
-			"description": request.Description,
-		})
-		if err != nil {
-			return err
-		}
-		var resources []rbac.Resource
-		// 获取所有角色列表
-		if len(request.Resources) != 0 {
-			resources, err = NewResourceService(s.ctx).FindByIDs(request.Resources)
-			if err != nil {
-				return err
-			}
-		}
-		// 更新用户角色
-		if err = tx.Model(&role).Association("Resources").Replace(resources); err != nil {
-			return fmt.Errorf("更新用户角色失败: %w", err)
-		}
-		// 移除所有相关用户的权限
-		// 事务提交后 清除所有拥有该角色的用户的权限缓存
-		userIDs, err := s.getRoleUserIds(request.Id)
-		if err != nil {
-			logrus.Errorf("获取角色用户列表失败: %v", err)
-			return err
-		}
-		if len(userIDs) > 0 {
-			if err := service.GetCacheService().ClearMultipleUsersPermissions(s.ctx, userIDs); err != nil {
-				logrus.Errorf("批量清除用户权限缓存失败: %v", err)
-				return err
-			}
-			logrus.Infof("已清除 %d 个用户的权限缓存", len(userIDs))
-		}
-		return nil
+	// TODO 如果禁用角色，需要移除所有绑定了角色的用户权限缓存，并且限制所有用户权限
+	return s.UpdateByID(request.Id, map[string]interface{}{
+		"name":        request.Name,
+		"description": request.Description,
+		"status":      request.Status,
 	})
 
 }
@@ -141,9 +110,10 @@ func (s *roleService) getRoleUserIds(roleId uint) ([]uint, error) {
 func (s *roleService) DeleteByID(id uint) error {
 	role, err := s.FindByID(id)
 	if err != nil {
+		logrus.Errorf("failed to find role: %v", err)
 		return err
 	}
-	return s.Tx.Transaction(
+	err = s.Tx.Transaction(
 		func(tx *gorm.DB) error {
 			err = tx.Model(&role).Association("Resources").Clear()
 			if err != nil {
@@ -151,4 +121,23 @@ func (s *roleService) DeleteByID(id uint) error {
 			}
 			return tx.Delete(role).Error
 		})
+	if nil != err {
+		logrus.Errorf("failed to delete role: %v", err)
+		return fmt.Errorf("删除角色失败")
+	}
+	return nil
+}
+
+func (s *roleService) AssignResource(request types.AssignResource) error {
+	role, err := s.FindByID(request.Id)
+	if err != nil {
+		logrus.Errorf("failed to find role: %v", err)
+		return err
+	}
+	resources, err := NewResourceService(s.ctx).FindByIDs(request.ResourceIds)
+	if err != nil {
+		logrus.Errorf("failed to find resources: %v", err)
+		return err
+	}
+	return s.Tx.Model(&role).Association("Resources").Replace(resources)
 }

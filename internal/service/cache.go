@@ -27,7 +27,7 @@ type CacheService interface {
 	ClearUserPermissions(ctx context.Context, userID uint) error
 	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error
 	SetUserPermissions(ctx context.Context, userID uint, resources []rbac.Resource) error
-
+	ClearAllPermissions(ctx context.Context) error
 	// Token黑名单
 	BlacklistToken(ctx context.Context, token string, ttl time.Duration) error
 	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
@@ -66,13 +66,13 @@ func GetCacheService() CacheService {
 
 const (
 	// 缓存Key前缀
-	cacheKeyPermission    = "permission:%d"     // 权限: permission:userID (使用Set存储 path_method)
-	cacheKeyToken         = "token:%s"          // Token黑名单: token:tokenString
-	cacheKeyJWTBlacklist  = "jwt:blacklist:%s"  // JWT黑名单: jwt:blacklist:token
-	cacheKeyUserSessions  = "user:sessions:%d"  // 用户会话: user:sessions:userID -> Set[sessionID]
-	cacheKeySessionTokens = "session:tokens:%s" // 会话令牌: session:tokens:sessionID -> {access, refresh}
-	cacheKeyRefreshCount  = "refresh:count:%s"  // 刷新计数: refresh:count:refreshToken -> count
-	cacheKeyEmptyMarker   = "empty:%s"          // 空值标记（防止缓存穿透）
+	cacheKeyPermissionPrefix = "permission:"       // 权限: permission:userID (使用Set存储 path_method)
+	cacheKeyToken            = "token:%s"          // Token黑名单: token:tokenString
+	cacheKeyJWTBlacklist     = "jwt:blacklist:%s"  // JWT黑名单: jwt:blacklist:token
+	cacheKeyUserSessions     = "user:sessions:%d"  // 用户会话: user:sessions:userID -> Set[sessionID]
+	cacheKeySessionTokens    = "session:tokens:%s" // 会话令牌: session:tokens:sessionID -> {access, refresh}
+	cacheKeyRefreshCount     = "refresh:count:%s"  // 刷新计数: refresh:count:refreshToken -> count
+	cacheKeyEmptyMarker      = "empty:%s"          // 空值标记（防止缓存穿透）
 
 	// 缓存TTL
 	ttlPermission       = 10 * time.Minute   // 权限缓存10分钟
@@ -98,7 +98,7 @@ func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, pat
 		return false, cache.ErrUnreachable
 	}
 
-	cacheKey := fmt.Sprintf(cacheKeyPermission, userID)
+	cacheKey := fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID)
 	member := fmt.Sprintf("%s_%s", method, path)
 
 	// 查询缓存key是否存在
@@ -146,7 +146,8 @@ func (s *cacheService) SetUserPermissions(ctx context.Context, userID uint, reso
 	if s.client == nil {
 		return nil
 	}
-	cacheKey := fmt.Sprintf(cacheKeyPermission, userID)
+	cacheKey := fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID)
+
 	// 先删除旧缓存
 	_ = s.client.Delete(ctx, cacheKey)
 	// 如果没有权限，设置一个空标记
@@ -184,7 +185,8 @@ func (s *cacheService) ClearUserPermissions(ctx context.Context, userID uint) er
 		return nil
 	}
 
-	key := fmt.Sprintf(cacheKeyPermission, userID)
+	key := fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID)
+
 	return s.client.Delete(ctx, key)
 }
 
@@ -196,10 +198,15 @@ func (s *cacheService) ClearMultipleUsersPermissions(ctx context.Context, userID
 
 	keys := make([]string, 0, len(userIDs))
 	for _, userID := range userIDs {
-		keys = append(keys, fmt.Sprintf(cacheKeyPermission, userID))
+		keys = append(keys, fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID))
 	}
-
 	return s.client.Delete(ctx, keys...)
+}
+func (s *cacheService) ClearAllPermissions(ctx context.Context) error {
+	if s.client == nil {
+		return nil
+	}
+	return s.client.DeletePrefix(ctx, cacheKeyPermissionPrefix)
 }
 
 // ================================

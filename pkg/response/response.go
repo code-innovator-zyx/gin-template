@@ -97,7 +97,7 @@ func InternalServerError(c *gin.Context, message string) {
 // Created 201创建成功响应
 func Created(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusCreated, Response{
-		Code:    0,
+		Code:    http.StatusCreated,
 		Message: "success",
 		Data:    data,
 	})

@@ -52,10 +52,10 @@ definitions:
       name:
         example: 管理员
         type: string
-      resources:
-        items:
-          type: integer
-        type: array
+      status:
+        allOf:
+        - $ref: '#/definitions/consts.RoleStatus'
+        example: 1
     type: object
   rbac.Option:
     properties:
@@ -172,6 +172,8 @@ definitions:
       description:
         example: 系统管理员
         type: string
+      id:
+        type: integer
       name:
         example: 管理员
         type: string
@@ -180,16 +182,29 @@ definitions:
           type: integer
         type: array
     type: object
-  rbac.UpsertUserOptions:
+  rbac.UpsertUserRequest:
     properties:
+      email:
+        example: john@example.com
+        type: string
       gender:
+        allOf:
+        - $ref: '#/definitions/consts.Gender'
+        example: 1
+      id:
+        type: integer
+      roles:
         items:
-          $ref: '#/definitions/rbac.Option'
+          type: integer
         type: array
-      role:
-        items:
-          $ref: '#/definitions/rbac.Option'
-        type: array
+      username:
+        example: johndoe
+        type: string
+    required:
+    - email
+    - gender
+    - roles
+    - username
     type: object
   rbac.User:
     description: 用户信息模型
@@ -197,6 +212,8 @@ definitions:
       avatar:
         example: https://example.com/avatar.jpg
         type: string
+      built_in:
+        type: boolean
       created_at:
         example: "2023-01-01T00:00:00Z"
         type: string
@@ -237,6 +254,23 @@ definitions:
     - account
     - password
     type: object
+  rbac.UserOptions:
+    properties:
+      gender:
+        items:
+          $ref: '#/definitions/rbac.Option'
+        type: array
+      status:
+        items:
+          $ref: '#/definitions/rbac.Option'
+        type: array
+      supplement_options:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/rbac.Option'
+          type: array
+        type: object
+    type: object
   rbac.UserProfile:
     properties:
       permissions:
@@ -262,15 +296,6 @@ definitions:
     - password
     - username
     type: object
-  rbac.UserRole:
-    properties:
-      id:
-        type: integer
-      role_id:
-        type: integer
-      user_id:
-        type: integer
-    type: object
   response.PaginatedResponse:
     properties:
       code:
@@ -294,7 +319,7 @@ definitions:
         type: integer
       data:
         description: 数据
-      message:
+      msg:
         description: 提示信息
         type: string
     type: object
@@ -440,99 +465,6 @@ paths:
       summary: 获取权限列表
       tags:
       - RBAC-权限管理
-  /roles:
-    get:
-      consumes:
-      - application/json
-      description: 获取系统中所有角色的列表
-      parameters:
-      - example: johndoe
-        in: query
-        name: name
-        type: string
-      - default: 1
-        example: 1
-        in: query
-        name: page
-        required: true
-        type: integer
-      - default: 10
-        example: 10
-        in: query
-        name: pageSize
-        required: true
-        type: integer
-      - example: 1
-        in: query
-        name: status
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功获取角色列表
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.PaginatedResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/rbac.Role'
-                  type: array
-              type: object
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取角色列表
-      tags:
-      - RBAC-角色管理
-    post:
-      consumes:
-      - application/json
-      description: 创建新的系统角色
-      parameters:
-      - description: 角色信息
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/rbac.CreateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 成功创建角色
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.Role'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 创建角色
-      tags:
-      - RBAC-角色管理
   /roles/{id}:
     delete:
       consumes:
@@ -610,7 +542,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: 根据ID更新角色信息
+      description: 根据ID更新角色信息,修改角色资源
       parameters:
       - description: 角色ID
         in: path
@@ -656,68 +588,30 @@ paths:
       summary: 更新角色
       tags:
       - RBAC-角色管理
-  /roles/{role_id}/resources/{resource_id}:
-    delete:
-      consumes:
-      - application/json
-      description: 从指定角色移除指定资源
-      parameters:
-      - description: 角色ID
-        in: path
-        name: role_id
-        required: true
-        type: integer
-      - description: 资源ID
-        in: path
-        name: resource_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: 成功移除资源
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 无效的角色ID或资源ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 从角色移除资源
-      tags:
-      - RBAC-角色资源管理
+  /roles/create:
     post:
       consumes:
       - application/json
-      description: 为指定角色分配资源（细粒度权限控制）
+      description: 创建新的系统角色
       parameters:
-      - description: 角色ID
-        in: path
-        name: role_id
+      - description: 角色信息
+        in: body
+        name: role
         required: true
-        type: integer
-      - description: 资源ID
-        in: path
-        name: resource_id
-        required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/rbac.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: 成功分配资源
+          description: 成功创建角色
           schema:
-            $ref: '#/definitions/response.Response'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/rbac.Role'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -732,19 +626,15 @@ paths:
             $ref: '#/definitions/response.Response'
       security:
       - ApiKeyAuth: []
-      summary: 分配资源给角色
+      summary: 创建角色
       tags:
-      - RBAC-角色资源管理
-  /users:
+      - RBAC-角色管理
+  /roles/list:
     get:
       consumes:
       - application/json
-      description: 获取所有用户信息列表（支持分页）
+      description: 获取系统中所有角色的列表
       parameters:
-      - example: john@example.com
-        in: query
-        name: email
-        type: string
       - example: johndoe
         in: query
         name: name
@@ -769,15 +659,143 @@ paths:
       - application/json
       responses:
         "200":
-          description: 成功返回用户列表
+          description: 成功获取角色列表
           schema:
             allOf:
             - $ref: '#/definitions/response.PaginatedResponse'
             - properties:
                 data:
-                  additionalProperties: true
-                  type: object
+                  items:
+                    $ref: '#/definitions/rbac.Role'
+                  type: array
               type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取角色列表
+      tags:
+      - RBAC-角色管理
+  /users/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 管理员更新用户信息
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UpsertUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求格式错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新用户
+      tags:
+      - RBAC-用户管理
+  /users/create:
+    post:
+      consumes:
+      - application/json
+      description: 系统内部管理员创建用户，密码默认就是邮箱号
+      parameters:
+      - description: 创建参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.UpsertUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回用户列表
+          schema:
+            $ref: '#/definitions/response.PaginatedResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建用户
+      tags:
+      - RBAC-用户管理
+  /users/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有用户信息列表（支持分页）
+      parameters:
+      - example: john@example.com
+        in: query
+        name: email
+        type: string
+      - example: 1
+        in: query
+        name: gender
+        type: integer
+      - default: 1
+        example: 1
+        in: query
+        name: page
+        required: true
+        type: integer
+      - default: 10
+        example: 10
+        in: query
+        name: pageSize
+        required: true
+        type: integer
+      - example: 1
+        in: query
+        name: status
+        type: integer
+      - example: johndoe
+        in: query
+        name: username
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回
+          schema:
+            $ref: '#/definitions/response.Response'
         "401":
           description: 未授权
           schema:
@@ -791,48 +809,6 @@ paths:
       summary: 获取用户列表
       tags:
       - RBAC-用户管理
-  /users/{id}/roles:
-    get:
-      consumes:
-      - application/json
-      description: 获取指定用户的所有角色
-      parameters:
-      - description: 用户ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功获取用户角色
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/rbac.UserRole'
-                  type: array
-              type: object
-        "400":
-          description: 无效的用户ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取用户角色
-      tags:
-      - RBAC-用户角色管理
   /users/login:
     post:
       consumes:
@@ -898,6 +874,13 @@ paths:
       consumes:
       - application/json
       description: 用户创建修改的option枚举信息
+      parameters:
+      - collectionFormat: multi
+        in: query
+        items:
+          type: string
+        name: include_fields
+        type: array
       produces:
       - application/json
       responses:
@@ -908,7 +891,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/rbac.UpsertUserOptions'
+                  $ref: '#/definitions/rbac.UserOptions'
               type: object
         "401":
           description: 未授权
@@ -927,19 +910,14 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前登录用户的完整资料（包括角色、权限和可访问资源）
+      description: 从系统移除用户
       produces:
       - application/json
       responses:
         "200":
-          description: 成功返回用户完整资料
+          description: 成功返回
           schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/rbac.UserProfile'
-              type: object
+            $ref: '#/definitions/response.Response'
         "401":
           description: 未授权
           schema:
@@ -950,7 +928,7 @@ paths:
             $ref: '#/definitions/response.Response'
       security:
       - ApiKeyAuth: []
-      summary: 获取用户个人资料
+      summary: 移除用户
       tags:
       - RBAC-用户管理
   /users/refresh:

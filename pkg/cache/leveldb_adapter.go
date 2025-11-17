@@ -117,7 +117,6 @@ func (l *levelDBCache) Delete(ctx context.Context, keys ...string) error {
 	if err != nil {
 		return err
 	}
-
 	// 批量删除ttlMap（减少锁操作次数）
 	l.ttlMu.Lock()
 	for _, key := range keys {
@@ -126,6 +125,31 @@ func (l *levelDBCache) Delete(ctx context.Context, keys ...string) error {
 	l.ttlMu.Unlock()
 
 	return nil
+}
+
+func (l *levelDBCache) DeletePrefix(ctx context.Context, prefix string) error {
+	if l.db == nil || prefix == "" {
+		return nil
+	}
+
+	iter := l.db.NewIterator(nil, nil)
+	defer iter.Release()
+
+	var keysToDelete []string
+
+	for iter.Next() {
+		key := string(iter.Key())
+		if len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			keysToDelete = append(keysToDelete, key)
+		}
+	}
+
+	if err := iter.Error(); err != nil {
+		return err
+	}
+
+	// 批量删除匹配前缀的 key
+	return l.Delete(ctx, keysToDelete...)
 }
 
 // Exists 检查key是否存在
