@@ -1,8 +1,8 @@
 package core
 
 import (
-	"gin-template/pkg/cache"
-	"gin-template/pkg/logger"
+	"gin-admin/pkg/cache"
+	"gin-admin/pkg/logger"
 	"log"
 )
 

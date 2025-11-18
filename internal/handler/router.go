@@ -2,11 +2,11 @@ package handler
 
 import (
 	"context"
-	"gin-template/internal/core"
-	v1 "gin-template/internal/handler/v1"
-	"gin-template/internal/middleware"
-	"gin-template/internal/routegroup"
-	"gin-template/internal/service/rbac"
+	"gin-admin/internal/core"
+	v1 "gin-admin/internal/handler/v1"
+	"gin-admin/internal/middleware"
+	"gin-admin/internal/routegroup"
+	"gin-admin/internal/service/rbac"
 
 	"github.com/sirupsen/logrus"
 

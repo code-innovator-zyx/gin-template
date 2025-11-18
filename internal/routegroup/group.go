@@ -1,7 +1,7 @@
 package routegroup
 
 import (
-	"gin-template/internal/model/rbac"
+	"gin-admin/internal/model/rbac"
 
 	"path"
 	"sync"

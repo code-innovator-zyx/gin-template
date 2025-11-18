@@ -1,8 +1,8 @@
 package model
 
 import (
-	"gin-template/internal/core"
-	"gin-template/internal/model/rbac"
+	"gin-admin/internal/core"
+	"gin-admin/internal/model/rbac"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )

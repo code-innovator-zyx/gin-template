@@ -1,7 +1,7 @@
 package service
 
 import (
-	"gin-template/pkg/orm"
+	"gin-admin/pkg/orm"
 	"testing"
 	"time"
 

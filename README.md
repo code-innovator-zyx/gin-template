@@ -1,4 +1,4 @@
-# Gin Web 应用框架模板
+# Gin Admin
 
 一个基于 Gin 框架的企业级 Web 应用模板，集成了常用功能和最佳实践，为快速开发高质量 Go 后端应用提供坚实基础。
 
@@ -163,8 +163,8 @@
 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/gin-template.git
-cd gin-template
+git clone https://github.com/yourusername/gin-admin.git
+cd gin-admin
 ```
 
 2. 安装依赖

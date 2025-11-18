@@ -1,9 +1,9 @@
 package rbac
 
 import (
-	"gin-template/internal/logic/v1/rbac"
-	"gin-template/internal/middleware"
-	"gin-template/internal/routegroup"
+	"gin-admin/internal/logic/v1/rbac"
+	"gin-admin/internal/middleware"
+	"gin-admin/internal/routegroup"
 )
 
 // RegisterRBACRoutes 注册RBAC相关路由

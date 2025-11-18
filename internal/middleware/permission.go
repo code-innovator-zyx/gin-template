@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"gin-template/internal/service/rbac"
-	"gin-template/pkg/response"
+	"gin-admin/internal/service/rbac"
+	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

@@ -17,7 +17,7 @@
 
 ```go
 import (
-    "gin-template/pkg/transaction"
+    "gin-admin/pkg/transaction"
     "context"
 )
 

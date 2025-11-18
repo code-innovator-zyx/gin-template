@@ -1574,7 +1574,7 @@ const docTemplatev1 = `{
     ],
     "externalDocs": {
         "description": "项目文档",
-        "url": "https://github.com/your-org/gin-template/docs"
+        "url": "https://github.com/your-org/gin-admin/docs"
     }
 }`
 

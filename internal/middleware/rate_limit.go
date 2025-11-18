@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"gin-template/pkg/errcode"
-	"gin-template/pkg/response"
+	"gin-admin/pkg/errcode"
+	"gin-admin/pkg/response"
 	"sync"
 	"time"
 

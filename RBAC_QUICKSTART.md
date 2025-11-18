@@ -50,9 +50,9 @@ POST /api/v1/user/login
 package rbac
 
 import (
-    "gin-template/internal/logic/v1/rbac"
-    "gin-template/internal/middleware"
-    "gin-template/internal/routegroup"
+    "gin-admin/internal/logic/v1/rbac"
+    "gin-admin/internal/middleware"
+    "gin-admin/internal/routegroup"
     "github.com/gin-gonic/gin"
 )
 

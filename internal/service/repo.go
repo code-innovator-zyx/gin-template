@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"gin-template/internal/core"
+	"gin-admin/internal/core"
 	"gorm.io/gorm"
 )
 

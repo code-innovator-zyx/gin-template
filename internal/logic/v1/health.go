@@ -2,9 +2,9 @@ package v1
 
 import (
 	"context"
-	"gin-template/internal/core"
-	"gin-template/pkg/cache"
-	"gin-template/pkg/response"
+	"gin-admin/internal/core"
+	"gin-admin/pkg/cache"
+	"gin-admin/pkg/response"
 	"runtime"
 	"time"
 

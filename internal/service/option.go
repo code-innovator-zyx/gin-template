@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"gin-template/internal/core"
-	"gin-template/internal/model/rbac"
-	types "gin-template/internal/types/rbac"
+	"gin-admin/internal/core"
+	"gin-admin/internal/model/rbac"
+	types "gin-admin/internal/types/rbac"
 )
 
 /*

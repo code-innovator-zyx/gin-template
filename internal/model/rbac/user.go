@@ -1,7 +1,7 @@
 package rbac
 
 import (
-	"gin-template/pkg/consts"
+	"gin-admin/pkg/consts"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 

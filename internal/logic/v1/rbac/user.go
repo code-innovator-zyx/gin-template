@@ -1,13 +1,13 @@
 package rbac
 
 import (
-	"gin-template/internal/model/rbac"
-	"gin-template/internal/service"
-	rbac2 "gin-template/internal/service/rbac"
-	types "gin-template/internal/types/rbac"
-	"gin-template/pkg/consts"
-	"gin-template/pkg/response"
-	"gin-template/pkg/utils"
+	"gin-admin/internal/model/rbac"
+	"gin-admin/internal/service"
+	rbac2 "gin-admin/internal/service/rbac"
+	types "gin-admin/internal/types/rbac"
+	"gin-admin/pkg/consts"
+	"gin-admin/pkg/response"
+	"gin-admin/pkg/utils"
 	"strconv"
 	"strings"
 

@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 
 # 应用名称
-APP_NAME := gin-template
+APP_NAME := gin-admin
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/$(APP_NAME)
 
@@ -34,7 +34,7 @@ rename: ## 重命名项目 (用法: make rename NEW_NAME=your-project-name)
 	@echo "✓ Go 文件导入路径已更新"
 	@echo ""
 	@echo "步骤 3/5: 更新 Makefile..."
-	@sed -i.bak 's|APP_NAME := gin-template|APP_NAME := $(NEW_NAME)|g' Makefile && rm Makefile.bak
+	@sed -i.bak 's|APP_NAME := gin-admin|APP_NAME := $(NEW_NAME)|g' Makefile && rm Makefile.bak
 	@echo "✓ Makefile 已更新"
 	@echo ""
 	@echo "步骤 4/5: 更新 docker-compose.yml..."

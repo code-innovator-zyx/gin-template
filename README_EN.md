@@ -1,6 +1,6 @@
 span
 
-# 🚀 Gin Enterprise Template
+# 🚀 Gin Admin
 
 ### Enterprise-Grade Go Web Development Template
 
@@ -9,7 +9,7 @@ span
 [![Go Version](https://img.shields.io/badge/Go-1.20+-00ADD8?style=flat&logo=go)](https://go.dev)
 [![Gin Version](https://img.shields.io/badge/Gin-1.9+-00ADD8?style=flat&logo=go)](https://github.com/gin-gonic/gin)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/code-innovator-zyx/gin-template/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/code-innovator-zyx/gin-admin/pulls)
 
 English | [简体中文](./README.md)
 
@@ -76,8 +76,8 @@ English | [简体中文](./README.md)
 
 ```bash
 # 1. Clone the project
-git clone https://github.com/code-innovator-zyx/gin-template.git
-cd gin-template
+git clone https://github.com/code-innovator-zyx/gin-admin.git
+cd gin-admin
 
 # 2. Rename project (recommended)
 make rename NEW_NAME=my-awesome-api
@@ -183,7 +183,7 @@ Automatically updates:
 ## 📁 Project Structure
 
 ```
-gin-template/
+gin-admin/
 ├── 📂 internal/          # Internal packages (not exported)
 │   ├── config/          # Configuration
 │   ├── core/            # Core components
@@ -262,8 +262,8 @@ The only requirement is to keep the copyright notice.
 
 Thanks to all contributors!
 
-<a href="https://github.com/code-innovator-zyx/gin-template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=code-innovator-zyx/gin-template" />
+<a href="https://github.com/code-innovator-zyx/gin-admin/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=code-innovator-zyx/gin-admin" />
 </a>
 
 ### Inspiration
@@ -279,7 +279,7 @@ Thanks to all contributors!
 
 **Don't just star, try it now!**
 
-[Quick Start](./docs/QUICK_START.md) · [Documentation](./docs/OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/code-innovator-zyx/gin-template/issues)
+[Quick Start](./docs/QUICK_START.md) · [Documentation](./docs/OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/code-innovator-zyx/gin-admin/issues)
 
 ### If this project helps you, please give it a ⭐️
 

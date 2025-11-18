@@ -13,7 +13,7 @@
 
 ```bash
 git clone <your-repo-url>
-cd gin-template
+cd gin-admin
 ```
 
 ### 2. 重命名项目（可选但推荐）
@@ -113,9 +113,9 @@ docker-compose up -d
 ```
 
 这将启动三个容器：
-- `gin-template` - 应用服务 (端口 8080)
-- `gin-template-mysql` - MySQL数据库 (端口 3306)
-- `gin-template-redis` - Redis缓存 (端口 6379)
+- `gin-admin` - 应用服务 (端口 8080)
+- `gin-admin-mysql` - MySQL数据库 (端口 3306)
+- `gin-admin-redis` - Redis缓存 (端口 6379)
 
 ### 3. 查看日志
 
@@ -235,7 +235,7 @@ curl http://localhost:8080/api/v1/user/profile \
 ## 🔍 目录结构说明
 
 ```
-gin-template/
+gin-admin/
 ├── internal/              # 内部包（不对外暴露）
 │   ├── config/           # 配置管理
 │   ├── core/             # 核心组件（全局变量、初始化）

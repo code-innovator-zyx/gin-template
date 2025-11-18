@@ -17,7 +17,7 @@ jwt:
   secret: "your-secret-key-change-this-in-production"  # 生产环境必须修改
   access_token_expire: 3600      # Access Token 1小时
   refresh_token_expire: 604800   # Refresh Token 7天
-  issuer: "gin-template"
+  issuer: "gin-admin"
   max_refresh_count: 10          # 单个 Refresh Token 最大刷新次数
   enable_blacklist: true         # 启用黑名单（需要缓存支持）
   blacklist_grace_period: 300    # 黑名单宽限期 5分钟
@@ -164,7 +164,7 @@ const logout = async () => {
 ### 生成令牌
 
 ```go
-import "gin-template/pkg/utils"
+import "gin-admin/pkg/utils"
 
 jwtManager := utils.GetJWTManager()
 

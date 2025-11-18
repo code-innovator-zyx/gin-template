@@ -2,7 +2,7 @@
 
 ## 为什么需要重命名？
 
-当你使用 `gin-template` 作为模板创建新项目时，你需要将项目名称改为自己的项目名称，这样可以：
+当你使用 `gin-admin` 作为模板创建新项目时，你需要将项目名称改为自己的项目名称，这样可以：
 
 - ✅ 避免与模板名称冲突
 - ✅ 让代码更具可读性
@@ -23,7 +23,7 @@ make rename NEW_NAME=your-project-name
 
 ```bash
 # 1. 克隆模板
-git clone https://github.com/your-username/gin-template.git blog-api
+git clone https://github.com/your-username/gin-admin.git blog-api
 cd blog-api
 
 # 2. 重命名项目
@@ -47,7 +47,7 @@ make run
 
 **修改前：**
 ```go
-module gin-template
+module gin-admin
 
 go 1.24.0
 ```
@@ -64,9 +64,9 @@ go 1.24.0
 **修改前：**
 ```go
 import (
-    "gin-template/internal/config"
-    "gin-template/pkg/logger"
-    "gin-template/pkg/response"
+    "gin-admin/internal/config"
+    "gin-admin/pkg/logger"
+    "gin-admin/pkg/response"
 )
 ```
 
@@ -83,7 +83,7 @@ import (
 
 **修改前：**
 ```makefile
-APP_NAME := gin-template
+APP_NAME := gin-admin
 ```
 
 **修改后：**
@@ -97,11 +97,11 @@ APP_NAME := blog-api
 ```yaml
 services:
   app:
-    container_name: gin-template
+    container_name: gin-admin
   mysql:
-    container_name: gin-template-mysql
+    container_name: gin-admin-mysql
   redis:
-    container_name: gin-template-redis
+    container_name: gin-admin-redis
 ```
 
 **修改后：**
@@ -117,14 +117,14 @@ services:
 
 ### 5️⃣ 更新所有 Markdown 文档
 
-所有 `*.md` 文件中的 `gin-template` 都会被替换为新名称。
+所有 `*.md` 文件中的 `gin-admin` 都会被替换为新名称。
 
 ## 🎯 命令输出示例
 
 ```bash
 $ make rename NEW_NAME=blog-api
 
-正在将项目从 'gin-template' 重命名为 'blog-api'...
+正在将项目从 'gin-admin' 重命名为 'blog-api'...
 
 步骤 1/5: 更新 go.mod 模块名...
 ✓ go.mod 已更新
@@ -145,7 +145,7 @@ $ make rename NEW_NAME=blog-api
 ✅ 重命名完成！
 ==========================================
 
-项目已从 'gin-template' 重命名为 'blog-api'
+项目已从 'gin-admin' 重命名为 'blog-api'
 
 下一步操作：
   1. 运行: go mod tidy
@@ -188,14 +188,14 @@ make rename NEW_NAME="blog api"    # 不要用空格
 
 ```bash
 # 创建备份
-cp -r . ../gin-template-backup
+cp -r . ../gin-admin-backup
 
 # 然后执行重命名
 make rename NEW_NAME=your-project-name
 
 # 如果有问题，可以恢复
 # rm -rf *
-# cp -r ../gin-template-backup/* .
+# cp -r ../gin-admin-backup/* .
 ```
 
 ### 4. 检查重命名结果
@@ -245,7 +245,7 @@ go build
 ### Q3: 可以重命名多次吗？
 
 **A:** 技术上可以，但不推荐。如果确实需要，建议：
-1. 先手动将当前名称改回 `gin-template`
+1. 先手动将当前名称改回 `gin-admin`
 2. 再执行重命名命令
 
 或者直接手动修改相关文件。

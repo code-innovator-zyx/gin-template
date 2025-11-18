@@ -21,7 +21,7 @@
 
 ```go
 import (
-    "gin-template/pkg/transaction"
+    "gin-admin/pkg/transaction"
     "context"
 )
 
@@ -44,7 +44,7 @@ err := transaction.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 
 ```go
 import (
-    "gin-template/pkg/transaction"
+    "gin-admin/pkg/transaction"
     "context"
 )
 

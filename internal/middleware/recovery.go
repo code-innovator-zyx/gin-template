@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"gin-template/pkg/response"
+	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"runtime/debug"

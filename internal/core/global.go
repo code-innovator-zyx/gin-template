@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
-	"gin-template/internal/config"
-	"gin-template/pkg/orm"
+	"gin-admin/internal/config"
+	"gin-admin/pkg/orm"
 	"log"
 	"sync"
 

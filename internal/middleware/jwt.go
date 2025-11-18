@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"gin-template/pkg/response"
-	"gin-template/pkg/utils"
+	"gin-admin/pkg/response"
+	"gin-admin/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,6 +1,6 @@
 package rbac
 
-import "gin-template/pkg/consts"
+import "gin-admin/pkg/consts"
 
 /*
 * @Author: zouyx

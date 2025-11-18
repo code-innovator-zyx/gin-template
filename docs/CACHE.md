@@ -62,7 +62,7 @@ cache:
 ### 基础操作
 
 ```go
-import "gin-template/pkg/cache"
+import "gin-admin/pkg/cache"
 
 // 获取缓存实例
 cacheClient := cache.GetGlobalCache()
@@ -101,7 +101,7 @@ members, err := cacheClient.SMembers(ctx, "myset")
 项目提供了封装好的缓存服务，用于常见业务场景：
 
 ```go
-import "gin-template/internal/service"
+import "gin-admin/internal/service"
 
 cacheService := service.GetCacheService()
 

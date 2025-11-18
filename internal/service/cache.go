@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
-	"gin-template/internal/model/rbac"
-	"gin-template/pkg/cache"
+	"gin-admin/internal/model/rbac"
+	"gin-admin/pkg/cache"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"

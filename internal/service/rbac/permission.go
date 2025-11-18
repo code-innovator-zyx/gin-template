@@ -3,8 +3,8 @@ package rbac
 import (
 	"cmp"
 	"context"
-	"gin-template/internal/model/rbac"
-	"gin-template/internal/service"
+	"gin-admin/internal/model/rbac"
+	"gin-admin/internal/service"
 	"maps"
 	"slices"
 )

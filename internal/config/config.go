@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
-	"gin-template/pkg/cache"
-	"gin-template/pkg/logger"
-	"gin-template/pkg/orm"
+	"gin-admin/pkg/cache"
+	"gin-admin/pkg/logger"
+	"gin-admin/pkg/orm"
 	"time"
 
 	"github.com/gin-gonic/gin"

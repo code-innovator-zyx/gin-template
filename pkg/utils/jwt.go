@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"gin-template/internal/core"
+	"gin-admin/internal/core"
 	"sync"
 	"time"
 

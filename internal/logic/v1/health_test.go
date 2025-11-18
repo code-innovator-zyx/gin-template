@@ -2,7 +2,7 @@ package v1
 
 import (
 	"encoding/json"
-	"gin-template/pkg/response"
+	"gin-admin/pkg/response"
 	"net/http"
 	"net/http/httptest"
 	"testing"

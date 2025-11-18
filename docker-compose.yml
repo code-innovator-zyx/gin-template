@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gin-template
+    container_name: gin-admin
     ports:
       - "8080:8080"
     environment:
@@ -33,7 +33,7 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: gin-template-mysql
+    container_name: gin-admin-mysql
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=gin_template
@@ -54,7 +54,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: gin-template-redis
+    container_name: gin-admin-redis
     ports:
       - "6379:6379"
     volumes:

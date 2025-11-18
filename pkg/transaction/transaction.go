@@ -3,7 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
-	"gin-template/internal/core"
+	"gin-admin/internal/core"
 	"time"
 
 	"github.com/sirupsen/logrus"

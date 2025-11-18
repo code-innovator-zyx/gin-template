@@ -3,9 +3,9 @@ package rbac
 import (
 	"context"
 	"fmt"
-	"gin-template/internal/model/rbac"
-	"gin-template/internal/service"
-	types "gin-template/internal/types/rbac"
+	"gin-admin/internal/model/rbac"
+	"gin-admin/internal/service"
+	types "gin-admin/internal/types/rbac"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )

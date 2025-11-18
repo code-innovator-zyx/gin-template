@@ -1,11 +1,11 @@
 package v1
 
 import (
-	_ "gin-template/docs"
-	"gin-template/internal/core"
-	"gin-template/internal/handler/v1/rbac"
-	v1 "gin-template/internal/logic/v1"
-	"gin-template/internal/routegroup"
+	_ "gin-admin/docs"
+	"gin-admin/internal/core"
+	"gin-admin/internal/handler/v1/rbac"
+	v1 "gin-admin/internal/logic/v1"
+	"gin-admin/internal/routegroup"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -68,7 +68,7 @@ import (
 
 // @externalDocs.description    项目文档
 
-// @externalDocs.url            https://github.com/your-org/gin-template/docs
+// @externalDocs.url            https://github.com/your-org/gin-admin/docs
 func RegisterRoutes(r *gin.Engine) {
 	// API版本v1 使用authGroup 自动维护权限管理
 	apiV1 := routegroup.WrapGroup(r.Group("/api/v1"))

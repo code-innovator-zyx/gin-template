@@ -1,8 +1,8 @@
 package rbac
 
 import (
-	"gin-template/internal/model/rbac"
-	"gin-template/pkg/consts"
+	"gin-admin/internal/model/rbac"
+	"gin-admin/pkg/consts"
 )
 
 /*

@@ -1,4 +1,4 @@
-module gin-template
+module gin-admin
 
 go 1.24.0
 
