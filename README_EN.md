@@ -9,7 +9,7 @@ span
 [![Go Version](https://img.shields.io/badge/Go-1.20+-00ADD8?style=flat&logo=go)](https://go.dev)
 [![Gin Version](https://img.shields.io/badge/Gin-1.9+-00ADD8?style=flat&logo=go)](https://github.com/gin-gonic/gin)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/code-innovator-zyx/gin-admin/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/the-yex/gin-admin/pulls)
 
 English | [简体中文](./README.md)
 
@@ -76,7 +76,7 @@ English | [简体中文](./README.md)
 
 ```bash
 # 1. Clone the project
-git clone https://github.com/code-innovator-zyx/gin-admin.git
+git clone https://github.com/the-yex/gin-admin.git
 cd gin-admin
 
 # 2. Rename project (recommended)
@@ -262,8 +262,8 @@ The only requirement is to keep the copyright notice.
 
 Thanks to all contributors!
 
-<a href="https://github.com/code-innovator-zyx/gin-admin/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=code-innovator-zyx/gin-admin" />
+<a href="https://github.com/the-yex/gin-admin/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=the-yex/gin-admin" />
 </a>
 
 ### Inspiration
@@ -279,11 +279,11 @@ Thanks to all contributors!
 
 **Don't just star, try it now!**
 
-[Quick Start](./docs/QUICK_START.md) · [Documentation](./docs/OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/code-innovator-zyx/gin-admin/issues)
+[Quick Start](./docs/QUICK_START.md) · [Documentation](./docs/OPTIMIZATION_REPORT.md) · [Submit Issue](https://github.com/the-yex/gin-admin/issues)
 
 ### If this project helps you, please give it a ⭐️
 
-**Made with ❤️ by [mortal](https://github.com/code-innovator-zyx)**
+**Made with ❤️ by [zouyx](https://github.com/the-yex)**
 
 </div>
 
