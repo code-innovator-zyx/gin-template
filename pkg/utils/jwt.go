@@ -2,11 +2,10 @@ package utils
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"gin-admin/internal/core"
+	"github.com/google/uuid"
 	"sync"
 	"time"
 
@@ -25,7 +24,16 @@ import (
 *   - Token 撤销机制
 *   - 刷新次数限制
 *   - 设备/会话管理
+*   - 支持退出登录 将token 都加入黑名单，刷新token 也做不到
  */
+// ================================
+// Token 类型定义
+// ================================
+
+const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+)
 
 // ================================
 // JWT 错误定义
@@ -40,15 +48,6 @@ var (
 	ErrRefreshTokenExpired = errors.New("刷新令牌已过期")
 	ErrRefreshLimitReached = errors.New("刷新次数已达上限")
 	ErrInvalidTokenType    = errors.New("令牌类型错误")
-)
-
-// ================================
-// Token 类型定义
-// ================================
-
-const (
-	TokenTypeAccess  = "access"
-	TokenTypeRefresh = "refresh"
 )
 
 // ================================
@@ -150,10 +149,7 @@ func GetJWTManager() *JWTManager {
 
 // GenerateTokenPair 生成令牌对（Access Token + Refresh Token）
 func (m *JWTManager) GenerateTokenPair(userID uint, username, email string, deviceID ...string) (*TokenPair, error) {
-	sessionID, err := generateSessionID()
-	if err != nil {
-		return nil, fmt.Errorf("生成会话ID失败: %w", err)
-	}
+	sessionID := uuid.New().String()
 
 	device := ""
 	if len(deviceID) > 0 {
@@ -197,7 +193,7 @@ func (m *JWTManager) generateAccessToken(userID uint, username, email, deviceID,
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    m.issuer,
 			Subject:   fmt.Sprintf("%d", userID),
-			ID:        generateJTI(),
+			ID:        uuid.New().String(),
 		},
 	}
 
@@ -221,7 +217,7 @@ func (m *JWTManager) generateRefreshToken(userID uint, username, deviceID, sessi
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    m.issuer,
 			Subject:   fmt.Sprintf("%d", userID),
-			ID:        generateJTI(),
+			ID:        uuid.New().String(),
 		},
 	}
 
@@ -318,7 +314,7 @@ func (m *JWTManager) RefreshToken(ctx context.Context, refreshTokenString string
 	// 生成新的令牌对
 	sessionID := claims.SessionID
 	if sessionID == "" {
-		sessionID, _ = generateSessionID()
+		sessionID = uuid.New().String()
 	}
 
 	// 生成新的 Access Token
@@ -366,7 +362,7 @@ func (m *JWTManager) generateNewRefreshToken(oldClaims *RefreshTokenClaims) (str
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    m.issuer,
 			Subject:   fmt.Sprintf("%d", oldClaims.UserID),
-			ID:        generateJTI(),
+			ID:        uuid.New().String(),
 		},
 	}
 
@@ -418,10 +414,6 @@ func (m *JWTManager) RevokeUserAllTokens(ctx context.Context, userID uint) error
 	return nil
 }
 
-// ================================
-// 辅助方法
-// ================================
-
 // blacklistToken 将 token 加入黑名单
 func (m *JWTManager) blacklistToken(ctx context.Context, tokenString string, ttl time.Duration) error {
 	// 通过缓存服务加入黑名单
@@ -455,7 +447,7 @@ func (m *JWTManager) parseError(err error) error {
 	return ErrTokenInvalid
 }
 
-// GetTokenMetadata 获取 Token 元数据（不验证有效性）
+// GetTokenMetadata 获取 Token 元数据
 func (m *JWTManager) GetTokenMetadata(tokenString string) (*TokenMetadata, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &CustomClaims{})
 	if err != nil {
@@ -482,22 +474,6 @@ func (m *JWTManager) GetTokenMetadata(tokenString string) (*TokenMetadata, error
 // 工具函数
 // ================================
 
-// generateSessionID 生成会话ID
-func generateSessionID() (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(b), nil
-}
-
-// generateJTI 生成 JWT ID
-func generateJTI() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.URLEncoding.EncodeToString(b)
-}
-
 // getCacheService 获取缓存服务
 func getCacheService() interface {
 	SetInstance(ctx context.Context, key string, value interface{}, ttl time.Duration) error
@@ -507,22 +483,4 @@ func getCacheService() interface {
 	// 由于包依赖关系，这里使用接口解耦
 	// 在实际使用中，可以通过依赖注入或全局变量获取
 	return nil
-}
-
-// ================================
-// 向后兼容的全局函数
-// ================================
-
-// GenerateToken 生成JWT令牌（向后兼容，仅生成 Access Token）
-// 建议使用 GenerateTokenPair 生成完整的令牌对
-func GenerateToken(userID uint, username string) (string, error) {
-	manager := GetJWTManager()
-	return manager.generateAccessToken(userID, username, "", "", "")
-}
-
-// ParseToken 解析JWT令牌（向后兼容）
-// 建议使用 JWTManager.ParseAccessToken
-func ParseToken(tokenString string) (*CustomClaims, error) {
-	manager := GetJWTManager()
-	return manager.ParseAccessToken(context.Background(), tokenString)
 }

@@ -162,8 +162,7 @@ func checkCache(ctx context.Context) ComponentHealth {
 		}
 	}
 
-	cacheClient := cache.GetClient()
-	cacheType := cacheClient.Type()
+	cacheClient := cache.GetGlobalCache()
 
 	// 执行 Ping 检查
 	if err := cacheClient.Ping(ctx); err != nil {
@@ -172,9 +171,6 @@ func checkCache(ctx context.Context) ComponentHealth {
 			ResponseTime: time.Since(start).Milliseconds(),
 			Message:      "Cache ping failed",
 			Error:        err.Error(),
-			Details: map[string]interface{}{
-				"type": cacheType,
-			},
 		}
 	}
 
@@ -182,9 +178,6 @@ func checkCache(ctx context.Context) ComponentHealth {
 		Status:       "ok",
 		ResponseTime: time.Since(start).Milliseconds(),
 		Message:      "Cache is healthy",
-		Details: map[string]interface{}{
-			"type": cacheType,
-		},
 	}
 }
 

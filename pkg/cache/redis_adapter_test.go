@@ -44,9 +44,6 @@ func TestRedisCache_Type(t *testing.T) {
 	cache := skipIfNoRedis(t)
 	defer cache.Close()
 
-	if cache.Type() != "redis" {
-		t.Errorf("期望类型为 redis，实际为: %s", cache.Type())
-	}
 }
 
 func TestRedisCache_SetAndGet(t *testing.T) {

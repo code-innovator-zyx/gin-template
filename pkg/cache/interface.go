@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"github.com/go-redis/redis/v8"
 	"time"
 )
 
@@ -10,14 +11,14 @@ import (
 * @Author: zouyx
 * @Email: 1003941268@qq.com
 * @Date:   2025/11/04
-* @Package: 缓存接口定义
+* @Package: 基础缓存定义(系统依赖的基础缓存)
  */
 
 // ErrKeyNotFound 缓存键不存在错误（包括已过期的键）
 var ErrKeyNotFound = errors.New("cache: key not found")
 var ErrUnreachable = errors.New("cache: cache unreachable")
 
-// Cache 缓存接口 - 支持多种实现（Redis、LevelDB、Memory等）
+// Cache 缓存接口
 type Cache interface {
 	// 基础操作
 	Get(ctx context.Context, key string, dest interface{}) error
@@ -46,48 +47,33 @@ type Cache interface {
 	Ping(ctx context.Context) error
 	Close() error
 
-	// 类型标识
-	Type() string
-
 	// 移除前缀key
 	DeletePrefix(ctx context.Context, prefix string) error
+
+	// RedisClient 除了通用的之外，提供redisclient 供使用
+	RedisClient() *redis.Client
 }
 
 // Pipeline 管道操作接口
 type Pipeline interface {
-	Exists(ctx context.Context, key string) ExistsCmd
+	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) StatusCmd
+	Exists(ctx context.Context, key string) IntCmd
+	SAdd(ctx context.Context, key string, members ...interface{}) IntCmd
+	Del(ctx context.Context, keys ...string) IntCmd
+	SRem(ctx context.Context, key string, members ...interface{}) IntCmd
 	SIsMember(ctx context.Context, key string, member interface{}) BoolCmd
 	Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd
 	Exec(ctx context.Context) error
-}
-
-// ExistsCmd Exists命令结果
-type ExistsCmd interface {
-	Result() (int64, error)
 }
 
 // BoolCmd 布尔命令结果
 type BoolCmd interface {
 	Result() (bool, error)
 }
-
-// CacheConfig 缓存配置
-type CacheConfig struct {
-	Type    string         `mapstructure:"type" validate:"required,oneof=redis leveldb memory"`
-	Redis   *RedisConfig   `mapstructure:"redis"`
-	LevelDB *LevelDBConfig `mapstructure:"leveldb"`
+type StatusCmd interface {
+	Result() (string, error)
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
-	Host     string `mapstructure:"host" validate:"required"`
-	Port     int    `mapstructure:"port" validate:"required,min=1,max=65535"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db" validate:"min=0"`
-	PoolSize int    `mapstructure:"pool_size" validate:"omitempty,min=1"`
-}
-
-// LevelDBConfig LevelDB配置
-type LevelDBConfig struct {
-	Path string `mapstructure:"path" validate:"required"`
+type IntCmd interface {
+	Result() (int64, error)
 }

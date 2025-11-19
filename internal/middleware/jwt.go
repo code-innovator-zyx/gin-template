@@ -28,7 +28,7 @@ func JWT() gin.HandlerFunc {
 		}
 
 		token := parts[1]
-		claims, err := utils.ParseToken(token)
+		claims, err := utils.GetJWTManager().ParseAccessToken(c.Request.Context(), token)
 		if err != nil {
 			if errors.Is(err, utils.ErrTokenExpired) {
 				response.Unauthorized(c, "Token已过期")

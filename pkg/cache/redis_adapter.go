@@ -17,6 +17,15 @@ import (
 * @Package: Redis适配器实现
  */
 
+// RedisConfig 缓存配置
+type RedisConfig struct {
+	Host     string `mapstructure:"host" validate:"required"`
+	Port     int    `mapstructure:"port" validate:"required,min=1,max=65535"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db" validate:"min=0"`
+	PoolSize int    `mapstructure:"pool_size" validate:"omitempty,min=1"`
+}
+
 // redisCache Redis缓存实现
 type redisCache struct {
 	client *redis.Client
@@ -149,6 +158,10 @@ func (r *redisCache) Pipeline() Pipeline {
 	return &redisPipeline{pipe: r.client.Pipeline()}
 }
 
+func (r *redisCache) RedisClient() *redis.Client {
+	return r.client
+}
+
 // Ping 测试连接
 func (r *redisCache) Ping(ctx context.Context) error {
 	return r.client.Ping(ctx).Err()
@@ -157,11 +170,6 @@ func (r *redisCache) Ping(ctx context.Context) error {
 // Close 关闭连接
 func (r *redisCache) Close() error {
 	return r.client.Close()
-}
-
-// Type 返回缓存类型
-func (r *redisCache) Type() string {
-	return "redis"
 }
 
 // GetClient 获取原始Redis客户端（用于高级操作）
@@ -177,10 +185,23 @@ type redisPipeline struct {
 	pipe redis.Pipeliner
 }
 
-func (p *redisPipeline) Exists(ctx context.Context, key string) ExistsCmd {
-	return &redisExistsCmd{cmd: p.pipe.Exists(ctx, key)}
+func (p *redisPipeline) SAdd(ctx context.Context, key string, members ...interface{}) IntCmd {
+	return &redisIntCmd{cmd: p.pipe.SAdd(ctx, key, members...)}
 }
 
+func (p *redisPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) StatusCmd {
+	return &redisStatusCmd{cmd: p.pipe.Set(ctx, key, value, ttl)}
+}
+
+func (p *redisPipeline) Exists(ctx context.Context, key string) IntCmd {
+	return &redisIntCmd{cmd: p.pipe.Exists(ctx, key)}
+}
+func (p *redisPipeline) Del(ctx context.Context, keys ...string) IntCmd {
+	return &redisIntCmd{cmd: p.pipe.Del(ctx, keys...)}
+}
+func (p *redisPipeline) SRem(ctx context.Context, key string, members ...interface{}) IntCmd {
+	return &redisIntCmd{cmd: p.pipe.SRem(ctx, key, members)}
+}
 func (p *redisPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
 	return &redisBoolCmd{cmd: p.pipe.SIsMember(ctx, key, member)}
 }
@@ -198,18 +219,26 @@ func (p *redisPipeline) Exec(ctx context.Context) error {
 // Command 实现
 // ================================
 
-type redisExistsCmd struct {
-	cmd *redis.IntCmd
-}
-
-func (c *redisExistsCmd) Result() (int64, error) {
-	return c.cmd.Result()
-}
-
 type redisBoolCmd struct {
 	cmd *redis.BoolCmd
 }
 
 func (c *redisBoolCmd) Result() (bool, error) {
+	return c.cmd.Result()
+}
+
+type redisStatusCmd struct {
+	cmd *redis.StatusCmd
+}
+
+func (c *redisStatusCmd) Result() (string, error) {
+	return c.cmd.Result()
+}
+
+type redisIntCmd struct {
+	cmd *redis.IntCmd
+}
+
+func (c *redisIntCmd) Result() (int64, error) {
 	return c.cmd.Result()
 }

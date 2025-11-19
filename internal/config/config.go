@@ -20,7 +20,7 @@ type AppConfig struct {
 	RBAC   *RBACConfig   `mapstructure:"rbac" validate:"required"`
 	// 选填的配置
 	Database *orm.Config        `mapstructure:"database" validate:"omitempty"`
-	Cache    *cache.CacheConfig `mapstructure:"cache" validate:"omitempty"`
+	Cache    *cache.RedisConfig `mapstructure:"cache" validate:"omitempty"`
 }
 
 func (a AppConfig) validate() error {

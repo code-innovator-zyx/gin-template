@@ -18,9 +18,6 @@ func TestMemoryCache_Type(t *testing.T) {
 	cache := NewMemoryCache()
 	defer cache.Close()
 
-	if cache.Type() != "memory" {
-		t.Errorf("期望类型为 memory，实际为: %s", cache.Type())
-	}
 }
 
 func TestMemoryCache_SetAndGet(t *testing.T) {
@@ -378,7 +375,7 @@ func TestMemoryCache_Pipeline(t *testing.T) {
 
 	// 创建管道
 	pipe := cache.Pipeline()
-
+	pipe.Set(ctx, "test", "test", time.Second)
 	// 执行管道操作
 	existsCmd := pipe.Exists(ctx, "key1")
 	isMemberCmd := pipe.SIsMember(ctx, "set1", "member1")
@@ -413,6 +410,18 @@ func TestMemoryCache_Pipeline(t *testing.T) {
 	if !expired {
 		t.Error("期望设置过期时间成功，但失败了")
 	}
+	var result string
+	err = cache.Get(ctx, "test", &result)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t.Log(result)
+	time.Sleep(2 * time.Second)
+	err = cache.Get(ctx, "test", &result)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t.Log(result)
 }
 
 func TestMemoryCache_Ping(t *testing.T) {

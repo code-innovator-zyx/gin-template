@@ -50,18 +50,11 @@ logger:
 # 支持三种类型：redis, leveldb, memory
 # ⚠️ 注意：如果不配置缓存，系统将自动使用内存缓存（memory）
 # cache:
-#   type: redis  # 缓存类型: redis | leveldb | memory
-#   # Redis配置（type=redis时必填）
-#   redis:
-#     host: localhost
-#     port: 6379
-#     password: ""
-#     db: 0
-#     pool_size: 10
-#   # LevelDB配置（type=leveldb时必填）
-#   leveldb:
-#     path: ./data/leveldb
-#   # Memory缓存无需额外配置（默认选项）
+#  host: localhost
+#  port: 6379
+#  password: ""
+#  db: 0
+#  pool_size: 10
 
 # RBAC权限系统配置（可选）
 # 用于配置系统初始化时的默认管理员账号和角色
