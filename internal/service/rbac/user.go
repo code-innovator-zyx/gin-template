@@ -8,7 +8,7 @@ import (
 	"gin-admin/internal/service"
 	types "gin-admin/internal/types/rbac"
 	"gin-admin/pkg/consts"
-	"gin-admin/pkg/utils"
+	"gin-admin/pkg/jwt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"strings"
@@ -54,7 +54,7 @@ func (s *userService) Register(user *rbac.User) error {
 }
 
 // Login 用户登录（返回完整的 TokenPair）
-func (s *userService) Login(account, password string) (*utils.TokenPair, error) {
+func (s *userService) Login(account, password string) (*jwt.TokenPair, error) {
 	user, err := s.BaseRepo.FindOne(func(db *gorm.DB) *gorm.DB {
 		return db.Where("username = ? OR email = ?", account, account)
 	})
@@ -62,12 +62,11 @@ func (s *userService) Login(account, password string) (*utils.TokenPair, error) 
 		return nil, err
 	}
 	// 验证密码
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return nil, errors.New("密码错误")
 	}
 	// 生成JWT令牌对
-	jwtManager := utils.GetJWTManager()
-	tokenPair, err := jwtManager.GenerateTokenPair(user.ID, user.Username, user.Email)
+	tokenPair, err := jwt.GetJwtSvr().GenerateTokenPair(s.ctx, user.ID, user.Username, user.Email)
 	if err != nil {
 		return nil, err
 	}

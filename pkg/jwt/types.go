@@ -7,10 +7,22 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// Token类型
+// 自定义错误类型
+
+var (
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrExpiredToken         = errors.New("expired token")
+	ErrSessionInvalid       = errors.New("session invalid or revoked")
+	ErrRefreshTokenStolen   = errors.New("refresh token stolen or reused")
+	ErrRefreshNotAllowed    = errors.New("refresh not allowed")
+	ErrUnsupportedTokenType = errors.New("unsupported token type")
+)
+
+type TokenType string
+
 const (
-	TokenTypeAccess  = "access"
-	TokenTypeRefresh = "refresh"
+	TokenTypeAccess  TokenType = "access"
+	TokenTypeRefresh TokenType = "refresh"
 )
 
 // TokenPair 令牌对响应结构
@@ -24,23 +36,12 @@ type TokenPair struct {
 
 // CustomClaims 自定义JWT声明（Access Token）
 type CustomClaims struct {
-	UserID    uint   `json:"user_id"`
-	Username  string `json:"username"`
-	Email     string `json:"email,omitempty"`
-	TokenType string `json:"token_type"` // access or refresh
-	DeviceID  string `json:"device_id,omitempty"`
-	SessionID string `json:"session_id,omitempty"`
-	jwt.RegisteredClaims
-}
-
-// RefreshTokenClaims 刷新令牌
-type RefreshTokenClaims struct {
-	UserID       uint   `json:"user_id"`
-	Username     string `json:"username"`
-	DeviceID     string `json:"device_id,omitempty"`
-	SessionID    string `json:"session_id"`
-	TokenType    string `json:"token_type"`    // refresh
-	RefreshCount int    `json:"refresh_count"` // 已刷新次数
+	UserID    uint      `json:"user_id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email,omitempty"`
+	TokenType TokenType `json:"token_type"` // access or refresh
+	DeviceID  string    `json:"device_id,omitempty"`
+	SessionID string    `json:"session_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -67,16 +68,6 @@ func WithSessionID(sessionID string) TokenOption {
 	}
 }
 
-// 自定义错误类型
-var (
-	ErrInvalidToken       = errors.New("token 无效")
-	ErrTokenExpired       = errors.New("token 已过期")
-	ErrSessionInvalid     = errors.New("会话已失效")
-	ErrRefreshTokenStolen = errors.New("refresh token 已被盗用（旧 token）")
-)
-
-// ================================ Token结构定义 ================================
-
 // TokenMetadata Token元数据
 type TokenMetadata struct {
 	UserID    uint
@@ -89,8 +80,6 @@ type TokenMetadata struct {
 	ExpiresAt time.Time
 }
 
-// ================================ 选项结构 ================================
-
 // ServiceOption 服务选项函数类型
 type ServiceOption func(*JWTService)
 
@@ -99,4 +88,14 @@ func WithSessionManager(manager SessionManager) ServiceOption {
 	return func(s *JWTService) {
 		s.sessionManager = manager
 	}
+}
+
+// SessionInfo 会话信息
+type SessionInfo struct {
+	SessionID        string    `json:"session_id"`
+	UserID           uint      `json:"user_id"`
+	Username         string    `json:"username"`
+	RefreshTokenHash string    `json:"refresh_hash"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	Revoked          bool      `json:"revoked"`
 }

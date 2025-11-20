@@ -8,32 +8,22 @@ import (
 	"time"
 )
 
-// SessionInfo 会话信息
-type SessionInfo struct {
-	SessionID        string    `json:"session_id"`
-	UserID           uint      `json:"user_id"`
-	Username         string    `json:"username"`
-	DeviceID         string    `json:"device_id"`
-	RefreshTokenHash string    `json:"refresh_hash"`
-	CreatedAt        time.Time `json:"created_at"`
-	ExpiresAt        time.Time `json:"expires_at"`
-	Revoked          bool      `json:"revoked"`
-}
-
 // SessionManager 会话管理器接口
+// TODO
+// 1. 提供查看用户在线设备列表
+// 2. 可限制用户在线设备数量
 type SessionManager interface {
 	SaveSession(ctx context.Context, s *SessionInfo) error
 	GetSession(ctx context.Context, sessionID interface{}) *SessionInfo
 	RemoveSession(ctx context.Context, sessionID string) error
 	UpdateRefreshHash(ctx context.Context, sessionID, hash string) error
-	GetUserSessions(ctx context.Context, userID uint) ([]*SessionInfo, error)
 	RemoveUserSessions(ctx context.Context, userID uint) error
 }
 type CacheSessionManager struct {
 	cache cache.Cache
 }
 
-func NewRedisSessionManager() SessionManager {
+func NewCacheSessionManager() SessionManager {
 	return &CacheSessionManager{cache: cache.GetGlobalCache()}
 }
 
@@ -88,9 +78,8 @@ func (m *CacheSessionManager) UpdateRefreshHash(ctx context.Context, sessionID, 
 		return nil
 	}
 	s.RefreshTokenHash = hash
-	data, _ := json.Marshal(s)
 	ttl := time.Until(s.ExpiresAt)
-	return m.cache.Set(ctx, m.sessionKey(sessionID), data, ttl)
+	return m.cache.Set(ctx, m.sessionKey(sessionID), s, ttl)
 }
 
 // GetUserSessions 获取用户所有会话

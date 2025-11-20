@@ -2,18 +2,24 @@ package middleware
 
 import (
 	"errors"
-	"strings"
-
+	"gin-admin/internal/core"
+	"gin-admin/pkg/jwt"
 	"gin-admin/pkg/response"
-	"gin-admin/pkg/utils"
-
 	"github.com/gin-gonic/gin"
+	jwtv4 "github.com/golang-jwt/jwt/v4"
+	"github.com/sirupsen/logrus"
+	"strings"
+)
+
+const (
+	ACCESSTOKEN_KEY  = "Authorization"
+	REFRESHTOKEN_KEY = "X-Refresh-Token"
 )
 
 // JWT 认证中间件
 func JWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(ACCESSTOKEN_KEY)
 		if authHeader == "" {
 			response.Unauthorized(c, "请先登录")
 			c.Abort()
@@ -21,24 +27,52 @@ func JWT() gin.HandlerFunc {
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
+		if !(len(parts) == 2 && parts[0] == jwt.TokenPrefix) {
 			response.Unauthorized(c, "无效的Token格式")
 			c.Abort()
 			return
 		}
 
 		token := parts[1]
-		claims, err := utils.GetJWTManager().ParseAccessToken(c.Request.Context(), token)
-		if err != nil {
-			if errors.Is(err, utils.ErrTokenExpired) {
-				response.Unauthorized(c, "Token已过期")
-				c.Abort()
-				return
-			}
-			response.Unauthorized(c, "无效的Token")
+		claims, err := jwt.GetJwtSvr().ParseAccessToken(c.Request.Context(), token)
+		if err == nil {
+			// 没过期，直接放行
+			c.Set("uid", claims.UserID)
+			c.Set("username", claims.Username)
+			c.Next()
+			return
+		}
+		// 若是其他错误（签名错误、格式错误）
+		if !errors.Is(err, jwtv4.ErrTokenExpired) {
+			logrus.Error("failed to parse jwt token :" + err.Error())
+			response.Unauthorized(c, err.Error())
 			c.Abort()
 			return
 		}
+		// 超时了，刷新token
+		refreshToken, errCookie := c.Cookie(REFRESHTOKEN_KEY)
+		if errCookie != nil {
+			response.Unauthorized(c, "登录已过期，请重新登录")
+			c.Abort()
+			return
+		}
+		tokenPair, errRefresh := jwt.GetJwtSvr().RefreshToken(c.Request.Context(), refreshToken)
+		if errRefresh != nil {
+			logrus.Error("failed to refresh jwt token :" + errRefresh.Error())
+			response.Unauthorized(c, errRefresh.Error())
+			c.Abort()
+			return
+		}
+		c.Header("X-Set-Access-Token", tokenPair.AccessToken)
+		c.SetCookie(REFRESHTOKEN_KEY,
+			tokenPair.RefreshToken,
+			int(core.MustGetConfig().Jwt.RefreshTokenExpire.Seconds()),
+			"/",
+			"",
+			false,
+			true)
+		claims, _ = jwt.GetJwtSvr().ParseAccessToken(c.Request.Context(), tokenPair.AccessToken)
+
 		c.Set("uid", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Next()

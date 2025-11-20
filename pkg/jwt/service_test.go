@@ -2,6 +2,9 @@ package jwt
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"gin-admin/internal/config"
 	"gin-admin/pkg/cache"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
@@ -15,14 +18,21 @@ import (
 * @Date:   2025/11/19 下午12:02
 * @Package:
  */
-
-func TestGenerateTokenPair(t *testing.T) {
-	svc := NewJWTService(&Config{
+func getJwtSvr() Service {
+	cfg := config.Jwt{
 		Secret:             "test-secret",
 		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
+		AccessTokenExpire:  time.Second * 2,
 		RefreshTokenExpire: time.Hour,
-	})
+	}
+	return &JWTService{
+		config:         &cfg,
+		sessionManager: NewCacheSessionManager(),
+	}
+}
+
+func TestGenerateTokenPair(t *testing.T) {
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 
@@ -35,29 +45,22 @@ func TestGenerateTokenPair(t *testing.T) {
 }
 
 func TestParseAccessToken(t *testing.T) {
-	svc := NewJWTService(&Config{
-		Secret:             "test-secret",
-		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
-		RefreshTokenExpire: time.Hour,
-	})
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 	tp, _ := svc.GenerateTokenPair(ctx, 1, "user", "email")
-
+	time.Sleep(time.Second * 3)
 	claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		fmt.Println("超时了")
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, uint(1), claims.UserID)
 	assert.Equal(t, TokenTypeAccess, claims.TokenType)
 }
 
 func TestRefreshTokenRotation(t *testing.T) {
-	svc := NewJWTService(&Config{
-		Secret:             "test-secret",
-		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
-		RefreshTokenExpire: time.Hour,
-	})
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 
@@ -71,7 +74,7 @@ func TestRefreshTokenRotation(t *testing.T) {
 	assert.NotEqual(t, tp.RefreshToken, tp2.RefreshToken, "refresh 必须更新")
 
 	// 校验 session 中的 hash 更新
-	claims := &RefreshTokenClaims{}
+	claims := &CustomClaims{}
 	_, _ = jwt.ParseWithClaims(tp2.RefreshToken, claims, func(t *jwt.Token) (interface{}, error) {
 		return []byte("test-secret"), nil
 	})
@@ -81,12 +84,7 @@ func TestRefreshTokenRotation(t *testing.T) {
 }
 
 func TestRefreshTokenStolen(t *testing.T) {
-	svc := NewJWTService(&Config{
-		Secret:             "test-secret",
-		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
-		RefreshTokenExpire: time.Hour,
-	})
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 
@@ -103,20 +101,19 @@ func TestRefreshTokenStolen(t *testing.T) {
 }
 
 func TestRevokeSession(t *testing.T) {
-	svc := NewJWTService(&Config{
-		Secret:             "test-secret",
-		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
-		RefreshTokenExpire: time.Hour,
-	})
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 
 	tp, _ := svc.GenerateTokenPair(ctx, 1, "user", "email")
-
-	claims, _ := svc.ParseAccessToken(ctx, tp.AccessToken)
-
-	err := svc.RevokeSession(ctx, claims.SessionID)
+	fmt.Println(tp)
+	claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(claims)
+	err = svc.RevokeSession(ctx, claims.SessionID)
 	assert.NoError(t, err)
 
 	_, err = svc.ParseAccessToken(ctx, tp.AccessToken)
@@ -124,12 +121,7 @@ func TestRevokeSession(t *testing.T) {
 }
 
 func TestRevokeUserAllSessions(t *testing.T) {
-	svc := NewJWTService(&Config{
-		Secret:             "test-secret",
-		Issuer:             "test",
-		AccessTokenExpire:  time.Minute,
-		RefreshTokenExpire: time.Hour,
-	})
+	svc := getJwtSvr()
 
 	ctx := context.Background()
 

@@ -1,13 +1,14 @@
 package rbac
 
 import (
+	"gin-admin/internal/core"
 	"gin-admin/internal/model/rbac"
 	"gin-admin/internal/service"
 	rbac2 "gin-admin/internal/service/rbac"
 	types "gin-admin/internal/types/rbac"
 	"gin-admin/pkg/consts"
+	"gin-admin/pkg/jwt"
 	"gin-admin/pkg/response"
-	"gin-admin/pkg/utils"
 	"strconv"
 	"strings"
 
@@ -78,7 +79,13 @@ func Login(c *gin.Context) {
 		TokenType:    tokenPair.TokenType,
 		ExpiresIn:    tokenPair.ExpiresIn,
 	}
-
+	c.SetCookie("X-Refresh-Token",
+		tokenPair.RefreshToken,
+		int(core.MustGetConfig().Jwt.RefreshTokenExpire.Seconds()),
+		"/",
+		"",
+		false,
+		true)
 	response.Success(c, tokenResponse)
 }
 
@@ -124,32 +131,16 @@ func LoginOut(c *gin.Context) {
 // @Tags RBAC-用户管理
 // @Accept json
 // @Produce json
-// @Param data body RefreshTokenRequest true "刷新令牌信息"
 // @Success 200 {object} response.Response{data=TokenResponse} "刷新成功返回新令牌对"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "刷新令牌无效或已过期"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /users/refresh [post]
 func RefreshToken(c *gin.Context) {
-	var req types.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
 	// 使用 Refresh Token 获取新的令牌对
-	jwtManager := utils.GetJWTManager()
-	tokenPair, err := jwtManager.RefreshToken(c.Request.Context(), req.RefreshToken)
+	tokenPair, err := jwt.GetJwtSvr().RefreshToken(c.Request.Context(), "")
 	if err != nil {
-		if err == utils.ErrRefreshTokenExpired || err == utils.ErrTokenExpired {
-			response.Unauthorized(c, "刷新令牌已过期，请重新登录")
-			return
-		}
-		if err == utils.ErrTokenBlacklisted {
-			response.Unauthorized(c, "令牌已被撤销，请重新登录")
-			return
-		}
-		response.Unauthorized(c, "刷新令牌无效")
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
@@ -184,13 +175,11 @@ func Logout(c *gin.Context) {
 			accessToken = parts[1]
 		}
 	}
-
-	jwtManager := utils.GetJWTManager()
 	ctx := c.Request.Context()
 
 	// 撤销 Access Token
 	if accessToken != "" {
-		_ = jwtManager.RevokeToken(ctx, accessToken)
+		_ = jwt.GetJwtSvr().RevokeSession(ctx, accessToken)
 	}
 
 	response.Success(c, "登出成功")

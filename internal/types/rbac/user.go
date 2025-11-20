@@ -25,11 +25,6 @@ type UserLoginRequest struct {
 	Password string `json:"password" binding:"required" example:"password123"`
 }
 
-// RefreshTokenRequest 刷新令牌请求
-type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-}
-
 // UserProfile 用户详情
 type UserProfile struct {
 	User        *rbac.User        `json:"user" description:"用户基础信息"`

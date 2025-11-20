@@ -3,18 +3,27 @@ package jwt
 import (
 	"context"
 	"fmt"
+	"gin-admin/internal/config"
+	"gin-admin/internal/core"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )
 
+const TokenPrefix string = "Bearer"
+
 // Service JWT服务接口
 type Service interface {
+	// GenerateTokenPair 生成密钥对
 	GenerateTokenPair(ctx context.Context, userID uint, username, email string, opts ...TokenOption) (*TokenPair, error)
+	// ParseAccessToken 解析accessToken
 	ParseAccessToken(ctx context.Context, tokenString string) (*CustomClaims, error)
+	// RefreshToken 刷新token
 	RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error)
-	RevokeSession(ctx context.Context, sessionID string) error
+	// RevokeSession 撤销登录session
+	RevokeSession(ctx context.Context, accessToken string) error
 	RevokeUserAllSessions(ctx context.Context, userID uint) error
 }
 
@@ -23,23 +32,24 @@ type Service interface {
 // =======================
 
 type JWTService struct {
-	config         *Config
-	sessionManager SessionManager // 关键：所有状态集中在这里
+	config         *config.Jwt
+	sessionManager SessionManager
 }
 
-// NewJWTService 创建实例
-func NewJWTService(config *Config) Service {
-	svc := &JWTService{
-		config: config,
-	}
-	svc.sessionManager = NewRedisSessionManager()
+var (
+	jwtSvr Service
+	once   sync.Once
+)
 
-	return svc
+func GetJwtSvr() Service {
+	once.Do(func() {
+		jwtSvr = &JWTService{
+			config:         core.MustGetConfig().Jwt,
+			sessionManager: NewCacheSessionManager(),
+		}
+	})
+	return jwtSvr
 }
-
-// =======================
-// Token Pair 生成
-// =======================
 
 func (s *JWTService) GenerateTokenPair(ctx context.Context, userID uint, username, email string, opts ...TokenOption) (*TokenPair, error) {
 	// 初始化 token options（SessionID 必须写入 Claims）
@@ -58,7 +68,7 @@ func (s *JWTService) GenerateTokenPair(ctx context.Context, userID uint, usernam
 	}
 
 	// 生成 refresh token
-	refreshToken, refreshHash, err := s.generateRefreshToken(userID, username, tokenOpts)
+	refreshToken, err := s.generateRefreshToken(userID, username, tokenOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +78,7 @@ func (s *JWTService) GenerateTokenPair(ctx context.Context, userID uint, usernam
 		SessionID:        tokenOpts.SessionID,
 		UserID:           userID,
 		Username:         username,
-		RefreshTokenHash: refreshHash,
+		RefreshTokenHash: Hash(refreshToken),
 		ExpiresAt:        time.Now().Add(s.config.RefreshTokenExpire),
 	})
 
@@ -111,15 +121,14 @@ func (s *JWTService) generateAccessToken(userID uint, username, email string, op
 // Refresh Token + Rotation
 // =======================
 
-func (s *JWTService) generateRefreshToken(userID uint, username string, opts *TokenOptions) (token string, hash string, err error) {
+func (s *JWTService) generateRefreshToken(userID uint, username string, opts *TokenOptions) (token string, err error) {
 	now := time.Now()
-	claims := RefreshTokenClaims{
-		UserID:       userID,
-		Username:     username,
-		TokenType:    TokenTypeRefresh,
-		DeviceID:     opts.DeviceID,
-		SessionID:    opts.SessionID,
-		RefreshCount: 0,
+	claims := CustomClaims{
+		UserID:    userID,
+		Username:  username,
+		TokenType: TokenTypeRefresh,
+		DeviceID:  opts.DeviceID,
+		SessionID: opts.SessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.RefreshTokenExpire)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -132,10 +141,10 @@ func (s *JWTService) generateRefreshToken(userID uint, username string, opts *To
 
 	token, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.config.Secret))
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return token, Hash(token), nil
+	return token, nil
 }
 
 // =======================
@@ -143,28 +152,21 @@ func (s *JWTService) generateRefreshToken(userID uint, username string, opts *To
 // =======================
 
 func (s *JWTService) ParseAccessToken(ctx context.Context, tokenString string) (*CustomClaims, error) {
-	claims := &CustomClaims{}
-
 	// 解析 token
-	_, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(s.config.Secret), nil
 	})
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, err
 	}
-
-	// 必须是 access token
-	if claims.TokenType != TokenTypeAccess {
-		return nil, ErrInvalidToken
+	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
+		// 验证 Token 类型
+		if claims.TokenType != TokenTypeAccess {
+			return nil, ErrInvalidToken
+		}
+		return claims, nil
 	}
-
-	// session 校验（access token 虽然无状态，但需校验 session 是否被撤销）
-	session := s.sessionManager.GetSession(ctx, claims.SessionID)
-	if session == nil || session.Revoked {
-		return nil, ErrSessionInvalid
-	}
-
-	return claims, nil
+	return nil, nil
 }
 
 // =======================
@@ -172,29 +174,34 @@ func (s *JWTService) ParseAccessToken(ctx context.Context, tokenString string) (
 // =======================
 
 func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
-	claims := &RefreshTokenClaims{}
-	_, err := jwt.ParseWithClaims(refreshToken, claims, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(refreshToken, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(s.config.Secret), nil
 	})
-	if err != nil || claims.TokenType != TokenTypeRefresh {
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok || !token.Valid {
 		return nil, ErrInvalidToken
 	}
-
+	if claims.TokenType != TokenTypeRefresh {
+		return nil, ErrInvalidToken
+	}
 	// 从 Redis 获取 session
 	session := s.sessionManager.GetSession(ctx, claims.SessionID)
 	if session == nil || session.Revoked {
+		// session 不存在或者已经被注销
 		return nil, ErrSessionInvalid
 	}
-
 	// 校验 refresh token hash
-	if session.RefreshTokenHash != Hash(refreshToken) {
-		// 说明 refresh token 被窃取（旧 token）
+	if !SecureCompare(Hash(refreshToken), session.RefreshTokenHash) {
+		// 说明 refresh token 不存在或者被窃取盗用
 		s.sessionManager.RemoveSession(ctx, claims.SessionID)
 		return nil, ErrRefreshTokenStolen
 	}
 
 	// Rotation：生成新 Refresh Token（保持 SessionID 不变）
-	newRefreshToken, newHash, err := s.generateRefreshToken(claims.UserID, claims.Username, &TokenOptions{
+	newRefreshToken, err := s.generateRefreshToken(claims.UserID, claims.Username, &TokenOptions{
 		SessionID: claims.SessionID,
 		DeviceID:  claims.DeviceID,
 	})
@@ -204,7 +211,7 @@ func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*To
 
 	// 生成新的 Access Token
 	accessToken, err := s.generateAccessToken(
-		claims.UserID, claims.Username, "", &TokenOptions{
+		claims.UserID, claims.Username, claims.Email, &TokenOptions{
 			SessionID: claims.SessionID,
 			DeviceID:  claims.DeviceID,
 		},
@@ -214,14 +221,17 @@ func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*To
 	}
 
 	// 更新 session 里的 refresh hash
-	s.sessionManager.UpdateRefreshHash(ctx, claims.SessionID, newHash)
+	err = s.sessionManager.UpdateRefreshHash(ctx, claims.SessionID, Hash(newRefreshToken))
+	if err != nil {
+		return nil, err
+	}
 
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 		ExpiresIn:    int64(s.config.AccessTokenExpire.Seconds()),
 		ExpiresAt:    time.Now().Add(s.config.AccessTokenExpire),
-		TokenType:    "Bearer",
+		TokenType:    TokenPrefix,
 	}, nil
 }
 
@@ -229,8 +239,17 @@ func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*To
 // Session 撤销（退出登录）
 // =======================
 
-func (s *JWTService) RevokeSession(ctx context.Context, sessionID string) error {
-	return s.sessionManager.RemoveSession(ctx, sessionID)
+func (s *JWTService) RevokeSession(ctx context.Context, accessToken string) error {
+	claims := &CustomClaims{}
+
+	// 解析 token
+	_, err := jwt.ParseWithClaims(accessToken, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(s.config.Secret), nil
+	})
+	if err != nil {
+		return ErrInvalidToken
+	}
+	return s.sessionManager.RemoveSession(ctx, claims.SessionID)
 }
 
 func (s *JWTService) RevokeUserAllSessions(ctx context.Context, userID uint) error {
