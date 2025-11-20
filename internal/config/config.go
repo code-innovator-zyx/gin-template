@@ -63,13 +63,10 @@ type Server struct {
 
 // jwt 配置
 type Jwt struct {
-	Secret               string        `mapstructure:"secret" validate:"required"`
-	AccessTokenExpire    time.Duration `mapstructure:"access_token_expire" validate:"required,min=60s"`   // Access Token 过期时间（秒），至少 60 秒
-	RefreshTokenExpire   time.Duration `mapstructure:"refresh_token_expire" validate:"required,min=600s"` // Refresh Token 过期时间（秒），至少 600 秒
-	Issuer               string        `mapstructure:"issuer" validate:"required"`                        // 签发者
-	MaxRefreshCount      int           `mapstructure:"max_refresh_count" validate:"omitempty"`            // 单个 Refresh Token 最大刷新次数（0为不限制）
-	EnableBlacklist      bool          `mapstructure:"enable_blacklist" validate:"omitempty"`             // 是否启用黑名单
-	BlacklistGracePeriod time.Duration `mapstructure:"blacklist_grace_period" validate:"omitempty"`       // 黑名单宽限期（秒）
+	Secret             string        `mapstructure:"secret" validate:"required"`
+	AccessTokenExpire  time.Duration `mapstructure:"access_token_expire" validate:"required,min=60s"`   // Access Token 过期时间（秒），至少 60 秒
+	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire" validate:"required,min=600s"` // Refresh Token 过期时间（秒），至少 600 秒
+	Issuer             string        `mapstructure:"issuer" validate:"required"`                        // 签发者
 }
 
 // RBACConfig RBAC权限系统配置
