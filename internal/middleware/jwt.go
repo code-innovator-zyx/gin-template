@@ -39,6 +39,7 @@ func JWT() gin.HandlerFunc {
 			// 没过期，直接放行
 			c.Set("uid", claims.UserID)
 			c.Set("username", claims.Username)
+			c.Set("sessionId", claims.SessionID)
 			c.Next()
 			return
 		}
@@ -72,7 +73,6 @@ func JWT() gin.HandlerFunc {
 			false,
 			true)
 		claims, _ = jwt.GetJwtSvr().ParseAccessToken(c.Request.Context(), tokenPair.AccessToken)
-
 		c.Set("uid", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("sessionId", claims.SessionID)
