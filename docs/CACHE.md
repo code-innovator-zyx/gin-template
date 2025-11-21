@@ -2,7 +2,7 @@
 
 ## 快速开始
 
-项目支持三种缓存实现：**Redis**、**LevelDB**、**Memory**，可通过配置文件灵活切换。
+项目支持缓存实现：**Redis**、**Memory**，可通过配置文件灵活切换。
 
 ### 默认行为
 
@@ -21,15 +21,6 @@ cache:
     password: ""
     db: 0
     pool_size: 10
-```
-
-### LevelDB（单机应用）
-
-```yaml
-cache:
-  type: leveldb
-  leveldb:
-    path: ./data/leveldb
 ```
 
 ### Memory（开发测试）
@@ -116,9 +107,8 @@ isBlacklisted, err := cacheService.IsTokenBlacklisted(ctx, token)
 ## 注意事项
 
 1. **Memory 缓存重启后数据丢失**，仅适合开发环境
-2. **LevelDB 不支持多进程共享**，只能单实例使用
-3. **Redis 需要额外部署服务**，但功能最完整
-4. **配置失败时自动降级**到 Memory 缓存，不影响系统启动
+2**Redis 需要额外部署服务**，但功能最完整
+3**配置失败时自动降级**到 Memory 缓存，不影响系统启动
 
 ## 故障处理
 
@@ -131,14 +121,6 @@ WARN 缓存初始化失败: xxx，自动降级到内存缓存
 INFO 已切换到内存缓存
 ```
 
-### 切换缓存类型
-
-修改 `app.yaml` 中的配置，重启应用即可：
-
-```yaml
-cache:
-  type: redis  # 改为 leveldb 或 memory
-```
 
 ## 更多信息
 
