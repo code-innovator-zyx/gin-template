@@ -29,7 +29,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		{
 			authUserGroup.GET("/profile", rbac.GetProfile).WithMeta("profile", "查询当前用户信息")
 			authUserGroup.GET("", rbac.ListUser).WithMeta("list", "查询用户列表")
-			authUserGroup.POST("", rbac.CreateUser).WithMeta("create", "创建用户")
+			authUserGroup.POST("", rbac.CreateUser).WithMeta("add", "创建用户")
 			authUserGroup.PUT("/:id", rbac.UpdateUser).WithMeta("update", "编辑用户")
 			authUserGroup.DELETE("/:id", rbac.DeleteUser).WithMeta("delete", "删除用户")
 		}
@@ -40,7 +40,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 	roleGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
 	{
 		roleGroup.GET("", rbac.GetRoles).WithMeta("list", "查询角色列表")
-		roleGroup.POST("", rbac.CreateRole).WithMeta("create", "创建角色")
+		roleGroup.POST("", rbac.CreateRole).WithMeta("add", "创建角色")
 		roleGroup.GET("/:id", rbac.GetRole).WithMeta("detail", "查询角色详情")
 		roleGroup.PUT("/:id", rbac.UpdateRole).WithMeta("update", "编辑角色")
 		roleGroup.DELETE("/:id", rbac.DeleteRole).WithMeta("delete", "删除角色")
