@@ -24,12 +24,15 @@ span
 
 Gin Admin 是一个开箱即用的 Go 语言后端开发模板，基于 [Gin](https://github.com/gin-gonic/gin) 框架构建，集成了企业级项目开发所需的核心功能模块。无论你是在构建 RESTful API、微服务，还是完整的 Web 应用后端，这个模板都能帮你节省大量基础设施搭建时间，让你专注于业务逻辑开发。
 
+> 🎨 **配套前端项目**：[gin-admin-web](https://github.com/the-yex/gin-admin-web) - 开箱即用的前端管理系统，完美适配本后端的 RBAC 权限设计！
+
 ### 🎯 为什么选择 Gin Admin？
 
 - ⚡ **开箱即用**：克隆即可运行，无需复杂配置
 - 🏗️ **最佳实践**：严格遵循 Go 项目布局和代码规范
 - 🔐 **安全第一**：完善的 RBAC 权限系统和 JWT 认证
 - 🤖 **路由即权限**：革命性的路由自动注册机制，添加路由 = 自动管理权限，零额外配置
+- 🎨 **全栈方案**：配套前端 [gin-admin-web](https://github.com/the-yex/gin-admin-web)，前后端完美联动
 - 🚢 **生产就绪**：Docker 容器化、优雅关闭、健康检查一应俱全
 - 📚 **文档完善**：自动生成的 Swagger API 文档
 - 🛠️ **开发友好**：强大的 Makefile 工具链和热重载支持
@@ -535,6 +538,35 @@ productGroup := routegroup.WrapGroup(api.Group("/products")).
 ### 快速入门
 
 详细的 RBAC 使用指南请查看：[📖 RBAC 快速开始](RBAC_QUICKSTART.md)
+
+---
+
+## 🎨 配套前端项目
+
+本项目提供了完整的前端管理系统，开箱即用！
+
+### [🌐 Gin Admin Web](https://github.com/the-yex/gin-admin-web)
+
+**技术栈**：基于现代前端框架，完美适配后端 RBAC 权限设计
+
+**核心特性**：
+- ✅ **权限联动**：前端菜单和按钮权限自动根据后端 RBAC 权限组控制
+- ✅ **开箱即用**：克隆即可运行，无需额外配置
+- ✅ **完整示例**：包含用户管理、角色管理、权限管理等完整功能模块
+- ✅ **响应式设计**：支持多种设备和屏幕尺寸
+
+**快速开始**：
+```bash
+# 克隆前端项目
+git clone https://github.com/the-yex/gin-admin-web.git
+cd gin-admin-web
+
+# 安装依赖并运行
+npm install
+npm run dev
+```
+
+前后端配合使用，即可获得完整的企业级后台管理系统！🚀
 
 ---
 

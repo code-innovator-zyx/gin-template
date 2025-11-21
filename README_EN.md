@@ -24,12 +24,15 @@ English | [简体中文](README.md)
 
 Gin Admin is a ready-to-use Go backend development template built on the [Gin](https://github.com/gin-gonic/gin) framework, integrating core functional modules required for enterprise-grade project development. Whether you're building RESTful APIs, microservices, or complete web application backends, this template saves you significant infrastructure setup time, allowing you to focus on business logic development.
 
+> 🎨 **Frontend Project**: [gin-admin-web](https://github.com/the-yex/gin-admin-web) - Ready-to-use frontend admin system, perfectly integrated with this backend's RBAC permission design!
+
 ### 🎯 Why Choose Gin Admin?
 
 - ⚡ **Ready to Use**: Clone and run, no complex configuration needed
 - 🏗️ **Best Practices**: Strictly follows Go project layout and coding standards
 - 🔐 **Security First**: Complete RBAC permission system and JWT authentication
 - 🤖 **Route = Permission**: Revolutionary auto-registration mechanism, add route = auto-manage permissions, zero extra configuration
+- 🎨 **Full-Stack Solution**: Bundled with frontend [gin-admin-web](https://github.com/the-yex/gin-admin-web), perfect frontend-backend integration
 - 🚢 **Production Ready**: Docker containerization, graceful shutdown, health checks all included
 - 📚 **Well Documented**: Auto-generated Swagger API documentation
 - 🛠️ **Developer Friendly**: Powerful Makefile toolchain and hot reload support
@@ -530,6 +533,35 @@ This project implements a **revolutionary RBAC permission management system** wi
 +### Quick Guide
 +
 +For detailed RBAC usage guide, see: [📖 RBAC Quick Start](RBAC_QUICKSTART.md)
+
+---
+
+## 🎨 Frontend Project
+
+Complete frontend admin system provided, ready to use!
+
+### [🌐 Gin Admin Web](https://github.com/the-yex/gin-admin-web)
+
+**Tech Stack**: Based on modern frontend framework, perfectly adapted to backend RBAC permission design
+
+**Core Features**:
+- ✅ **Permission Integration**: Frontend menus and button permissions auto-controlled by backend RBAC permission groups
+- ✅ **Ready to Use**: Clone and run, no extra configuration needed
+- ✅ **Complete Examples**: Includes user management, role management, permission management and other complete functional modules
+- ✅ **Responsive Design**: Supports various devices and screen sizes
+
+**Quick Start**:
+```bash
+# Clone frontend project
+git clone https://github.com/the-yex/gin-admin-web.git
+cd gin-admin-web
+
+# Install dependencies and run
+npm install
+npm run dev
+```
+
+Use frontend and backend together to get a complete enterprise-level admin management system! 🚀
 
 ---
 
