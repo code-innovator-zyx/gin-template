@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"strings"
+	"time"
 )
 
 // userService 用户服务
@@ -71,6 +72,11 @@ func (s *userService) Login(account, password string) (*jwt.TokenPair, error) {
 		return nil, err
 	}
 	return tokenPair, nil
+}
+func (s *userService) LoginOut(userId uint, sessionId string) error {
+	return service.GetCacheService().ClearUserPermissions(s.ctx, userId, time.Millisecond*5, func() error {
+		return jwt.GetJwtSvr().RevokeSession(s.ctx, sessionId)
+	})
 }
 
 // List 获取用户列表

@@ -15,7 +15,6 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		// 公共接口（不需要权限，也不需要登录的jwt）
 		userGroup.Public().POST("/register", rbac.Register)
 		userGroup.Public().POST("/login", rbac.Login)
-		userGroup.Public().POST("/refresh", rbac.RefreshToken) // 刷新令牌
 		authGroup := userGroup.Group("")
 		authGroup.Use(middleware.JWT())
 		{

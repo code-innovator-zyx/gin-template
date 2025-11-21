@@ -8,6 +8,7 @@ import (
 	types "gin-admin/internal/types/rbac"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"time"
 )
 
 /*
@@ -139,5 +140,13 @@ func (s *roleService) AssignResource(request types.AssignResource) error {
 		logrus.Errorf("failed to find resources: %v", err)
 		return err
 	}
-	return s.Tx.Model(&role).Association("Resources").Replace(resources)
+	// 给角色重新分配了资源，就要移除角色缓存
+	roleIds, err := NewRoleService(s.ctx).getRoleUserIds(request.Id)
+	if err != nil {
+		logrus.Errorf("failed to find role user_ids: %v", err)
+		return err
+	}
+	return service.GetCacheService().ClearMultipleUsersPermissions(s.ctx, roleIds, time.Millisecond*50, func() error {
+		return s.Tx.Model(&role).Association("Resources").Replace(resources)
+	})
 }

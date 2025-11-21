@@ -75,6 +75,7 @@ func JWT() gin.HandlerFunc {
 
 		c.Set("uid", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Set("sessionId", claims.SessionID)
 		c.Next()
 	}
 }

@@ -7,12 +7,9 @@ import (
 	rbac2 "gin-admin/internal/service/rbac"
 	types "gin-admin/internal/types/rbac"
 	"gin-admin/pkg/consts"
-	"gin-admin/pkg/jwt"
 	"gin-admin/pkg/response"
-	"strconv"
-	"strings"
-
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 // Register godoc
@@ -89,72 +86,6 @@ func Login(c *gin.Context) {
 	response.Success(c, tokenResponse)
 }
 
-// LoginOut godoc
-// @Summary 退出登录
-// @Description 用户退出登录将 token 和 refreshToken 加入黑名单
-// @Tags RBAC-用户管理
-// @Accept json
-// @Produce json
-// @Param data body types.UserLoginRequest true "用户登录信息"
-// @Success 200 {object} response.Response{data=types.TokenResponse} "登录成功返回令牌对"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "用户名或密码错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/login [post]
-func LoginOut(c *gin.Context) {
-	var req types.UserLoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	tokenPair, err := rbac2.NewUserService(c.Request.Context()).Login(req.Account, req.Password)
-	if err != nil {
-		response.Unauthorized(c, err.Error())
-		return
-	}
-
-	// 返回令牌对
-	tokenResponse := types.TokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
-	}
-
-	response.Success(c, tokenResponse)
-}
-
-// RefreshToken godoc
-// @Summary 刷新令牌
-// @Description 使用 Refresh Token 获取新的 Access Token 和 Refresh Token
-// @Tags RBAC-用户管理
-// @Accept json
-// @Produce json
-// @Success 200 {object} response.Response{data=TokenResponse} "刷新成功返回新令牌对"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 401 {object} response.Response "刷新令牌无效或已过期"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/refresh [post]
-func RefreshToken(c *gin.Context) {
-	// 使用 Refresh Token 获取新的令牌对
-	tokenPair, err := jwt.GetJwtSvr().RefreshToken(c.Request.Context(), "")
-	if err != nil {
-		response.Unauthorized(c, err.Error())
-		return
-	}
-
-	// 返回新的令牌对
-	tokenResponse := types.TokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
-	}
-
-	response.Success(c, tokenResponse)
-}
-
 // Logout godoc
 // @Summary 用户登出
 // @Description 撤销当前用户的令牌
@@ -167,21 +98,12 @@ func RefreshToken(c *gin.Context) {
 // @Router /users/logout [post]
 func Logout(c *gin.Context) {
 	// 获取 Access Token
-	authHeader := c.GetHeader("Authorization")
-	accessToken := ""
-	if authHeader != "" {
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) == 2 && parts[0] == "Bearer" {
-			accessToken = parts[1]
-		}
+	userID := c.GetUint("uid")
+	sessionId := c.GetString("sessionId")
+	if err := rbac2.NewUserService(c).LoginOut(userID, sessionId); err != nil {
+		response.Fail(c, 200, err.Error())
+		return
 	}
-	ctx := c.Request.Context()
-
-	// 撤销 Access Token
-	if accessToken != "" {
-		_ = jwt.GetJwtSvr().RevokeSession(ctx, accessToken)
-	}
-
 	response.Success(c, "登出成功")
 }
 

@@ -23,7 +23,7 @@ type Service interface {
 	// RefreshToken 刷新token
 	RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error)
 	// RevokeSession 撤销登录session
-	RevokeSession(ctx context.Context, accessToken string) error
+	RevokeSession(ctx context.Context, sessionId string) error
 	RevokeUserAllSessions(ctx context.Context, userID uint) error
 }
 
@@ -239,17 +239,8 @@ func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*To
 // Session 撤销（退出登录）
 // =======================
 
-func (s *JWTService) RevokeSession(ctx context.Context, accessToken string) error {
-	claims := &CustomClaims{}
-
-	// 解析 token
-	_, err := jwt.ParseWithClaims(accessToken, claims, func(t *jwt.Token) (interface{}, error) {
-		return []byte(s.config.Secret), nil
-	})
-	if err != nil {
-		return ErrInvalidToken
-	}
-	return s.sessionManager.RemoveSession(ctx, claims.SessionID)
+func (s *JWTService) RevokeSession(ctx context.Context, sessionId string) error {
+	return s.sessionManager.RemoveSession(ctx, sessionId)
 }
 
 func (s *JWTService) RevokeUserAllSessions(ctx context.Context, userID uint) error {

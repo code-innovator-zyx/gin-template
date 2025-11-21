@@ -24,8 +24,8 @@ import (
 type CacheService interface {
 	// 权限相关缓存
 	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(uid uint) ([]rbac.Resource, error)) (bool, error)
-	ClearUserPermissions(ctx context.Context, userID uint) error
-	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error
+	ClearUserPermissions(ctx context.Context, userID uint, ttl time.Duration, updateFn func() error) error
+	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint, ttl time.Duration, updateFn func() error) error
 	SetUserPermissions(ctx context.Context, userID uint, resources []rbac.Resource) error
 	ClearAllPermissions(ctx context.Context) error
 	// Token黑名单
@@ -180,18 +180,38 @@ func (s *cacheService) getPermissionTTL() time.Duration {
 }
 
 // ClearUserPermissions 清除指定用户的所有权限缓存
-func (s *cacheService) ClearUserPermissions(ctx context.Context, userID uint) error {
+func (s *cacheService) ClearUserPermissions(ctx context.Context, userID uint, ttl time.Duration, updateFn func() error) error {
 	if s.client == nil {
 		return nil
 	}
 
 	key := fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID)
-
-	return s.client.Delete(ctx, key)
+	if err := s.client.Delete(ctx, key); err != nil {
+		logrus.Printf("[DelayDoubleDelete] first delete failed: key=%s, err=%v", key, err)
+		return err
+	}
+	// 更新数据库
+	if err := updateFn(); err != nil {
+		logrus.Printf("[DelayDoubleDelete] updateFn failed: key=%s, err=%v", key, err)
+		return err
+	}
+	// 异步延迟删除
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logrus.Printf("[DelayDoubleDelete] panic: %v", r)
+			}
+		}()
+		time.Sleep(ttl)
+		if err := s.client.Delete(context.Background(), key); err != nil {
+			logrus.Printf("[DelayDoubleDelete] second delete failed: key=%s, err=%v", key, err)
+		}
+	}()
+	return nil
 }
 
 // ClearMultipleUsersPermissions 批量清除多个用户的权限缓存
-func (s *cacheService) ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint) error {
+func (s *cacheService) ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint, ttl time.Duration, updateFn func() error) error {
 	if s.client == nil || len(userIDs) == 0 {
 		return nil
 	}
@@ -200,7 +220,26 @@ func (s *cacheService) ClearMultipleUsersPermissions(ctx context.Context, userID
 	for _, userID := range userIDs {
 		keys = append(keys, fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID))
 	}
-	return s.client.Delete(ctx, keys...)
+	err := s.client.Delete(ctx, keys...)
+	if err != nil {
+		return err
+	}
+	if err = updateFn(); err != nil {
+		return err
+	}
+	// 异步延迟删除
+	go func(rKeys []string) {
+		defer func() {
+			if r := recover(); r != nil {
+				logrus.Printf("[DelayDoubleDelete] panic: %v", r)
+			}
+		}()
+		time.Sleep(ttl)
+		if err := s.client.Delete(context.Background(), keys...); err != nil {
+			logrus.Printf("[DelayDoubleDelete] second delete failed:  err=%v", err)
+		}
+	}(keys)
+	return nil
 }
 func (s *cacheService) ClearAllPermissions(ctx context.Context) error {
 	if s.client == nil {
