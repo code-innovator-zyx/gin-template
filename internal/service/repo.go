@@ -51,7 +51,7 @@ func (r *BaseRepo[T]) FindByIDs(ids []uint) ([]T, error) {
 		return nil, nil
 	}
 	var list []T
-	if err := r.Tx.Where("id IN ?", ids).Find(&list).Error; err != nil {
+	if err := r.Tx.Model(new(T)).Where("id IN ?", ids).Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil

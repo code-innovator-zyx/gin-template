@@ -17,51 +17,73 @@ help: ## 显示帮助信息
 	@echo "可用的命令："
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-rename: ## 重命名项目 (用法: make rename NEW_NAME=your-project-name)
+rename: ## 用法: make rename NEW_NAME=your-project-name
 	@if [ -z "$(NEW_NAME)" ]; then \
-		echo "错误: 请提供新的项目名称"; \
-		echo "用法: make rename NEW_NAME=your-project-name"; \
+		echo "❌ 请提供新的项目名称，如：make rename NEW_NAME=demo"; \
 		exit 1; \
 	fi
-	@echo "正在将项目从 'gin-template' 重命名为 '$(NEW_NAME)'..."
-	@echo ""
-	@echo "步骤 1/5: 更新 go.mod 模块名..."
-	@sed -i.bak 's|module gin-template|module $(NEW_NAME)|g' go.mod && rm go.mod.bak
-	@echo "✓ go.mod 已更新"
-	@echo ""
-	@echo "步骤 2/5: 更新所有 Go 文件中的 import 路径..."
-	@find . -type f -name "*.go" ! -path "*/vendor/*" ! -path "*/\.*" -exec sed -i.bak 's|gin-template/|$(NEW_NAME)/|g' {} \; -exec rm {}.bak \;
-	@echo "✓ Go 文件导入路径已更新"
-	@echo ""
-	@echo "步骤 3/5: 更新 Makefile..."
-	@sed -i.bak 's|APP_NAME := gin-admin|APP_NAME := $(NEW_NAME)|g' Makefile && rm Makefile.bak
-	@echo "✓ Makefile 已更新"
-	@echo ""
-	@echo "步骤 4/5: 更新 docker-compose.yml..."
-	@if [ -f docker-compose.yml ]; then \
-		sed -i.bak 's|gin-template|$(NEW_NAME)|g' docker-compose.yml && rm docker-compose.yml.bak; \
-		echo "✓ docker-compose.yml 已更新"; \
-	fi
-	@echo ""
-	@echo "步骤 5/5: 更新文档..."
-	@find . -type f \( -name "*.md" \) ! -path "*/vendor/*" ! -path "*/\.*" -exec sed -i.bak 's|gin-template|$(NEW_NAME)|g' {} \; -exec rm {}.bak \;
-	@echo "✓ 文档已更新"
-	@echo ""
-	@echo "=========================================="
-	@echo "✅ 重命名完成！"
-	@echo "=========================================="
-	@echo ""
-	@echo "项目已从 'gin-template' 重命名为 '$(NEW_NAME)'"
-	@echo ""
-	@echo "下一步操作："
-	@echo "  1. 运行: go mod tidy"
-	@echo "  2. 运行: make init-config (如果还没有 app.yaml)"
-	@echo "  3. 运行: make run"
-	@echo ""
-	@echo "提示: 如果使用 Git，建议执行:"
-	@echo "  git add ."
-	@echo "  git commit -m 'chore: rename project to $(NEW_NAME)'"
-	@echo ""
+
+	@echo "📦 获取当前 go.mod module..."
+	@OLD_MODULE=$$(grep "^module " go.mod | awk '{print $$2}'); \
+	echo "旧 module: $$OLD_MODULE"; \
+	echo "新 module: $(NEW_NAME)"; \
+	echo ""; \
+	echo "👉 步骤 1/5: 更新 go.mod 模块名"; \
+	if sed --version >/dev/null 2>&1; then \
+		sed -i "s|^module .*|module $(NEW_NAME)|" go.mod; \
+	else \
+		sed -i '' "s|^module .*|module $(NEW_NAME)|" go.mod; \
+	fi; \
+	echo "✓ go.mod 更新成功"; \
+	echo ""; \
+	\
+	echo "👉 步骤 2/5: 更新 Go 文件 import 路径"; \
+	if sed --version >/dev/null 2>&1; then \
+		find . -type f -name "*.go" -exec sed -i "s|$$OLD_MODULE|$(NEW_NAME)|g" {} \;; \
+	else \
+		find . -type f -name "*.go" -exec sed -i '' "s|$$OLD_MODULE|$(NEW_NAME)|g" {} \;; \
+	fi; \
+	echo "✓ Go import 更新成功"; \
+	echo ""; \
+	\
+	echo "👉 步骤 3/5: 更新 Makefile"; \
+	if sed --version >/dev/null 2>&1; then \
+		sed -i "s|$$OLD_MODULE|$(NEW_NAME)|g" Makefile; \
+	else \
+		sed -i '' "s|$$OLD_MODULE|$(NEW_NAME)|g" Makefile; \
+	fi; \
+	echo "✓ Makefile 更新成功"; \
+	echo ""; \
+	\
+	echo "👉 步骤 4/5: 更新 docker-compose.yml（如果存在）"; \
+	if [ -f docker-compose.yml ]; then \
+		if sed --version >/dev/null 2>&1; then \
+			sed -i "s|$$OLD_MODULE|$(NEW_NAME)|g" docker-compose.yml; \
+		else \
+			sed -i '' "s|$$OLD_MODULE|$(NEW_NAME)|g" docker-compose.yml; \
+		fi; \
+		echo "✓ docker-compose.yml 更新成功"; \
+	else \
+		echo "（跳过：docker-compose.yml 不存在）"; \
+	fi; \
+	echo ""; \
+	\
+	echo "👉 步骤 5/5: 更新所有 Markdown 文档"; \
+	if sed --version >/dev/null 2>&1; then \
+		find . -type f -name "*.md" -exec sed -i "s|$$OLD_MODULE|$(NEW_NAME)|g" {} \;; \
+	else \
+		find . -type f -name "*.md" -exec sed -i '' "s|$$OLD_MODULE|$(NEW_NAME)|g" {} \;; \
+	fi; \
+	echo "✓ 文档更新成功"; \
+	echo ""; \
+	\
+	echo "=========================================="; \
+	echo "🎉 项目重命名完成！"; \
+	echo "🔁 $(OLD_MODULE) → $(NEW_NAME)"; \
+	echo "=========================================="; \
+	echo "下一步执行："; \
+	echo "  go mod tidy"; \
+	echo ""
 
 run: ## 运行应用
 	$(GO) run main.go
