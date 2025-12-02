@@ -9,4 +9,6 @@ package _interface
 
 type IModel interface {
 	TableName() string
+	GetID() uint
+	SetID(id uint)
 }

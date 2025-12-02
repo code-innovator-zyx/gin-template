@@ -341,18 +341,13 @@ func (r *Repo[T]) Count(ctx context.Context, condition map[string]interface{}) (
 }
 
 func (r *Repo[T]) Exists(ctx context.Context, condition map[string]interface{}) (bool, error) {
+	var count int64
 	db := r.DB.WithContext(ctx).Model(new(T))
 	if len(condition) > 0 {
 		db = db.Where(condition)
 	}
-	err := db.Select("1").Limit(1).Find(&struct{}{}).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
+	err := db.Limit(1).Count(&count).Error
+	return count > 0, err
 }
 
 func (r *Repo[T]) ExistsByID(ctx context.Context, id uint) (bool, error) {
