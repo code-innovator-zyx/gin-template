@@ -8,7 +8,7 @@ import (
 
 /*
 * @Author: zouyx
-* @Email: zouyx@knowsec.com
+* @Email: 1003941268@qq.com
 * @Date:   2025/11/16 下午2:06
 * @Package: 资源相关操作
  */
