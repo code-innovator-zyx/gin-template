@@ -2,9 +2,7 @@ package v1
 
 import (
 	"context"
-	"gin-admin/internal/core"
 	"gin-admin/internal/services"
-	"gin-admin/pkg/cache"
 	"gin-admin/pkg/response"
 	"runtime"
 	"time"
@@ -64,7 +62,7 @@ func HealthCheck(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		healthResp := HealthResponse{
 			Status:     HealthStatusHealthy,
 			Timestamp:  time.Now().Unix(),
-			Version:    getAppVersion(),
+			Version:    svcCtx.Config.App.Version,
 			Uptime:     int64(time.Since(startTime).Seconds()),
 			Components: make(map[string]ComponentHealth),
 			System:     getSystemInfo(),
@@ -148,14 +146,6 @@ func checkDatabase(ctx context.Context, svcCtx *services.ServiceContext) Compone
 func checkCache(ctx context.Context, svcCtx *services.ServiceContext) ComponentHealth {
 	start := time.Now()
 
-	if !cache.IsAvailable() {
-		return ComponentHealth{
-			Status:       "not_configured",
-			ResponseTime: time.Since(start).Milliseconds(),
-			Message:      "Cache not configured",
-		}
-	}
-
 	cacheClient := svcCtx.Cache
 
 	// 执行 Ping 检查
@@ -173,15 +163,6 @@ func checkCache(ctx context.Context, svcCtx *services.ServiceContext) ComponentH
 		ResponseTime: time.Since(start).Milliseconds(),
 		Message:      "Cache is healthy",
 	}
-}
-
-// getAppVersion 获取应用版本
-func getAppVersion() string {
-	cfg, err := core.GetConfig()
-	if err == nil && cfg != nil {
-		return cfg.App.Version
-	}
-	return "unknown"
 }
 
 // getSystemInfo 获取系统信息

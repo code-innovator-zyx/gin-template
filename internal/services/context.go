@@ -5,7 +5,9 @@ import (
 	rbac2 "gin-admin/internal/services/rbac"
 	"gin-admin/pkg/cache"
 	"gin-admin/pkg/components/orm"
+	redis2 "gin-admin/pkg/components/redis"
 	"gin-admin/pkg/jwt"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +22,8 @@ var SvcContext *ServiceContext
 
 // ServiceContext 服务上下文，包含所有业务 相关依赖(TODO 直接注入到logic)
 type ServiceContext struct {
+	// config
+	Config *config.AppConfig
 	// components
 	Db    *gorm.DB
 	Cache cache.ICache
@@ -38,13 +42,15 @@ func MustInitServiceContext(c *config.AppConfig) *ServiceContext {
 	if err != nil {
 		panic(err)
 	}
-
-	// 初始化缓存
-	cacheInstance, err := cache.NewCache(c.Cache)
-	if err != nil {
-		panic(err)
+	var redisClient *redis.Client
+	if c.Cache != nil {
+		redisClient, err = redis2.NewClient(*c.Cache)
 	}
+	// 初始化缓存
+	cacheInstance := cache.NewCache(redisClient)
+
 	SvcContext = &ServiceContext{
+		Config:            c,
 		Db:                db,
 		Cache:             cacheInstance,
 		CacheService:      NewCacheService(cacheInstance),

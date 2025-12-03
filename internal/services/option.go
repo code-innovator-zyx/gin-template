@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"gin-admin/internal/core"
 	"gin-admin/internal/model/rbac"
 	types "gin-admin/internal/types/rbac"
 )
@@ -26,7 +25,7 @@ const (
 var OptionGenerators = map[OptionField]func(ctx context.Context) ([]types.Option, error){
 	FieldRole: func(ctx context.Context) ([]types.Option, error) {
 		roles := []rbac.Role{}
-		tx := core.MustNewDbWithContext(ctx)
+		tx := SvcContext.Db
 		if err := tx.Find(&roles).Error; err != nil {
 			return nil, err
 		}
@@ -41,7 +40,7 @@ var OptionGenerators = map[OptionField]func(ctx context.Context) ([]types.Option
 	},
 	FieldUser: func(ctx context.Context) ([]types.Option, error) {
 		roles := []rbac.User{}
-		tx := core.MustNewDbWithContext(ctx)
+		tx := SvcContext.Db
 		if err := tx.Find(&roles).Error; err != nil {
 			return nil, err
 		}

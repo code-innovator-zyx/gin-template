@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	redis2 "gin-admin/pkg/components/redis"
 	"os"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ import (
  */
 
 // skipIfNoRedis 如果Redis不可用则跳过测试
-func skipIfNoRedis(t *testing.T) Cache {
+func skipIfNoRedis(t *testing.T) ICache {
 	host := os.Getenv("REDIS_HOST")
 	if host == "" {
 		host = "localhost"
@@ -24,15 +25,15 @@ func skipIfNoRedis(t *testing.T) Cache {
 
 	port := 6379
 
-	cfg := RedisConfig{
+	cfg := redis2.Config{
 		Host:     host,
 		Port:     port,
 		Password: "123456",
 		DB:       0,
 		PoolSize: 10,
 	}
-
-	cache, err := NewRedisCache(cfg)
+	client, _ := redis2.NewClient(cfg)
+	cache, err := NewRedisCache(client)
 	if err != nil {
 		t.Skipf("Redis不可用，跳过测试: %v", err)
 	}

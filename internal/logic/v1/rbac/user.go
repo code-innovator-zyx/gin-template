@@ -3,7 +3,6 @@ package rbac
 import (
 	"context"
 	"fmt"
-	"gin-admin/internal/core"
 	"gin-admin/internal/model/rbac"
 	"gin-admin/internal/services"
 	types "gin-admin/internal/types/rbac"
@@ -100,7 +99,7 @@ func Login(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		// 设置刷新token
 		c.SetCookie("X-Refresh-Token",
 			tokenPair.RefreshToken,
-			int(core.MustGetConfig().Jwt.RefreshTokenExpire.Seconds()),
+			int(svcCtx.Config.Jwt.RefreshTokenExpire.Seconds()),
 			"/",
 			"",
 			false,

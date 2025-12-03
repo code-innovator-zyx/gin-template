@@ -2,7 +2,6 @@ package v1
 
 import (
 	_ "gin-admin/docs"
-	"gin-admin/internal/core"
 	"gin-admin/internal/handler/v1/rbac"
 	v1 "gin-admin/internal/logic/v1"
 	"gin-admin/internal/routegroup"
@@ -78,7 +77,7 @@ func RegisterRoutes(ctx *services.ServiceContext, r *gin.Engine) {
 	registerHealthRoutes(ctx, apiV1)
 	// 用户管理已整合到RBAC系统中
 	rbac.RegisterRBACRoutes(ctx, apiV1)
-	if core.MustGetConfig().App.EnableSwagger {
+	if ctx.Config.App.EnableSwagger {
 		r.GET("/swagger/v1/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.InstanceName("v1")))
 	}
 }

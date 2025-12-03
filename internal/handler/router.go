@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"gin-admin/internal/core"
 	v1 "gin-admin/internal/handler/v1"
 	"gin-admin/internal/middleware"
 	"gin-admin/internal/routegroup"
@@ -13,8 +12,7 @@ import (
 
 func Init(svcContext *services.ServiceContext) *gin.Engine {
 	// 根据配置设置 Gin 运行模式
-	cfg := core.MustGetConfig()
-	gin.SetMode(cfg.App.GetGinMode())
+	gin.SetMode(svcContext.Config.App.GetGinMode())
 
 	r := gin.New()
 
@@ -34,7 +32,7 @@ func Init(svcContext *services.ServiceContext) *gin.Engine {
 	// 5. 幂等操作：重复执行不会产生副作用
 	protectedRoutes := convertRoutes(routegroup.GetProtectedRoutes())
 
-	rbacConfig := buildRBACConfig()
+	rbacConfig := buildRBACConfig(svcContext)
 	// 使用 Service 层来处理 RBAC 初始化业务逻辑（应用启动时使用 Background context）
 	if err := services.NewRbacService().InitializeRBAC(protectedRoutes, rbacConfig); err != nil {
 		logrus.Fatalf("RBAC 权限系统初始化失败: %v", err)
@@ -58,20 +56,19 @@ func convertRoutes(routes []*routegroup.ProtectedRoute) []services.ProtectedRout
 }
 
 // buildRBACConfig 从配置文件构建 RBAC 初始化配置
-func buildRBACConfig() *services.RBACInitConfig {
-	cfg := core.MustGetConfig()
+func buildRBACConfig(svcContext *services.ServiceContext) *services.RBACInitConfig {
 
 	// 如果没有配置 RBAC 或未启用自动初始化，返回 nil 使用默认配置
-	if cfg.RBAC == nil {
+	if svcContext.Config.RBAC == nil {
 		return nil
 	}
 
 	return &services.RBACInitConfig{
-		AdminUsername:  cfg.RBAC.AdminUser.Username,
-		AdminPassword:  cfg.RBAC.AdminUser.Password,
-		AdminEmail:     cfg.RBAC.AdminUser.Email,
-		AdminRoleName:  cfg.RBAC.AdminRole.Name,
-		AdminRoleDesc:  cfg.RBAC.AdminRole.Description,
-		EnableAutoInit: cfg.RBAC.EnableAutoInit,
+		AdminUsername:  svcContext.Config.RBAC.AdminUser.Username,
+		AdminPassword:  svcContext.Config.RBAC.AdminUser.Password,
+		AdminEmail:     svcContext.Config.RBAC.AdminUser.Email,
+		AdminRoleName:  svcContext.Config.RBAC.AdminRole.Name,
+		AdminRoleDesc:  svcContext.Config.RBAC.AdminRole.Description,
+		EnableAutoInit: svcContext.Config.RBAC.EnableAutoInit,
 	}
 }

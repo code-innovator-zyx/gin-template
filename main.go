@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gin-admin/internal/core"
+	"gin-admin/internal/config"
 	"gin-admin/internal/handler"
-	_ "gin-admin/internal/model"
+	"gin-admin/internal/migrates"
 	"gin-admin/internal/services"
+	"gin-admin/pkg/components/logger"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -17,11 +18,20 @@ import (
 )
 
 func main() {
-	// 初始化应用配置和依赖
-	core.Init()
-	cfg := core.MustGetConfig()
+	// 初始化配置文件
+	cfg, err := config.Init()
+	if err != nil {
+		panic(err)
+	}
+	// 初始化日志
+	logger.Init(cfg.Logger)
 	// 初始化内部服务
 	ctx := services.MustInitServiceContext(cfg)
+	// migrate
+	err = migrates.Do(ctx)
+	if err != nil {
+		panic(err)
+	}
 	// 初始化路由
 	r := handler.Init(ctx)
 

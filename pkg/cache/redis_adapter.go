@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -17,43 +16,13 @@ import (
 * @Package: Redis适配器实现
  */
 
-// RedisConfig 缓存配置
-type RedisConfig struct {
-	Host     string `mapstructure:"host" validate:"required"`
-	Port     int    `mapstructure:"port" validate:"required,min=1,max=65535"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db" validate:"min=0"`
-	PoolSize int    `mapstructure:"pool_size" validate:"omitempty,min=1"`
-}
-
 // redisCache Redis缓存实现
 type redisCache struct {
 	client *redis.Client
 }
 
 // NewRedisCache 创建Redis缓存实例
-func NewRedisCache(cfg RedisConfig) (ICache, error) {
-	poolSize := cfg.PoolSize
-	if poolSize == 0 {
-		poolSize = 10
-	}
-
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Password: cfg.Password,
-		DB:       cfg.DB,
-		PoolSize: poolSize,
-	})
-
-	// 测试连接
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("Redis连接失败: %w", err)
-	}
-
-	logrus.Infof("Redis缓存初始化成功: %s:%d", cfg.Host, cfg.Port)
+func NewRedisCache(client *redis.Client) (ICache, error) {
 	return &redisCache{client: client}, nil
 }
 

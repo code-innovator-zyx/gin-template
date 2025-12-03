@@ -27,10 +27,6 @@ func NewCacheSessionManager(cache cache.ICache) SessionManager {
 	return &CacheSessionManager{cache: cache}
 }
 
-func NewSessionManager() SessionManager {
-	return &CacheSessionManager{cache: cache.GetGlobalCache()}
-}
-
 func (m *CacheSessionManager) sessionKey(id interface{}) string {
 	return fmt.Sprintf("jwt:session:%+v", id)
 }

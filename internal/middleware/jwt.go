@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"gin-admin/internal/core"
 	"gin-admin/internal/services"
 	"gin-admin/pkg/jwt"
 	"gin-admin/pkg/response"
@@ -68,7 +67,7 @@ func JWT(svrCtx *services.ServiceContext) gin.HandlerFunc {
 		c.Header("X-Set-Access-Token", tokenPair.AccessToken)
 		c.SetCookie(REFRESHTOKEN_KEY,
 			tokenPair.RefreshToken,
-			int(core.MustGetConfig().Jwt.RefreshTokenExpire.Seconds()),
+			int(svrCtx.Config.Jwt.RefreshTokenExpire.Seconds()),
 			"/",
 			"",
 			false,
