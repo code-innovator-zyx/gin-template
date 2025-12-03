@@ -175,13 +175,13 @@ logs: ## 查看docker-compose日志
 	docker-compose logs -f
 
 init-config: ## 初始化配置文件
-	@if [ ! -f app.yaml ]; then \
+	@if [ ! -f config/app.yaml ]; then \
 		echo "创建配置文件..."; \
-		cp app.yaml.template app.yaml; \
+		cp config/app.yaml.template config/app.yaml; \
 		echo "配置文件已创建: app.yaml"; \
 		echo "请编辑 app.yaml 配置数据库和其他设置"; \
 	else \
-		echo "配置文件已存在: app.yaml"; \
+		echo "配置文件已存在: config/app.yaml"; \
 	fi
 
 check: fmt vet lint ## 运行所有检查

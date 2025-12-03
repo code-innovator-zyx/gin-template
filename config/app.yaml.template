@@ -1,0 +1,83 @@
+# 应用信息
+app:
+  name: template
+  # 运行环境（dev: 开发环境, test: 测试环境, prod: 生产环境）
+  # dev -> Gin DebugMode（详细日志）
+  # test -> Gin TestMode（减少日志）
+  # prod -> Gin ReleaseMode（最小日志）
+  env: dev
+  version: 1.0
+  enable_swagger: true
+
+server:
+  # 监听端口号（1~65535）
+  port: 8080
+  # 读取超时，支持带单位的时间
+  read_timeout: 10s
+  # 写入超时
+  write_timeout: 10s
+  # 空闲超时
+  idle_timeout: 30s
+
+# 日志配置
+logger:
+  # 是否打印调用者（文件名、行号）
+  report_caller: true
+  # 是否美化输出（带缩进和颜色）
+  pretty_print: false
+  # 日志级别 (0~6)
+  # 0 Panic, 1 Fatal, 2 Error, 3 Warn, 4 Info, 5 Debug, 6 Trace
+  level: 4
+  # 是否启用文件输出
+  enable_file: true
+  # 日志文件路径（enable_file=true 时必填）
+  file_path: ./logs
+
+# 数据库配置
+database:
+  # DSN 格式取决于你用的数据库类型（MySQL / PostgreSQL / SQLite）
+  # MySQL 例子：
+  dsn: "root:root@tcp(127.0.0.1:3306)/template?charset=utf8mb4&parseTime=True&loc=Local"
+  # 最大打开连接数（一般可设为 CPU 核数 * 2 ~ 4）
+  max_open_conns: 16
+  # 最大空闲连接数（建议略小于 max_open_conns）
+  max_idle_conns: 10
+  # 单个连接最大存活时间（秒）
+  max_life_time: 3600
+  # 日志等级（0=Silent, 1=Error, 2=Warn, 3=Info, 4=Debug）
+  log_level: 2
+
+# JWT配置
+jwt:
+  # JWT 密钥（生产环境必须修改！）
+  secret: "kZ3r7XG8YpS+vO9fN7JxBtUo1e8L2jH4pFqS5mRw9tDcVyZxGqK0sT3bLnM6wA9d"
+  # Access Token 过期时间（秒  -根据自身业务设置，5分钟差不多了
+  access_token_expire: 600s
+  # Refresh Token 过期时间（秒）- 建议：7天到30天
+  refresh_token_expire: 168h  # 7天
+  # Token 签发者
+  issuer: "gin-template"
+
+# 缓存配置（可选）
+# 支持三种类型：redis
+# ⚠️ 注意：如果不配置redis缓存，系统将自动使用内存缓存（memory）
+cache:
+  host: localhost
+  port: 6379
+  password: "123456"
+  db: 0
+  pool_size: 10
+
+# RBAC权限系统配置（可选）
+rbac:
+  # 是否启用自动初始化
+  enable_auto_init: true
+  # 默认管理员用户配置
+  admin_user:
+    username: admin
+    password: admin123
+    email: admin@template.com
+  # 默认管理员角色配置
+  admin_role:
+    name: 超级管理员
+    description: 系统超级管理员，拥有所有权限

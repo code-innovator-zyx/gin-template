@@ -40,7 +40,7 @@ WORKDIR /app
 COPY --from=builder /app/gin-template .
 
 # 复制配置模板
-COPY app.yaml.template ./app.yaml.template
+COPY config/app.yaml.template ./app.yaml.template
 
 # 创建日志目录
 RUN mkdir -p logs && chown -R app:app /app

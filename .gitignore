@@ -32,7 +32,7 @@ go.work
 Thumbs.db
 
 # Config files (contains sensitive data)
-app.yaml
+config/app.yaml
 config/app.yaml
 
 # Logs
