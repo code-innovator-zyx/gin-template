@@ -25,12 +25,13 @@ import (
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /permissions [get]
-func GetPermissions(c *gin.Context) {
-
-	permissions, err := services.SvcContext.PermissionService.List(c.Request.Context(), _interface.WithPreloads("Resources"))
-	if err != nil {
-		response.InternalServerError(c, "获取权限列表失败")
-		return
+func GetPermissions(svcCtx *services.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		permissions, err := svcCtx.PermissionService.List(c.Request.Context(), _interface.WithPreloads("Resources"))
+		if err != nil {
+			response.InternalServerError(c, "获取权限列表失败")
+			return
+		}
+		response.Success(c, permissions)
 	}
-	response.Success(c, permissions)
 }

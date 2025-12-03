@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"gin-admin/internal/core"
+	"gin-admin/internal/services"
 	"gin-admin/pkg/cache"
 	"gin-admin/pkg/response"
 	"runtime"
@@ -53,59 +54,52 @@ var startTime = time.Now()
 // @Produce json
 // @Success 200 {object} response.Response{data=HealthResponse} "健康状态"
 // @Router /health [get]
-func HealthCheck(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-	defer cancel()
+func HealthCheck(svcCtx *services.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
 
-	startCheck := time.Now()
+		startCheck := time.Now()
 
-	healthResp := HealthResponse{
-		Status:     HealthStatusHealthy,
-		Timestamp:  time.Now().Unix(),
-		Version:    getAppVersion(),
-		Uptime:     int64(time.Since(startTime).Seconds()),
-		Components: make(map[string]ComponentHealth),
-		System:     getSystemInfo(),
+		healthResp := HealthResponse{
+			Status:     HealthStatusHealthy,
+			Timestamp:  time.Now().Unix(),
+			Version:    getAppVersion(),
+			Uptime:     int64(time.Since(startTime).Seconds()),
+			Components: make(map[string]ComponentHealth),
+			System:     getSystemInfo(),
+		}
+
+		// 检查数据库
+		dbHealth := checkDatabase(ctx, svcCtx)
+		healthResp.Components["database"] = dbHealth
+		if dbHealth.Status == "error" {
+			healthResp.Status = HealthStatusDegraded
+		}
+
+		// 检查缓存
+		cacheHealth := checkCache(ctx, svcCtx)
+		healthResp.Components["cache"] = cacheHealth
+		if cacheHealth.Status == "error" {
+			healthResp.Status = HealthStatusDegraded
+		}
+
+		// 添加健康检查耗时
+		healthResp.Components["health_check"] = ComponentHealth{
+			Status:       "ok",
+			ResponseTime: time.Since(startCheck).Milliseconds(),
+			Message:      "Health check completed",
+		}
+
+		response.Success(c, healthResp)
 	}
-
-	// 检查数据库
-	dbHealth := checkDatabase(ctx)
-	healthResp.Components["database"] = dbHealth
-	if dbHealth.Status == "error" {
-		healthResp.Status = HealthStatusDegraded
-	}
-
-	// 检查缓存
-	cacheHealth := checkCache(ctx)
-	healthResp.Components["cache"] = cacheHealth
-	if cacheHealth.Status == "error" {
-		healthResp.Status = HealthStatusDegraded
-	}
-
-	// 添加健康检查耗时
-	healthResp.Components["health_check"] = ComponentHealth{
-		Status:       "ok",
-		ResponseTime: time.Since(startCheck).Milliseconds(),
-		Message:      "Health check completed",
-	}
-
-	response.Success(c, healthResp)
 }
 
 // checkDatabase 检查数据库健康状态
-func checkDatabase(ctx context.Context) ComponentHealth {
+func checkDatabase(ctx context.Context, svcCtx *services.ServiceContext) ComponentHealth {
 	start := time.Now()
 
-	db, err := core.GetDb()
-	if err != nil {
-		return ComponentHealth{
-			Status:       "error",
-			ResponseTime: time.Since(start).Milliseconds(),
-			Message:      "Database initialization failed",
-			Error:        err.Error(),
-		}
-	}
-
+	db := svcCtx.Db
 	if db == nil {
 		return ComponentHealth{
 			Status:       "not_configured",
@@ -151,7 +145,7 @@ func checkDatabase(ctx context.Context) ComponentHealth {
 }
 
 // checkCache 检查缓存健康状态
-func checkCache(ctx context.Context) ComponentHealth {
+func checkCache(ctx context.Context, svcCtx *services.ServiceContext) ComponentHealth {
 	start := time.Now()
 
 	if !cache.IsAvailable() {
@@ -162,7 +156,7 @@ func checkCache(ctx context.Context) ComponentHealth {
 		}
 	}
 
-	cacheClient := cache.GetGlobalCache()
+	cacheClient := svcCtx.Cache
 
 	// 执行 Ping 检查
 	if err := cacheClient.Ping(ctx); err != nil {

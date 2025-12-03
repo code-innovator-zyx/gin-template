@@ -75,7 +75,7 @@ func RegisterRoutes(ctx *services.ServiceContext, r *gin.Engine) {
 	apiV1 := routegroup.WrapGroup(r.Group("/api/v1"))
 
 	// 注册各个模块的路由
-	registerHealthRoutes(apiV1)
+	registerHealthRoutes(ctx, apiV1)
 	// 用户管理已整合到RBAC系统中
 	rbac.RegisterRBACRoutes(ctx, apiV1)
 	if core.MustGetConfig().App.EnableSwagger {
@@ -84,7 +84,7 @@ func RegisterRoutes(ctx *services.ServiceContext, r *gin.Engine) {
 }
 
 // registerHealthRoutes 注册健康检查相关路由
-func registerHealthRoutes(api *routegroup.RouterGroup) {
+func registerHealthRoutes(ctx *services.ServiceContext, api *routegroup.RouterGroup) {
 	// 健康检查
-	api.Public().GET("/health", v1.HealthCheck)
+	api.Public().GET("/health", v1.HealthCheck(ctx))
 }
