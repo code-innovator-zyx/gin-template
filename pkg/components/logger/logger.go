@@ -1,6 +1,5 @@
 package logger
 
-import "C"
 import (
 	"fmt"
 	"github.com/natefinch/lumberjack"
@@ -11,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 )
+
 
 // Config 日志配置
 type Config struct {
