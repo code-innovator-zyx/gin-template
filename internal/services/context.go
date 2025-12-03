@@ -4,9 +4,9 @@ import (
 	"gin-admin/internal/config"
 	rbac2 "gin-admin/internal/services/rbac"
 	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/jwt"
 	"gin-admin/pkg/components/orm"
 	redis2 "gin-admin/pkg/components/redis"
-	"gin-admin/pkg/jwt"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )

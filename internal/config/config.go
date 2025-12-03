@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"gin-admin/pkg/components/jwt"
 	"gin-admin/pkg/components/logger"
 	"gin-admin/pkg/components/orm"
 	"gin-admin/pkg/components/redis"
@@ -16,7 +17,7 @@ type AppConfig struct {
 	App    App           `mapstructure:"app" validate:"required"`
 	Server Server        `mapstructure:"server" validate:"required"`
 	Logger logger.Config `mapstructure:"logger" validate:"required"`
-	Jwt    *Jwt          `mapstructure:"jwt" validate:"required"`
+	Jwt    *jwt.Config   `mapstructure:"jwt" validate:"required"`
 	RBAC   *RBACConfig   `mapstructure:"rbac" validate:"required"`
 	// 选填的配置
 	Database *orm.Config   `mapstructure:"database" validate:"omitempty"`
@@ -59,14 +60,6 @@ type Server struct {
 	ReadTimeout  time.Duration `mapstructure:"read_timeout" validate:"required,gt=0"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout" validate:"required,gt=0"`
 	IdleTimeout  time.Duration `mapstructure:"idle_timeout" validate:"required,gt=0"`
-}
-
-// jwt 配置
-type Jwt struct {
-	Secret             string        `mapstructure:"secret" validate:"required"`
-	AccessTokenExpire  time.Duration `mapstructure:"access_token_expire" validate:"required,min=60s"`   // Access Token 过期时间（秒），至少 60 秒
-	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire" validate:"required,min=600s"` // Refresh Token 过期时间（秒），至少 600 秒
-	Issuer             string        `mapstructure:"issuer" validate:"required"`                        // 签发者
 }
 
 // RBACConfig RBAC权限系统配置

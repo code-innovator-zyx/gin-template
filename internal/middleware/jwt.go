@@ -3,7 +3,7 @@ package middleware
 import (
 	"errors"
 	"gin-admin/internal/services"
-	"gin-admin/pkg/jwt"
+	"gin-admin/pkg/components/jwt"
 	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
 	jwtv4 "github.com/golang-jwt/jwt/v4"

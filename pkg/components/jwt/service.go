@@ -3,7 +3,6 @@ package jwt
 import (
 	"context"
 	"fmt"
-	"gin-admin/internal/config"
 	"gin-admin/pkg/cache"
 	"time"
 
@@ -31,11 +30,11 @@ type Service interface {
 // =======================
 
 type JWTService struct {
-	config         config.Jwt
+	config         Config
 	sessionManager SessionManager
 }
 
-func NewJwtService(cfg config.Jwt, cache cache.ICache) *JWTService {
+func NewJwtService(cfg Config, cache cache.ICache) *JWTService {
 	return &JWTService{
 		config:         cfg,
 		sessionManager: NewCacheSessionManager(cache),
