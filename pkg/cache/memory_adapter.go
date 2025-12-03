@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"sync"
 	"time"
 
@@ -326,10 +325,6 @@ func (m *memoryCache) Ping(ctx context.Context) error {
 func (m *memoryCache) Close() error {
 	close(m.stopChan)
 	return nil
-}
-
-func (m *memoryCache) RedisClient() *redis.Client {
-	panic("redis client not reachable")
 }
 
 // cleanupExpired 清理过期key（优化：读写锁分离）

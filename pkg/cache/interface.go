@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"errors"
-	"github.com/go-redis/redis/v8"
 	"time"
 )
 
@@ -49,9 +48,6 @@ type ICache interface {
 
 	// 移除前缀key
 	DeletePrefix(ctx context.Context, prefix string) error
-
-	// RedisClient 除了通用的之外，提供redisclient 供使用
-	RedisClient() *redis.Client
 }
 
 // Pipeline 管道操作接口

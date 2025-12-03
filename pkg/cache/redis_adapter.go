@@ -141,11 +141,6 @@ func (r *redisCache) Close() error {
 	return r.client.Close()
 }
 
-// GetClient 获取原始Redis客户端（用于高级操作）
-func (r *redisCache) GetClient() *redis.Client {
-	return r.client
-}
-
 // ================================
 // Pipeline 实现
 // ================================
