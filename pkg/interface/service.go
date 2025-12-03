@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gin-admin/pkg/cache"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -16,7 +17,7 @@ import (
 * @Package: Service 层 - 在 Repo 基础上增加缓存能力
  */
 
-// IService Service 接口，继承 IRepo 的所有能力
+// IService Service 接口
 type IService[T IModel] interface {
 	IRepo[T]
 	// ClearCache 清空该模型的所有缓存
@@ -26,15 +27,17 @@ type IService[T IModel] interface {
 // Service 实现，在 Repo 基础上增加缓存
 type Service[T IModel] struct {
 	Repo     IRepo[T]
-	cache    cache.Cache
+	DB       *gorm.DB
+	cache    cache.ICache
 	cacheTTL time.Duration // 缓存过期时间
 }
 
 // NewService 创建 Service 实例
-func NewService[T IModel](repo IRepo[T], cache cache.Cache) *Service[T] {
+func NewService[T IModel](db *gorm.DB, cache cache.ICache) *Service[T] {
 	return &Service[T]{
-		Repo:     repo,
+		Repo:     NewRepo[T](db),
 		cache:    cache,
+		DB:       db,
 		cacheTTL: 5 * time.Minute,
 	}
 }
@@ -181,7 +184,7 @@ func (s *Service[T]) List(ctx context.Context, opts ...QueryOption) ([]T, error)
 	return result, nil
 }
 
-// FindPage 分页查询 - ⭐ 缓存
+// FindPage 分页查询
 func (s *Service[T]) FindPage(ctx context.Context, opts ...QueryOption) (*PageResult[T], error) {
 	optsKey := s.serializeOpts(opts...)
 	cacheKey := s.cacheKey(fmt.Sprintf("page:%s", optsKey))
@@ -313,17 +316,14 @@ func (s *Service[T]) DeleteByCondition(ctx context.Context, condition map[string
 // ==================== 统计操作（不缓存）====================
 
 func (s *Service[T]) Count(ctx context.Context, condition map[string]interface{}) (int64, error) {
-	// Count 数据变化频繁，不缓存
 	return s.Repo.Count(ctx, condition)
 }
 
-func (s *Service[T]) Exists(ctx context.Context, condition map[string]interface{}) (bool, error) {
-	// 轻量查询，不缓存
-	return s.Repo.Exists(ctx, condition)
+func (s *Service[T]) Exists(ctx context.Context, opts ...QueryOption) (bool, error) {
+	return s.Repo.Exists(ctx, opts...)
 }
 
 func (s *Service[T]) ExistsByID(ctx context.Context, id uint) (bool, error) {
-	// 轻量查询，不缓存
 	return s.Repo.ExistsByID(ctx, id)
 }
 
@@ -342,7 +342,7 @@ func (s *Service[T]) FirstOrCreate(ctx context.Context, condition map[string]int
 
 // ==================== 事务支持 ====================
 
-func (s *Service[T]) Transaction(ctx context.Context, fn func(txRepo IRepo[T]) error) error {
+func (s *Service[T]) Transaction(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB, txRepo IRepo[T]) error) error {
 	// 事务中直接使用 repo，不走缓存
 	err := s.Repo.Transaction(ctx, fn)
 	if err != nil {

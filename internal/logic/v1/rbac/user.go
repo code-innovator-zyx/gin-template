@@ -1,15 +1,22 @@
 package rbac
 
 import (
+	"context"
+	"fmt"
 	"gin-admin/internal/core"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/internal/service"
-	rbac2 "gin-admin/internal/service/rbac"
+	"gin-admin/internal/services"
 	types "gin-admin/internal/types/rbac"
 	"gin-admin/pkg/consts"
+	_interface "gin-admin/pkg/interface"
 	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // Register godoc
@@ -29,18 +36,19 @@ func Register(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-
+	if err := services.SvcContext.UserService.CheckAccountExist(c.Request.Context(), req.Username, req.Email); nil != err {
+		response.Forbidden(c, err.Error())
+		return
+	}
 	user := &rbac.User{
 		Username: req.Username,
 		Password: req.Password,
 		Email:    req.Email,
 	}
-
-	if err := rbac2.NewUserService(c.Request.Context()).Register(user); err != nil {
+	if err := services.SvcContext.UserService.Create(c, user); err != nil {
 		response.Fail(c, 400, err.Error())
 		return
 	}
-
 	response.Success(c, user)
 }
 
@@ -62,13 +70,23 @@ func Login(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-
-	tokenPair, err := rbac2.NewUserService(c.Request.Context()).Login(req.Account, req.Password)
+	user, err := services.SvcContext.UserService.FindOne(c, _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		return db.Where("username = ? OR email = ?", req.Account, req.Account)
+	}))
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
 	}
-
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		response.Unauthorized(c, "密码错误")
+		return
+	}
+	// 生成JWT令牌对
+	tokenPair, err := services.SvcContext.Jwt.GenerateTokenPair(c, user.ID, user.Username, user.Email)
+	if err != nil {
+		response.InternalServerError(c, err.Error())
+		return
+	}
 	// 返回令牌对
 	tokenResponse := types.TokenResponse{
 		AccessToken:  tokenPair.AccessToken,
@@ -76,6 +94,7 @@ func Login(c *gin.Context) {
 		TokenType:    tokenPair.TokenType,
 		ExpiresIn:    tokenPair.ExpiresIn,
 	}
+	// 设置刷新token
 	c.SetCookie("X-Refresh-Token",
 		tokenPair.RefreshToken,
 		int(core.MustGetConfig().Jwt.RefreshTokenExpire.Seconds()),
@@ -100,7 +119,9 @@ func Logout(c *gin.Context) {
 	// 获取 Access Token
 	userID := c.GetUint("uid")
 	sessionId := c.GetString("sessionId")
-	if err := rbac2.NewUserService(c).LoginOut(userID, sessionId); err != nil {
+	if err := services.SvcContext.CacheService.ClearUserPermissions(c, userID, time.Millisecond*5, func() error {
+		return services.SvcContext.Jwt.RevokeSession(c, sessionId)
+	}); err != nil {
 		response.Fail(c, 200, err.Error())
 		return
 	}
@@ -123,14 +144,14 @@ func GetProfile(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取用户基础信息
-	user, err := rbac2.NewUserService(ctx).FindByID(userID, "Roles")
+	user, err := services.SvcContext.UserService.FindByID(ctx, userID, _interface.WithPreloads("Roles"))
 	if err != nil {
 		response.Fail(c, 500, "获取用户信息失败: "+err.Error())
 		return
 	}
 
 	// 获取用户可访问的资源列表
-	resources, err := rbac2.NewPermissionService(ctx).GetUserPerms(userID)
+	resources, err := services.SvcContext.UserService.GetUserPerms(ctx, userID)
 	if err != nil {
 		response.Fail(c, 500, "获取用户资源失败: "+err.Error())
 		return
@@ -165,7 +186,7 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	// 获取用户基础信息
-	err = rbac2.NewUserService(c.Request.Context()).DeleteByID(uint(userID))
+	err = services.SvcContext.UserService.DeleteByID(c.Request.Context(), uint(userID))
 	if err != nil {
 		response.Fail(c, 500, "删除用户失败: "+err.Error())
 		return
@@ -190,9 +211,25 @@ func CreateUser(c *gin.Context) {
 	if err := c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 	}
-	// 创建用户
-	err := rbac2.NewUserService(c.Request.Context()).Create(request)
+	if err := services.SvcContext.UserService.CheckAccountExist(c.Request.Context(), request.Username, request.Email); nil != err {
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	roles, err := services.SvcContext.RoleService.List(c.Request.Context())
 	if err != nil {
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	// ==== 创建 ====
+	user := rbac.User{
+		Username: request.Username,
+		Password: strings.Split(request.Email, "@")[0],
+		Email:    request.Email,
+		Gender:   request.Gender,
+		Roles:    roles,
+		Status:   consts.UserStatusActive,
+	}
+	if err = services.SvcContext.UserService.Create(c.Request.Context(), &user); err != nil {
 		response.Fail(c, 500, err.Error())
 		return
 	}
@@ -227,9 +264,47 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	request.Id = uint(userID)
-
-	// 更新用户
-	err = rbac2.NewUserService(c.Request.Context()).Update(request)
+	exist, err := services.SvcContext.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		return db.Where("username = ? AND id <> ?", request.Username, request.Id)
+	}))
+	if err != nil {
+		response.Fail(c, 500, err.Error())
+	}
+	if exist {
+		response.Fail(c, http.StatusConflict, "用户名已存在")
+	}
+	exist, err = services.SvcContext.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		return db.Where("email = ? AND id <> ?", request.Email, request.Id)
+	}))
+	if err != nil {
+		response.Fail(c, 500, err.Error())
+	}
+	if exist {
+		response.Fail(c, http.StatusConflict, "邮箱已存在")
+	}
+	err = services.SvcContext.UserService.Transaction(c.Request.Context(), func(ctx context.Context, tx *gorm.DB, txRepo _interface.IRepo[rbac.User]) error {
+		err = txRepo.UpdateByID(ctx, request.Id, map[string]interface{}{
+			"username": request.Username,
+			"email":    request.Email,
+			"gender":   request.Gender,
+		})
+		if err != nil {
+			return err
+		}
+		var roles []rbac.Role
+		// 获取所有角色列表
+		if len(request.Roles) != 0 {
+			roles, err = services.SvcContext.RoleService.FindByIDs(ctx, request.Roles)
+			if err != nil {
+				return err
+			}
+		}
+		// 更新用户角色
+		if err = tx.Association("Roles").Replace(roles); err != nil {
+			return fmt.Errorf("更新用户角色失败: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -257,17 +332,27 @@ func ListUser(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-
-	ctx := c.Request.Context()
-
-	// 获取用户列表
-	pageResult, err := rbac2.NewUserService(ctx).List(request)
+	pr, err := services.SvcContext.UserService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize),
+		_interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+			if request.Username != "" {
+				db = db.Where("username LIKE ?", request.Username+"%")
+			}
+			if request.Email != "" {
+				db = db.Where("email = ?", request.Email)
+			}
+			if request.Status > 0 {
+				db = db.Where("status = ?", request.Status)
+			}
+			if request.Gender > 0 {
+				db = db.Where("gender = ?", request.Gender)
+			}
+			return db.Preload("Roles")
+		}))
 	if err != nil {
 		response.Fail(c, 500, "获取用户列表失败: "+err.Error())
 		return
 	}
-
-	response.SuccessPage(c, pageResult.List, pageResult.Page, pageResult.PageSize, pageResult.Total)
+	response.SuccessPage(c, pr.List, pr.Page, pr.PageSize, pr.Total)
 }
 
 // UserOptions godoc
@@ -306,7 +391,7 @@ func UserOptions(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	for _, field := range params.IncludeFields {
-		if fn, ok := service.OptionGenerators[service.OptionField(field)]; ok {
+		if fn, ok := services.OptionGenerators[services.OptionField(field)]; ok {
 			fieldOptions, err := fn(ctx)
 			if err != nil {
 				response.Fail(c, 500, err.Error())

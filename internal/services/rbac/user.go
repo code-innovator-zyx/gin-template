@@ -3,8 +3,11 @@ package rbac
 import (
 	"cmp"
 	"context"
+	"errors"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/internal/service"
+	"gin-admin/pkg/cache"
+	_interface "gin-admin/pkg/interface"
+	"gorm.io/gorm"
 	"maps"
 	"slices"
 )
@@ -12,23 +15,36 @@ import (
 /*
 * @Author: zouyx
 * @Email: 1003941268@qq.com
-* @Date:   2025/11/16 下午2:06
-* @Package: 资源相关操作
+* @Date:   2025 2025/12/3 上午9:31
+* @Package:
  */
 
-type permissionService struct {
-	ctx context.Context
-	*service.BaseRepo[rbac.Permission]
+// UserService 用户可以自己实现一些定制化的函数
+type UserService struct {
+	_interface.Service[rbac.User]
 }
 
-func NewPermissionService(ctx context.Context) *permissionService {
-	return &permissionService{
-		ctx:      ctx,
-		BaseRepo: service.NewBaseRepo[rbac.Permission](ctx),
+func NewUserService(db *gorm.DB, cache cache.ICache) *UserService {
+	return &UserService{
+		Service: *_interface.NewService[rbac.User](db, cache),
 	}
 }
 
-func (s *permissionService) GetUserPerms(userID uint) ([]rbac.Permission, error) {
+func (s *UserService) CheckAccountExist(ctx context.Context, username, email string) error {
+	if exist, err := s.Exists(ctx, _interface.WithConditions(map[string]interface{}{"username": username})); err != nil {
+		return err
+	} else if exist {
+		return errors.New("用户名已存在")
+	}
+	if exist, err := s.Exists(ctx, _interface.WithConditions(map[string]interface{}{"email": email})); err != nil {
+		return err
+	} else if exist {
+		return errors.New("邮箱已存在")
+	}
+	return nil
+}
+
+func (s *UserService) GetUserPerms(ctx context.Context, userID uint) ([]rbac.Permission, error) {
 	var rows []struct {
 		PermissionID   uint   `json:"permission_id"`
 		PermissionName string `json:"permission_name"`
@@ -39,7 +55,7 @@ func (s *permissionService) GetUserPerms(userID uint) ([]rbac.Permission, error)
 		Method         string `json:"method"`
 		Description    string `json:"description"`
 	}
-	err := s.Tx.Raw(`
+	err := s.DB.WithContext(ctx).Raw(`
 		SELECT DISTINCT
 			p.id   AS permission_id,
 			p.name AS permission_name,
@@ -66,14 +82,18 @@ func (s *permissionService) GetUserPerms(userID uint) ([]rbac.Permission, error)
 		p, ok := permMap[row.PermissionID]
 		if !ok {
 			p = rbac.Permission{
-				ID:   row.PermissionID,
+				BaseModel: rbac.BaseModel{
+					ID: row.PermissionID,
+				},
 				Name: row.PermissionName,
 				Code: row.PermissionCode,
 			}
 			permMap[row.PermissionID] = p
 		}
 		p.Resources = append(p.Resources, rbac.Resource{
-			ID:          row.ResourceID,
+			BaseModel: rbac.BaseModel{
+				ID: row.PermissionID,
+			},
 			Path:        row.Path,
 			Method:      row.Method,
 			Code:        row.Code,

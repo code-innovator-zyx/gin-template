@@ -1,13 +1,18 @@
 package rbac
 
 import (
-	"gin-admin/internal/service"
-	"gin-admin/internal/service/rbac"
+	"fmt"
+	rbac2 "gin-admin/internal/model/rbac"
+	"gin-admin/internal/services"
 	types "gin-admin/internal/types/rbac"
-	"gin-admin/pkg/consts"
+	_interface "gin-admin/pkg/interface"
 	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"net/http"
 	"strconv"
+	"time"
 )
 
 // CreateRole godoc
@@ -29,7 +34,21 @@ func CreateRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if err := rbac.NewRoleService(c.Request.Context()).Create(request); err != nil {
+	exist, err := services.SvcContext.RoleService.Exists(c.Request.Context(), _interface.WithConditions(map[string]interface{}{"name": request.Name}))
+	if err != nil {
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	if exist {
+		response.Fail(c, http.StatusConflict, "角色名已存在")
+		return
+	}
+	role := &rbac2.Role{
+		Name:        request.Name,
+		Description: request.Description,
+		Status:      request.Status,
+	}
+	if err = services.SvcContext.RoleService.Create(c.Request.Context(), role); err != nil {
 		response.Fail(c, 500, err.Error())
 		return
 	}
@@ -62,7 +81,7 @@ func GetRoles(c *gin.Context) {
 	if err != nil {
 		response.BadRequest(c, err.Error())
 	}
-	result, err := rbac.NewRoleService(c.Request.Context()).List(request)
+	result, err := services.SvcContext.RoleService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize))
 	if err != nil {
 		response.Fail(c, 500, "获取角色列表失败")
 		return
@@ -89,7 +108,7 @@ func GetRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	role, err := rbac.NewRoleService(c.Request.Context()).FindByID(uint(id), "Resources")
+	role, err := services.SvcContext.RoleService.FindByID(c.Request.Context(), uint(id), _interface.WithPreloads("Resources"))
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -119,12 +138,36 @@ func UpdateRole(c *gin.Context) {
 		return
 	}
 	var request types.UpsertRoleRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err = c.ShouldBindJSON(&request); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	request.Id = uint(id)
-	err = rbac.NewRoleService(c.Request.Context()).Update(request)
+
+	role, err := services.SvcContext.RoleService.FindByID(c.Request.Context(), uint(id))
+	if err != nil {
+		logrus.Errorf("failed to find role by id %d, %v", id, err)
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	if request.Name != "" && request.Name != role.Name {
+		exist, err := services.SvcContext.RoleService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+			return db.Where("name = ? AND id <> ?", request.Name, id)
+		}))
+		if err != nil {
+			logrus.Errorf("failed to check role exist %s", err)
+			response.Fail(c, 500, err.Error())
+			return
+		}
+		if exist {
+			response.Fail(c, http.StatusConflict, fmt.Sprintf("角色名 %s 已存在", request.Name))
+			return
+		}
+	}
+	err = services.SvcContext.RoleService.UpdateByID(c.Request.Context(), uint(id), map[string]interface{}{
+		"name":        request.Name,
+		"description": request.Description,
+		"status":      request.Status,
+	})
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -151,7 +194,7 @@ func DeleteRole(c *gin.Context) {
 		response.BadRequest(c, "无效的角色ID")
 		return
 	}
-	if err = rbac.NewRoleService(c.Request.Context()).DeleteByID(uint(id)); err != nil {
+	if err = services.SvcContext.RoleService.DeleteByID(c.Request.Context(), uint(id)); err != nil {
 		response.Fail(c, 500, err.Error())
 		return
 	}
@@ -182,53 +225,31 @@ func AssignRoleResources(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	request.Id = uint(id)
-	err = rbac.NewRoleService(c.Request.Context()).AssignResource(request)
+	role, err := services.SvcContext.RoleService.FindByID(c.Request.Context(), uint(id))
+	if err != nil {
+		logrus.Errorf("failed to find role by id %d, %v", id, err)
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	resources, err := services.SvcContext.ResourceService.FindByIDs(c.Request.Context(), request.ResourceIds)
+	if err != nil {
+		logrus.Errorf("failed to find resources by ids %+v, %v", request.ResourceIds, err)
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	userIds, err := services.SvcContext.RoleService.ListRoleUsers(uint(id))
+	if err != nil {
+		logrus.Errorf("failed to list role users by id %d, %v", id, err)
+		response.Fail(c, 500, err.Error())
+		return
+	}
+	err = services.SvcContext.CacheService.ClearMultipleUsersPermissions(c.Request.Context(), userIds, time.Millisecond*50, func() error {
+		tx := services.SvcContext.RoleService.DB.WithContext(c.Request.Context())
+		return tx.Model(&role).Association("Resources").Replace(resources)
+	})
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
 	}
 	response.Success(c, nil)
-}
-
-// RoleOptions godoc
-// @Summary 用户options
-// @Description 用户创建修改的option枚举信息
-// @Tags RBAC-用户管理
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param request query types.UserOptionParams true "查询参数"
-// @Success 200 {object} response.Response{data=types.UserOptions} "成功返回用户列表"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /users/options [get]
-func RoleOptions(c *gin.Context) {
-	params := types.OptionParams{}
-	err := c.ShouldBindQuery(&params)
-	if err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	options := types.RoleOptions{
-		SupplementOptions: make(map[string][]types.Option, len(params.IncludeFields)),
-	}
-	for _, status := range consts.AllRoleStatus() {
-		options.Status = append(options.Status, types.Option{
-			Label: status.String(),
-			Value: status,
-		})
-	}
-	ctx := c.Request.Context()
-	for _, field := range params.IncludeFields {
-		if fn, ok := service.OptionGenerators[service.OptionField(field)]; ok {
-			fieldOptions, err := fn(ctx)
-			if err != nil {
-				response.Fail(c, 500, err.Error())
-				return
-			}
-			options.SupplementOptions[field] = fieldOptions
-		}
-	}
-	response.Success(c, options)
 }

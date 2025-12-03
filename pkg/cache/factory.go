@@ -16,12 +16,12 @@ import (
 var (
 	// 缓存单例
 	cacheOnce    sync.Once
-	globalCache  Cache
+	globalCache  ICache
 	cacheInitErr error
 )
 
 // initCacheWithConfig 根据配置初始化缓存（内部使用）
-func initCacheWithConfig(cfg *RedisConfig) (Cache, error) {
+func initCacheWithConfig(cfg *RedisConfig) (ICache, error) {
 	// 如果没有配置，使用内存缓存
 	if cfg == nil {
 		logrus.Info("未配置缓存，使用默认内存缓存")
@@ -36,11 +36,14 @@ func initCacheWithConfig(cfg *RedisConfig) (Cache, error) {
 }
 
 // GetGlobalCache 获取全局缓存实例
-func GetGlobalCache() Cache {
+func GetGlobalCache() ICache {
 	if globalCache == nil {
 		MustInitCache(nil)
 	}
 	return globalCache
+}
+func NewCache(cfg *RedisConfig) (ICache, error) {
+	return initCacheWithConfig(cfg)
 }
 
 // MustInitCache 初始化缓存（无论如何都会成功，失败时自动降级到Memory）

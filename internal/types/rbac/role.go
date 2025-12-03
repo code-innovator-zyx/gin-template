@@ -17,7 +17,6 @@ type ListRoleRequest struct {
 
 // UpsertRoleRequest 更新角色
 type UpsertRoleRequest struct {
-	Id          uint
 	Name        string            `json:"name,omitempty" example:"管理员"`
 	Description string            `json:"description,omitempty" example:"系统管理员"`
 	Status      consts.RoleStatus `json:"status" example:"1"`
@@ -29,6 +28,5 @@ type RoleOptions struct {
 }
 
 type AssignResource struct {
-	Id          uint
 	ResourceIds []uint `json:"resource_ids"`
 }

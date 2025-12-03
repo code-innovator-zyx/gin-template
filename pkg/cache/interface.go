@@ -18,8 +18,8 @@ import (
 var ErrKeyNotFound = errors.New("cache: key not found")
 var ErrUnreachable = errors.New("cache: cache unreachable")
 
-// Cache 缓存接口
-type Cache interface {
+// ICache 缓存接口
+type ICache interface {
 	// 基础操作
 	Get(ctx context.Context, key string, dest interface{}) error
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error

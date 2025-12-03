@@ -3,6 +3,7 @@ package _interface
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -15,12 +16,13 @@ import (
 
 // QueryOptions 查询选项函数
 type QueryOptions struct {
-	SelectFields []string               // 查询字段
-	Preloads     []string               // 预加载字段
-	OrderBy      string                 // 排序
-	Conditions   map[string]interface{} // 筛选条件
-	Page         int                    // 分页页码
-	PageSize     int                    // 分页大小
+	SelectFields []string                     // 查询字段
+	Preloads     []string                     // 预加载字段
+	OrderBy      string                       // 排序
+	Conditions   map[string]interface{}       // 筛选条件
+	Page         int                          // 分页页码
+	PageSize     int                          // 分页大小
+	Scopes       []func(db *gorm.DB) *gorm.DB // 针对复杂的查询条件，比如模糊匹配这样的 conditions 无法满足，通过scopes 来设置
 }
 
 type QueryOption = func(*QueryOptions)
@@ -58,6 +60,34 @@ func WithPagination(page, pageSize int) QueryOption {
 	return func(option *QueryOptions) {
 		option.Page = page
 		option.PageSize = pageSize
+	}
+}
+func WithScopes(scopes ...func(db *gorm.DB) *gorm.DB) QueryOption {
+	return func(option *QueryOptions) {
+		option.Scopes = scopes
+	}
+}
+
+// LikeScope 模糊匹配匹配搜索  TODO:字段校验，防注入
+func LikeScope(field, keyword string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+		// 使用前缀索引，完全模糊匹配会扫全表
+		return db.Where(fmt.Sprintf("%s LIKE ?", field), keyword+"%")
+	}
+}
+
+func RangeScope(field string, start, end any) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if start != nil {
+			db = db.Where(fmt.Sprintf("%s >= ?", field), start)
+		}
+		if end != nil {
+			db = db.Where(fmt.Sprintf("%s <= ?", field), end)
+		}
+		return db
 	}
 }
 
@@ -134,7 +164,7 @@ type IRepo[T IModel] interface {
 	Count(ctx context.Context, condition map[string]interface{}) (int64, error)
 
 	// Exists 检查记录是否存在
-	Exists(ctx context.Context, condition map[string]interface{}) (bool, error)
+	Exists(ctx context.Context, opts ...QueryOption) (bool, error)
 
 	// ExistsByID 检查ID是否存在
 	ExistsByID(ctx context.Context, id uint) (bool, error)
@@ -148,7 +178,7 @@ type IRepo[T IModel] interface {
 
 	// Transaction 执行事务
 	// 自动 commit / rollback
-	Transaction(ctx context.Context, fn func(txRepo IRepo[T]) error) error
+	Transaction(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB, txRepo IRepo[T]) error) error
 }
 
 type Repo[T IModel] struct {
@@ -164,6 +194,9 @@ func NewRepo[T IModel](db *gorm.DB) *Repo[T] {
 func (r *Repo[T]) apply(db *gorm.DB, opts ...QueryOption) *gorm.DB {
 	o := ApplyQueryOptions(opts...)
 
+	if len(o.Scopes) > 0 {
+		db = db.Scopes(o.Scopes...)
+	}
 	// 条件
 	if len(o.Conditions) > 0 {
 		db = db.Where(o.Conditions)
@@ -237,6 +270,9 @@ func (r *Repo[T]) FindPage(ctx context.Context, opts ...QueryOption) (*PageResul
 	}
 	base := r.DB.WithContext(ctx)
 	countDB := base
+	if len(o.Scopes) > 0 {
+		countDB = countDB.Scopes(o.Scopes...)
+	}
 	if len(o.Conditions) > 0 {
 		countDB = countDB.Where(o.Conditions)
 	}
@@ -340,18 +376,27 @@ func (r *Repo[T]) Count(ctx context.Context, condition map[string]interface{}) (
 	return count, err
 }
 
-func (r *Repo[T]) Exists(ctx context.Context, condition map[string]interface{}) (bool, error) {
-	var count int64
+func (r *Repo[T]) Exists(ctx context.Context, opts ...QueryOption) (bool, error) {
+	o := ApplyQueryOptions(opts...)
 	db := r.DB.WithContext(ctx).Model(new(T))
-	if len(condition) > 0 {
-		db = db.Where(condition)
+	if len(o.Scopes) > 0 {
+		db = db.Scopes(o.Scopes...)
 	}
-	err := db.Limit(1).Count(&count).Error
-	return count > 0, err
+	if len(o.Conditions) > 0 {
+		db = db.Where(o.Conditions)
+	}
+	err := db.Select("1").Limit(1).Find(&struct{}{}).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *Repo[T]) ExistsByID(ctx context.Context, id uint) (bool, error) {
-	return r.Exists(ctx, map[string]interface{}{"id": id})
+	return r.Exists(ctx, WithConditions(map[string]interface{}{"id": id}))
 }
 
 // ==================== 查找或创建 ====================
@@ -362,9 +407,9 @@ func (r *Repo[T]) FirstOrCreate(ctx context.Context, condition map[string]interf
 
 // ==================== 事务 ====================
 
-func (r *Repo[T]) Transaction(ctx context.Context, fn func(txRepo IRepo[T]) error) error {
+func (r *Repo[T]) Transaction(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB, txRepo IRepo[T]) error) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txRepo := &Repo[T]{DB: tx}
-		return fn(txRepo)
+		return fn(ctx, tx, txRepo)
 	})
 }

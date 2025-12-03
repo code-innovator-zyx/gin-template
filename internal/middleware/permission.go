@@ -1,14 +1,14 @@
 package middleware
 
 import (
-	"gin-admin/internal/service/rbac"
+	"gin-admin/internal/services"
 	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
 // PermissionMiddleware 权限验证中间件
-func PermissionMiddleware() gin.HandlerFunc {
+func PermissionMiddleware(svrCtx *services.ServiceContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取当前用户ID
 		userID, exists := c.Get("uid")
@@ -17,16 +17,17 @@ func PermissionMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// 使用缓存服务检查权限
-		hasPermission, err := rbac.NewResourceService(c.Request.Context()).CheckUserPermission(userID.(uint), c.FullPath(), c.Request.Method)
+		has, err := svrCtx.CacheService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method, svrCtx.ResourceService.GetUserResources)
 		if err != nil {
-			logrus.Error("failed check user permission: ", err)
-			response.InternalServerError(c, "权限检查失败")
-			c.Abort()
-			return
+			has, err = svrCtx.ResourceService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method)
+			if nil != err {
+				logrus.Error("failed check user permission: ", err)
+				response.InternalServerError(c, "权限检查失败")
+				c.Abort()
+				return
+			}
 		}
-
-		if !hasPermission {
+		if !has {
 			response.Forbidden(c, "没有权限")
 			c.Abort()
 			return

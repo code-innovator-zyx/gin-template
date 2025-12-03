@@ -3,6 +3,7 @@ package middleware
 import (
 	"errors"
 	"gin-admin/internal/core"
+	"gin-admin/internal/services"
 	"gin-admin/pkg/jwt"
 	"gin-admin/pkg/response"
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ const (
 )
 
 // JWT 认证中间件
-func JWT() gin.HandlerFunc {
+func JWT(svrCtx *services.ServiceContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(ACCESSTOKEN_KEY)
 		if authHeader == "" {
@@ -34,7 +35,7 @@ func JWT() gin.HandlerFunc {
 		}
 
 		token := parts[1]
-		claims, err := jwt.GetJwtSvr().ParseAccessToken(c.Request.Context(), token)
+		claims, err := svrCtx.Jwt.ParseAccessToken(c.Request.Context(), token)
 		if err == nil {
 			// 没过期，直接放行
 			c.Set("uid", claims.UserID)
@@ -57,7 +58,7 @@ func JWT() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		tokenPair, errRefresh := jwt.GetJwtSvr().RefreshToken(c.Request.Context(), refreshToken)
+		tokenPair, errRefresh := svrCtx.Jwt.RefreshToken(c.Request.Context(), refreshToken)
 		if errRefresh != nil {
 			logrus.Error("failed to refresh jwt token :" + errRefresh.Error())
 			response.Unauthorized(c, errRefresh.Error())
@@ -72,7 +73,7 @@ func JWT() gin.HandlerFunc {
 			"",
 			false,
 			true)
-		claims, _ = jwt.GetJwtSvr().ParseAccessToken(c.Request.Context(), tokenPair.AccessToken)
+		claims, _ = svrCtx.Jwt.ParseAccessToken(c.Request.Context(), tokenPair.AccessToken)
 		c.Set("uid", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("sessionId", claims.SessionID)

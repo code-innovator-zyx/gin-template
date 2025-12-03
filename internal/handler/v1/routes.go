@@ -6,6 +6,7 @@ import (
 	"gin-admin/internal/handler/v1/rbac"
 	v1 "gin-admin/internal/logic/v1"
 	"gin-admin/internal/routegroup"
+	"gin-admin/internal/services"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -69,14 +70,14 @@ import (
 // @externalDocs.description    项目文档
 
 // @externalDocs.url            https://github.com/your-org/gin-admin/docs
-func RegisterRoutes(r *gin.Engine) {
+func RegisterRoutes(ctx *services.ServiceContext, r *gin.Engine) {
 	// API版本v1 使用authGroup 自动维护权限管理
 	apiV1 := routegroup.WrapGroup(r.Group("/api/v1"))
 
 	// 注册各个模块的路由
 	registerHealthRoutes(apiV1)
 	// 用户管理已整合到RBAC系统中
-	rbac.RegisterRBACRoutes(apiV1)
+	rbac.RegisterRBACRoutes(ctx, apiV1)
 	if core.MustGetConfig().App.EnableSwagger {
 		r.GET("/swagger/v1/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.InstanceName("v1")))
 	}

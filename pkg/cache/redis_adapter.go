@@ -32,7 +32,7 @@ type redisCache struct {
 }
 
 // NewRedisCache 创建Redis缓存实例
-func NewRedisCache(cfg RedisConfig) (Cache, error) {
+func NewRedisCache(cfg RedisConfig) (ICache, error) {
 	poolSize := cfg.PoolSize
 	if poolSize == 0 {
 		poolSize = 10

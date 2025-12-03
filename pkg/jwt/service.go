@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gin-admin/internal/config"
-	"gin-admin/internal/core"
-	"sync"
+	"gin-admin/pkg/cache"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -32,23 +31,15 @@ type Service interface {
 // =======================
 
 type JWTService struct {
-	config         *config.Jwt
+	config         config.Jwt
 	sessionManager SessionManager
 }
 
-var (
-	jwtSvr Service
-	once   sync.Once
-)
-
-func GetJwtSvr() Service {
-	once.Do(func() {
-		jwtSvr = &JWTService{
-			config:         core.MustGetConfig().Jwt,
-			sessionManager: NewCacheSessionManager(),
-		}
-	})
-	return jwtSvr
+func NewJwtService(cfg config.Jwt, cache cache.ICache) *JWTService {
+	return &JWTService{
+		config:         cfg,
+		sessionManager: NewCacheSessionManager(cache),
+	}
 }
 
 func (s *JWTService) GenerateTokenPair(ctx context.Context, userID uint, username, email string, opts ...TokenOption) (*TokenPair, error) {

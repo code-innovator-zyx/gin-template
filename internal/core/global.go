@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 	"gin-admin/internal/config"
-	"gin-admin/pkg/orm"
+	"gin-admin/pkg/components/orm"
 	"log"
 	"sync"
 

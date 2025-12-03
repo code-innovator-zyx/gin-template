@@ -33,7 +33,7 @@ type memoryCacheItem struct {
 }
 
 // NewMemoryCache 创建内存缓存实例
-func NewMemoryCache() Cache {
+func NewMemoryCache() ICache {
 	cache := &memoryCache{
 		data:     make(map[string]*memoryCacheItem),
 		stopChan: make(chan struct{}),

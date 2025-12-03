@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"gin-admin/pkg/cache"
 	"github.com/sirupsen/logrus"
 	"math/rand"
-	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
@@ -20,10 +19,10 @@ import (
 * @Package: 缓存服务 - 统一管理所有缓存操作
  */
 
-// CacheService 缓存服务接口
-type CacheService interface {
+// ICacheService 缓存服务接口
+type ICacheService interface {
 	// 权限相关缓存
-	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(uid uint) ([]rbac.Resource, error)) (bool, error)
+	CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error)
 	ClearUserPermissions(ctx context.Context, userID uint, ttl time.Duration, updateFn func() error) error
 	ClearMultipleUsersPermissions(ctx context.Context, userIDs []uint, ttl time.Duration, updateFn func() error) error
 	SetUserPermissions(ctx context.Context, userID uint, resources []rbac.Resource) error
@@ -41,23 +40,14 @@ type CacheService interface {
 
 // cacheService 缓存服务实现
 type cacheService struct {
-	client cache.Cache
+	client cache.ICache
 	sg     singleflight.Group // 防止缓存击穿（多个请求同时查询同一个不存在的key）
 }
 
-var (
-	cacheServiceOnce   sync.Once
-	globalCacheService CacheService
-)
-
-// GetCacheService 获取缓存服务单例（懒加载，线程安全）
-func GetCacheService() CacheService {
-	cacheServiceOnce.Do(func() {
-		globalCacheService = &cacheService{
-			client: cache.GetGlobalCache(),
-		}
-	})
-	return globalCacheService
+func NewCacheService(cache cache.ICache) ICacheService {
+	return &cacheService{
+		client: cache,
+	}
 }
 
 // ================================
@@ -92,7 +82,7 @@ const (
 // 1. 防穿透：缓存空权限（用户没有任何权限时也缓存）
 // 2. 防击穿：使用 singleflight 确保同一个 key 只有一个请求去查询数据库
 // 3. 防雪崩：TTL 添加随机偏移
-func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(uid uint) ([]rbac.Resource, error)) (bool, error) {
+func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error) {
 	if s.client == nil {
 		// 缓存不可用
 		return false, cache.ErrUnreachable
@@ -123,7 +113,7 @@ func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, pat
 			return nil, nil // 缓存已存在，直接返回
 		}
 		// 从数据库加载用户所有权限
-		resources, err := fn(userID)
+		resources, err := fn(ctx, userID)
 		if err != nil {
 			return nil, err
 		}

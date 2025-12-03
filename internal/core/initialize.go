@@ -2,7 +2,7 @@ package core
 
 import (
 	"gin-admin/pkg/cache"
-	"gin-admin/pkg/logger"
+	"gin-admin/pkg/components/logger"
 	"log"
 )
 

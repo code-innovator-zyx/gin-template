@@ -1,11 +1,9 @@
-package rbac
+package services
 
 import (
 	"context"
 	"fmt"
-	"gin-admin/internal/core"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/internal/service"
 	"gin-admin/pkg/consts"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -14,11 +12,10 @@ import (
 
 // rbacService RBAC权限服务
 type rbacService struct {
-	ctx context.Context
 }
 
-func NewRbacService(ctx context.Context) *rbacService {
-	return &rbacService{ctx: ctx}
+func NewRbacService() *rbacService {
+	return &rbacService{}
 }
 
 // ==================== RBAC 系统初始化 ====================
@@ -58,7 +55,7 @@ func (s *rbacService) InitializeRBAC(routes []ProtectedRoute, config *RBACInitCo
 		logrus.Info("RBAC 自动初始化已禁用")
 		return nil
 	}
-	db := core.MustNewDbWithContext(s.ctx)
+	db := SvcContext.Db
 
 	logrus.Info("开始初始化 RBAC 权限系统...")
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -92,7 +89,7 @@ func (s *rbacService) InitializeRBAC(routes []ProtectedRoute, config *RBACInitCo
 		if err := s.initializeAdminUser(tx, adminRole.ID, config); err != nil {
 			return fmt.Errorf("初始化管理员用户失败: %w", err)
 		}
-		service.GetCacheService().ClearAllPermissions(context.TODO())
+		_ = SvcContext.CacheService.ClearAllPermissions(context.TODO())
 		return nil
 	})
 

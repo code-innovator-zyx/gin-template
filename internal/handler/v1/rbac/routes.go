@@ -4,11 +4,12 @@ import (
 	"gin-admin/internal/logic/v1/rbac"
 	"gin-admin/internal/middleware"
 	"gin-admin/internal/routegroup"
+	"gin-admin/internal/services"
 )
 
 // RegisterRBACRoutes 注册RBAC相关路由
 // 使用 SetPermission 声明路由组所属的权限组，系统会自动完成资源绑定
-func RegisterRBACRoutes(api *routegroup.RouterGroup) {
+func RegisterRBACRoutes(ctx *services.ServiceContext, api *routegroup.RouterGroup) {
 	// 用户模块
 	userGroup := api.Group("/users")
 	{
@@ -16,7 +17,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		userGroup.Public().POST("/register", rbac.Register)
 		userGroup.Public().POST("/login", rbac.Login)
 		authGroup := userGroup.Group("")
-		authGroup.Use(middleware.JWT())
+		authGroup.Use(middleware.JWT(ctx))
 		{
 			// 需要登录但是不需要权限控制
 			authGroup.POST("/logout", rbac.Logout)
@@ -24,7 +25,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 		}
 		// 需要认证和权限 - 声明权限组
 		authUserGroup := userGroup.WithMeta("user:manage", "用户管理")
-		authUserGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
+		authUserGroup.Use(middleware.JWT(ctx), middleware.PermissionMiddleware(ctx))
 		{
 			authUserGroup.GET("/profile", rbac.GetProfile).WithMeta("profile", "查询当前用户信息")
 			authUserGroup.GET("", rbac.ListUser).WithMeta("list", "查询用户列表")
@@ -36,7 +37,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 
 	// 角色模块 - 声明权限组
 	roleGroup := api.Group("/roles").WithMeta("role:manage", "角色管理")
-	roleGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
+	roleGroup.Use(middleware.JWT(ctx), middleware.PermissionMiddleware(ctx))
 	{
 		roleGroup.GET("", rbac.GetRoles).WithMeta("list", "查询角色列表")
 		roleGroup.POST("", rbac.CreateRole).WithMeta("add", "创建角色")
@@ -48,7 +49,7 @@ func RegisterRBACRoutes(api *routegroup.RouterGroup) {
 
 	// 权限模块 - 声明权限组
 	permissionGroup := api.Group("/permissions").WithMeta("permission:manage", "权限管理")
-	permissionGroup.Use(middleware.JWT(), middleware.PermissionMiddleware())
+	permissionGroup.Use(middleware.JWT(ctx), middleware.PermissionMiddleware(ctx))
 	{
 		permissionGroup.GET("", rbac.GetPermissions).WithMeta("list", "获取权限列表")
 	}

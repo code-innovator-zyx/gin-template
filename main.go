@@ -7,6 +7,7 @@ import (
 	"gin-admin/internal/core"
 	"gin-admin/internal/handler"
 	_ "gin-admin/internal/model"
+	"gin-admin/internal/services"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -19,8 +20,10 @@ func main() {
 	// 初始化应用配置和依赖
 	core.Init()
 	cfg := core.MustGetConfig()
+	// 初始化内部服务
+	ctx := services.MustInitServiceContext(cfg)
 	// 初始化路由
-	r := handler.Init()
+	r := handler.Init(ctx)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

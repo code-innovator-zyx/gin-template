@@ -20,10 +20,14 @@ type SessionManager interface {
 	RemoveUserSessions(ctx context.Context, userID uint) error
 }
 type CacheSessionManager struct {
-	cache cache.Cache
+	cache cache.ICache
 }
 
-func NewCacheSessionManager() SessionManager {
+func NewCacheSessionManager(cache cache.ICache) SessionManager {
+	return &CacheSessionManager{cache: cache}
+}
+
+func NewSessionManager() SessionManager {
 	return &CacheSessionManager{cache: cache.GetGlobalCache()}
 }
 

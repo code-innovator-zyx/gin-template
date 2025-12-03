@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 	"gin-admin/pkg/cache"
-	"gin-admin/pkg/logger"
-	"gin-admin/pkg/orm"
+	"gin-admin/pkg/components/logger"
+	"gin-admin/pkg/components/orm"
 	"time"
 
 	"github.com/gin-gonic/gin"
