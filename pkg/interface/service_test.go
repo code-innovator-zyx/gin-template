@@ -2,11 +2,11 @@ package _interface
 
 import (
 	"context"
+	cache2 "gin-admin/pkg/components/cache"
 	"gorm.io/driver/mysql"
 	"testing"
 	"time"
 
-	"gin-admin/pkg/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -21,7 +21,7 @@ import (
  */
 
 // setupTestService 创建测试 Service
-func setupTestService(t *testing.T) (*Service[TestUser], *gorm.DB, cache.Cache) {
+func setupTestService(t *testing.T) (*Service[TestUser], *gorm.DB, cache2.ICache) {
 	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
 	require.NoError(t, err)
 
@@ -29,16 +29,9 @@ func setupTestService(t *testing.T) (*Service[TestUser], *gorm.DB, cache.Cache) 
 	require.NoError(t, err)
 
 	// 使用内存缓存
-	cacheInstance, err := cache.NewRedisCache(cache.RedisConfig{
-		Host:     "127.0.0.1",
-		Port:     6379,
-		Password: "123456",
-		DB:       0,
-		PoolSize: 10,
-	})
+	cacheInstance := cache2.NewMemoryCache()
 	require.NoError(t, err)
-	repo := NewRepo[TestUser](db)
-	service := NewService[TestUser](repo, cacheInstance)
+	service := NewService[TestUser](db, cacheInstance)
 
 	return service, db, cacheInstance
 }
@@ -312,7 +305,7 @@ func TestService_Transaction_ClearCache(t *testing.T) {
 		assert.Equal(t, 30, result1.Age)
 
 		// 执行事务
-		err := service.Transaction(ctx, func(txRepo IRepo[TestUser]) error {
+		err := service.Transaction(ctx, func(ctx context.Context, tx *gorm.DB, txRepo IRepo[TestUser]) error {
 			return txRepo.UpdateByID(ctx, user.ID, map[string]interface{}{
 				"age": 70,
 			})
@@ -330,9 +323,8 @@ func TestService_WithoutCache(t *testing.T) {
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	db.AutoMigrate(&TestUser{})
 
-	repo := NewRepo[TestUser](db)
 	// 传入 nil 缓存
-	service := NewService[TestUser](repo, nil)
+	service := NewService[TestUser](db, nil)
 	ctx := context.Background()
 
 	user := &TestUser{Username: "nocache", Email: "nocache@example.com", Age: 40}

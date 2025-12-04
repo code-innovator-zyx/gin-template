@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/cache"
 	"gorm.io/gorm"
 	"time"
 )
@@ -41,8 +41,6 @@ func NewService[T IModel](db *gorm.DB, cache cache.ICache) *Service[T] {
 		cacheTTL: 5 * time.Minute,
 	}
 }
-
-// ==================== 内部辅助方法 ====================
 
 // cacheKeyPrefix 缓存键前缀
 func (s *Service[T]) cacheKeyPrefix() string {

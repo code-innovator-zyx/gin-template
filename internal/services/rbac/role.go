@@ -2,7 +2,7 @@ package rbac
 
 import (
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/cache"
 	_interface "gin-admin/pkg/interface"
 	"gorm.io/gorm"
 )

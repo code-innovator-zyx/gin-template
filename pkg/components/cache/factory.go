@@ -15,12 +15,12 @@ import (
 func NewCache(client *redis.Client) ICache {
 	if client == nil {
 		logrus.Info("未配置缓存，使用默认内存缓存")
-		return NewMemoryCache()
+		return NewShardedMemoryCache(0)
 	}
 	cache, err := NewRedisCache(client)
 	if err != nil {
 		logrus.Errorf("初始化redis 缓存失败，降级为内存缓存:%v", err)
-		return NewMemoryCache()
+		return NewShardedMemoryCache(0)
 	}
 	return cache
 }

@@ -2,7 +2,7 @@ package _interface
 
 import (
 	"context"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +40,7 @@ func (u TestUser) SetID(id uint) {
 
 // setupTestDB 创建测试数据库
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
 	// 自动迁移
@@ -415,17 +415,17 @@ func TestRepo_Exists(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("存在的记录", func(t *testing.T) {
-		exists, err := repo.Exists(ctx, map[string]interface{}{
+		exists, err := repo.Exists(ctx, WithConditions(map[string]interface{}{
 			"username": "user1",
-		})
+		}))
 		assert.NoError(t, err)
 		assert.True(t, exists)
 	})
 
 	t.Run("不存在的记录", func(t *testing.T) {
-		exists, err := repo.Exists(ctx, map[string]interface{}{
+		exists, err := repo.Exists(ctx, WithConditions(map[string]interface{}{
 			"username": "nonexistent",
-		})
+		}))
 		assert.NoError(t, err)
 		assert.False(t, exists)
 	})
@@ -488,7 +488,7 @@ func TestRepo_Transaction(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("事务成功提交", func(t *testing.T) {
-		err := repo.Transaction(ctx, func(txRepo IRepo[TestUser]) error {
+		err := repo.Transaction(ctx, func(ctx context.Context, db *gorm.DB, txRepo IRepo[TestUser]) error {
 			user1 := &TestUser{Username: "tx_user1", Email: "tx1@example.com"}
 			if err := txRepo.Create(ctx, user1); err != nil {
 				return err
@@ -512,7 +512,7 @@ func TestRepo_Transaction(t *testing.T) {
 		db := setupTestDB(t)
 		repo := NewRepo[TestUser](db)
 
-		err := repo.Transaction(ctx, func(txRepo IRepo[TestUser]) error {
+		err := repo.Transaction(ctx, func(ctx context.Context, db *gorm.DB, txRepo IRepo[TestUser]) error {
 			user := &TestUser{Username: "rollback_user", Email: "rollback@example.com"}
 			if err := txRepo.Create(ctx, user); err != nil {
 				return err

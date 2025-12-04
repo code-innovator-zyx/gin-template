@@ -3,7 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
-	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/cache"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -156,6 +156,13 @@ func (s *JWTService) ParseAccessToken(ctx context.Context, tokenString string) (
 		if claims.TokenType != TokenTypeAccess {
 			return nil, ErrInvalidToken
 		}
+
+		// 验证 Session 是否有效
+		session := s.sessionManager.GetSession(ctx, claims.SessionID)
+		if session == nil || session.Revoked {
+			return nil, ErrSessionInvalid
+		}
+
 		return claims, nil
 	}
 	return nil, nil

@@ -41,7 +41,6 @@ func NewMemoryCache() ICache {
 	// 启动过期清理
 	go cache.cleanupExpired()
 
-	logrus.Info("内存缓存初始化成功")
 	return cache
 }
 
@@ -166,16 +165,16 @@ func (m *memoryCache) SIsMember(ctx context.Context, key string, member interfac
 }
 
 // SMembers 获取集合所有成员
-func (m *memoryCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
+func (m *memoryCache) SMembers(ctx context.Context, key string) ([]string, error) {
 	m.mu.RLock()
 	item, exists := m.data[key]
 	m.mu.RUnlock()
 
 	if !exists || !item.isSet {
-		return []interface{}{}, nil
+		return nil, nil
 	}
 
-	members := make([]interface{}, 0, len(item.setData))
+	members := make([]string, 0, len(item.setData))
 	for member := range item.setData {
 		members = append(members, member)
 	}
@@ -310,7 +309,6 @@ func (m *memoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 // Pipeline 创建管道
 func (m *memoryCache) Pipeline() Pipeline {
 	return &memoryPipeline{
-		cache:   m,
 		cmds:    make([]memoryPipelineCmd, 0),
 		results: make([]interface{}, 0),
 	}
@@ -367,279 +365,4 @@ func (m *memoryCache) cleanupExpired() {
 			return
 		}
 	}
-}
-
-// ================================
-// Pipeline 实现
-// ================================
-
-type memoryPipelineCmd struct {
-	cmdType string
-	key     string
-	keys    []string
-	value   interface{}   // 用于 set 或 get
-	member  interface{}   // 用于集合操作
-	ttl     time.Duration // 用于 set 或 expire
-	members []interface{} // 用于 sadd 或 srem
-}
-
-type memoryPipeline struct {
-	cache   *memoryCache
-	cmds    []memoryPipelineCmd
-	results []interface{}
-	mu      sync.Mutex
-}
-
-func (p *memoryPipeline) Get(ctx context.Context, key string, dest interface{}) StatusCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "get",
-		key:     key,
-		value:   dest,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryStatusCmd{pipeline: p, index: idx}
-}
-
-func (p *memoryPipeline) SAdd(ctx context.Context, key string, members ...interface{}) IntCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	// 修复：使用 members 字段传递成员
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "sadd",
-		key:     key,
-		members: members,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryIntCmd{pipeline: p, index: idx}
-}
-func (p *memoryPipeline) Del(ctx context.Context, keys ...string) IntCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "del",
-		keys:    keys,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryIntCmd{pipeline: p, index: idx}
-}
-func (p *memoryPipeline) SRem(ctx context.Context, key string, members ...interface{}) IntCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "srem",
-		key:     key,
-		members: members,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryIntCmd{pipeline: p, index: idx}
-}
-func (p *memoryPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) StatusCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "set",
-		key:     key,
-		value:   value,
-		ttl:     ttl,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryStatusCmd{pipeline: p, index: idx}
-}
-
-func (p *memoryPipeline) Exists(ctx context.Context, key string) IntCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "exists",
-		key:     key,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryIntCmd{pipeline: p, index: idx}
-}
-
-func (p *memoryPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "ismember",
-		key:     key,
-		member:  member,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryBoolCmd{pipeline: p, index: idx}
-}
-
-func (p *memoryPipeline) Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	idx := len(p.cmds)
-	p.cmds = append(p.cmds, memoryPipelineCmd{
-		cmdType: "expire",
-		key:     key,
-		ttl:     ttl,
-	})
-	p.results = append(p.results, nil)
-
-	return &memoryBoolCmd{pipeline: p, index: idx}
-}
-
-func (p *memoryPipeline) Exec(ctx context.Context) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	for i, cmd := range p.cmds {
-		switch cmd.cmdType {
-		case "exists":
-			exists, _ := p.cache.Exists(ctx, cmd.key)
-			if exists {
-				p.results[i] = int64(1)
-			} else {
-				p.results[i] = int64(0)
-			}
-		case "ismember":
-			isMember, _ := p.cache.SIsMember(ctx, cmd.key, cmd.member)
-			p.results[i] = isMember
-
-		case "expire":
-			err := p.cache.Expire(ctx, cmd.key, cmd.ttl)
-			p.results[i] = err == nil
-
-		case "set":
-			err := p.cache.Set(ctx, cmd.key, cmd.value, cmd.ttl)
-			if err != nil {
-				p.results[i] = err.Error()
-			} else {
-				p.results[i] = "OK"
-			}
-
-		case "sadd":
-			err := p.cache.SAdd(ctx, cmd.key, cmd.members...)
-			if err != nil {
-				p.results[i] = err
-			} else {
-				// 返回添加成员数
-				p.results[i] = int64(len(cmd.members))
-			}
-
-		case "get":
-			// cmd.value is dest interface{}
-			err := p.cache.Get(ctx, cmd.key, cmd.value)
-			if err != nil {
-				p.results[i] = err
-			} else {
-				p.results[i] = "OK"
-			}
-		case "del":
-			err := p.cache.Delete(ctx, cmd.keys...)
-			if err != nil {
-				p.results[i] = err
-			} else {
-				// 返回删除的数量
-				p.results[i] = int64(len(cmd.keys))
-			}
-		case "srem":
-			err := p.cache.SRem(ctx, cmd.key, cmd.members...)
-			if err != nil {
-				p.results[i] = err
-			} else {
-				// 返回删除的数量
-				p.results[i] = int64(len(cmd.members))
-			}
-		}
-	}
-
-	return nil
-}
-
-type memoryBoolCmd struct {
-	pipeline *memoryPipeline
-	index    int
-	result   bool
-}
-
-func (c *memoryBoolCmd) Result() (bool, error) {
-	if c.pipeline != nil {
-		c.pipeline.mu.Lock()
-		defer c.pipeline.mu.Unlock()
-
-		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
-			switch val := c.pipeline.results[c.index].(type) {
-			case bool:
-				return val, nil
-			case error:
-				return false, val
-			}
-		}
-	}
-	return c.result, nil
-}
-
-type memoryStatusCmd struct {
-	pipeline *memoryPipeline
-	index    int
-	result   string
-}
-
-func (c *memoryStatusCmd) Result() (string, error) {
-	if c.pipeline != nil {
-		c.pipeline.mu.Lock()
-		defer c.pipeline.mu.Unlock()
-
-		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
-			switch val := c.pipeline.results[c.index].(type) {
-			case string:
-				return val, nil
-			case error:
-				return "", val
-			}
-		}
-	}
-	return c.result, nil
-}
-
-type memoryIntCmd struct {
-	pipeline *memoryPipeline
-	index    int
-	result   int64
-}
-
-func (c *memoryIntCmd) Result() (int64, error) {
-	if c.pipeline != nil {
-		c.pipeline.mu.Lock()
-		defer c.pipeline.mu.Unlock()
-
-		if c.index < len(c.pipeline.results) && c.pipeline.results[c.index] != nil {
-			switch val := c.pipeline.results[c.index].(type) {
-			case int64:
-				return val, nil
-			case error:
-				return 0, val
-			}
-		}
-	}
-	return c.result, nil
 }

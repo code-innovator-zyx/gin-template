@@ -29,7 +29,7 @@ type ICache interface {
 	SAdd(ctx context.Context, key string, members ...interface{}) error
 	SRem(ctx context.Context, key string, members ...interface{}) error
 	SIsMember(ctx context.Context, key string, member interface{}) (bool, error)
-	SMembers(ctx context.Context, key string) ([]interface{}, error)
+	SMembers(ctx context.Context, key string) ([]string, error)
 
 	// 计数器操作
 	Incr(ctx context.Context, key string) (int64, error)

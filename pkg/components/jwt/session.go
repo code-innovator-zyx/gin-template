@@ -2,9 +2,8 @@ package jwt
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/cache"
 	"time"
 )
 
@@ -37,13 +36,15 @@ func (m *CacheSessionManager) userSessionsKey(uid uint) string {
 
 // SaveSession 保存 session
 func (m *CacheSessionManager) SaveSession(ctx context.Context, s *SessionInfo) error {
-	data, _ := json.Marshal(s)
+	if m.cache == nil {
+		return nil // 没有缓存时直接返回
+	}
 
 	ttl := time.Until(s.ExpiresAt)
 	key := m.sessionKey(s.SessionID)
 
 	pipe := m.cache.Pipeline()
-	pipe.Set(ctx, key, data, ttl)
+	pipe.Set(ctx, key, s, ttl) // 直接传递结构体，让 cache.Set 处理序列化
 	pipe.SAdd(ctx, m.userSessionsKey(s.UserID), s.SessionID)
 	pipe.Expire(ctx, m.userSessionsKey(s.UserID), ttl)
 
@@ -52,6 +53,10 @@ func (m *CacheSessionManager) SaveSession(ctx context.Context, s *SessionInfo) e
 }
 
 func (m *CacheSessionManager) GetSession(ctx context.Context, sessionID interface{}) *SessionInfo {
+	if m.cache == nil {
+		return nil
+	}
+
 	var s SessionInfo
 	err := m.cache.Get(ctx, m.sessionKey(sessionID), &s)
 	if err != nil {
@@ -61,6 +66,10 @@ func (m *CacheSessionManager) GetSession(ctx context.Context, sessionID interfac
 }
 
 func (m *CacheSessionManager) RemoveSession(ctx context.Context, sessionID string) error {
+	if m.cache == nil {
+		return nil
+	}
+
 	s := m.GetSession(ctx, sessionID)
 	if s == nil {
 		return nil
@@ -73,6 +82,10 @@ func (m *CacheSessionManager) RemoveSession(ctx context.Context, sessionID strin
 
 // UpdateRefreshHash 刷新token 更新 sessionId的新token 防重入
 func (m *CacheSessionManager) UpdateRefreshHash(ctx context.Context, sessionID, hash string) error {
+	if m.cache == nil {
+		return nil
+	}
+
 	s := m.GetSession(ctx, sessionID)
 	if s == nil {
 		return nil
@@ -84,6 +97,10 @@ func (m *CacheSessionManager) UpdateRefreshHash(ctx context.Context, sessionID, 
 
 // GetUserSessions 获取用户所有会话
 func (m *CacheSessionManager) GetUserSessions(ctx context.Context, userID uint) ([]*SessionInfo, error) {
+	if m.cache == nil {
+		return nil, nil
+	}
+
 	keys, err := m.cache.SMembers(ctx, m.userSessionsKey(userID))
 	if err != nil {
 		return nil, err

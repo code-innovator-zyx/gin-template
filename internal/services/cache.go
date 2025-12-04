@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/cache"
+	"gin-admin/pkg/components/cache"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"time"

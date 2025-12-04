@@ -3,7 +3,7 @@ package services
 import (
 	"gin-admin/internal/config"
 	rbac2 "gin-admin/internal/services/rbac"
-	"gin-admin/pkg/cache"
+	cache2 "gin-admin/pkg/components/cache"
 	"gin-admin/pkg/components/jwt"
 	"gin-admin/pkg/components/orm"
 	redis2 "gin-admin/pkg/components/redis"
@@ -26,7 +26,7 @@ type ServiceContext struct {
 	Config *config.AppConfig
 	// components
 	Db    *gorm.DB
-	Cache cache.ICache
+	Cache cache2.ICache
 	Jwt   jwt.Service
 	// 服务缓存
 	CacheService ICacheService
@@ -47,7 +47,7 @@ func MustInitServiceContext(c *config.AppConfig) *ServiceContext {
 		redisClient, err = redis2.NewClient(*c.Cache)
 	}
 	// 初始化缓存
-	cacheInstance := cache.NewCache(redisClient)
+	cacheInstance := cache2.NewCache(redisClient)
 
 	SvcContext = &ServiceContext{
 		Config:            c,

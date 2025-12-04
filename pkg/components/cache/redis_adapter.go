@@ -84,13 +84,13 @@ func (r *redisCache) SIsMember(ctx context.Context, key string, member interface
 }
 
 // SMembers 获取集合所有成员
-func (r *redisCache) SMembers(ctx context.Context, key string) ([]interface{}, error) {
+func (r *redisCache) SMembers(ctx context.Context, key string) ([]string, error) {
 	result, err := r.client.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	members := make([]interface{}, len(result))
+	members := make([]string, len(result))
 	for i, v := range result {
 		members[i] = v
 	}
