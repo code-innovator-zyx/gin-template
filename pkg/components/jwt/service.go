@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"golang.org/x/sync/singleflight"
 )
 
 const TokenPrefix string = "Bearer"
@@ -32,6 +33,7 @@ type Service interface {
 type JWTService struct {
 	config         Config
 	sessionManager SessionManager
+	refreshGroup   singleflight.Group // 防止并发刷新同一个 refresh token
 }
 
 func NewJwtService(cfg Config, cache cache.ICache) *JWTService {
@@ -164,6 +166,23 @@ func (s *JWTService) ParseAccessToken(ctx context.Context, tokenString string) (
 // =======================
 
 func (s *JWTService) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
+	// 使用 singleflight 防止并发刷新同一个 refresh token
+	// 场景：前端同时发送多个请求，Access Token 都过期了
+	// 问题：多个请求同时刷新会导致 token rotation 检测为 stolen
+	// 解决：使用 refresh token 作为 key，确保同时只有一个刷新请求执行
+	result, err, _ := s.refreshGroup.Do(refreshToken, func() (interface{}, error) {
+		return s.doRefreshToken(ctx, refreshToken)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result.(*TokenPair), nil
+}
+
+// doRefreshToken
+func (s *JWTService) doRefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
 	token, err := jwt.ParseWithClaims(refreshToken, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(s.config.Secret), nil
 	})

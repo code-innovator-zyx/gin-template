@@ -13,7 +13,7 @@ import (
 type User struct {
 	BaseModel
 	Username string            `gorm:"size:50;not null;uniqueIndex" json:"username" example:"johndoe" description:"用户名"`
-	Password string            `gorm:"size:100;not null" json:"-" description:"密码"`
+	Password string            `gorm:"size:100;not null" json:"password" description:"密码"`
 	Email    string            `gorm:"size:100;uniqueIndex" json:"email" example:"john@example.com" description:"邮箱"`
 	Avatar   string            `gorm:"size:255" json:"avatar" example:"https://example.com/avatar.jpg" description:"头像URL"`
 	BuiltIn  bool              `gorm:"default:false" json:"built_in" description:"保护内置用户不被外部删除"`

@@ -105,7 +105,7 @@ func (s *Service[T]) ClearCache(ctx context.Context) error {
 	return s.cache.DeletePrefix(ctx, s.cacheKeyPrefix())
 }
 
-// serializeOpts 序列化查询选项为字符串（用于缓存键，使用 MD5 缩短长度）
+// serializeOpts 序列化查询选项为字符串
 func (s *Service[T]) serializeOpts(opts ...QueryOption) string {
 	if len(opts) == 0 {
 		return "default"
@@ -336,6 +336,64 @@ func (s *Service[T]) FirstOrCreate(ctx context.Context, condition map[string]int
 	}
 
 	// 可能创建了新记录，清空列表缓存
+	s.invalidateListCache(ctx)
+	return nil
+}
+
+// ==================== 关联操作（清除相关缓存）====================
+
+// ReplaceAssociation 替换关联（多对多关系）
+func (s *Service[T]) ReplaceAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	err := s.Repo.ReplaceAssociation(ctx, entity, association, values)
+	if err != nil {
+		return err
+	}
+
+	// 替换关联后，清除该实体的缓存
+	id := (*entity).GetID()
+	s.invalidateIDCache(ctx, id)
+	s.invalidateListCache(ctx)
+	return nil
+}
+
+// AppendAssociation 追加关联（多对多关系）
+func (s *Service[T]) AppendAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	err := s.Repo.AppendAssociation(ctx, entity, association, values)
+	if err != nil {
+		return err
+	}
+
+	// 追加关联后，清除该实体的缓存
+	id := (*entity).GetID()
+	s.invalidateIDCache(ctx, id)
+	s.invalidateListCache(ctx)
+	return nil
+}
+
+// DeleteAssociation 删除关联（多对多关系）
+func (s *Service[T]) DeleteAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	err := s.Repo.DeleteAssociation(ctx, entity, association, values)
+	if err != nil {
+		return err
+	}
+
+	// 删除关联后，清除该实体的缓存
+	id := (*entity).GetID()
+	s.invalidateIDCache(ctx, id)
+	s.invalidateListCache(ctx)
+	return nil
+}
+
+// ClearAssociation 清空关联（多对多关系）
+func (s *Service[T]) ClearAssociation(ctx context.Context, entity *T, association string) error {
+	err := s.Repo.ClearAssociation(ctx, entity, association)
+	if err != nil {
+		return err
+	}
+
+	// 清空关联后，清除该实体的缓存
+	id := (*entity).GetID()
+	s.invalidateIDCache(ctx, id)
 	s.invalidateListCache(ctx)
 	return nil
 }

@@ -174,6 +174,24 @@ type IRepo[T IModel] interface {
 	// FirstOrCreate 查找或创建(不存在则创建)
 	FirstOrCreate(ctx context.Context, condition map[string]interface{}, entity *T) error
 
+	// ==================== 关联操作 ====================
+
+	// ReplaceAssociation 替换关联（多对多关系）
+	// 示例: repo.ReplaceAssociation(ctx, &role, "Resources", resources)
+	ReplaceAssociation(ctx context.Context, entity *T, association string, values interface{}) error
+
+	// AppendAssociation 追加关联（多对多关系）
+	// 示例: repo.AppendAssociation(ctx, &user, "Roles", roles)
+	AppendAssociation(ctx context.Context, entity *T, association string, values interface{}) error
+
+	// DeleteAssociation 删除关联（多对多关系）
+	// 示例: repo.DeleteAssociation(ctx, &user, "Roles", roles)
+	DeleteAssociation(ctx context.Context, entity *T, association string, values interface{}) error
+
+	// ClearAssociation 清空关联（多对多关系）
+	// 示例: repo.ClearAssociation(ctx, &role, "Resources")
+	ClearAssociation(ctx context.Context, entity *T, association string) error
+
 	// ==================== 事务支持 ====================
 
 	// Transaction 执行事务
@@ -402,14 +420,40 @@ func (r *Repo[T]) ExistsByID(ctx context.Context, id uint) (bool, error) {
 // ==================== 查找或创建 ====================
 
 func (r *Repo[T]) FirstOrCreate(ctx context.Context, condition map[string]interface{}, entity *T) error {
-	return r.DB.WithContext(ctx).Where(condition).FirstOrCreate(entity).Error
+	return r.DB.WithContext(ctx).Where(condition).Assign(entity).FirstOrCreate(entity).Error
 }
 
-// ==================== 事务 ====================
+// =======================
+// 关联操作
+// =======================
+
+// ReplaceAssociation 替换关联（多对多关系）
+func (r *Repo[T]) ReplaceAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	return r.DB.WithContext(ctx).Model(entity).Association(association).Replace(values)
+}
+
+// AppendAssociation 追加关联（多对多关系）
+func (r *Repo[T]) AppendAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	return r.DB.WithContext(ctx).Model(entity).Association(association).Append(values)
+}
+
+// DeleteAssociation 删除关联（多对多关系）
+func (r *Repo[T]) DeleteAssociation(ctx context.Context, entity *T, association string, values interface{}) error {
+	return r.DB.WithContext(ctx).Model(entity).Association(association).Delete(values)
+}
+
+// ClearAssociation 清空关联（多对多关系）
+func (r *Repo[T]) ClearAssociation(ctx context.Context, entity *T, association string) error {
+	return r.DB.WithContext(ctx).Model(entity).Association(association).Clear()
+}
+
+// =======================
+// 事务支持
+// =======================
 
 func (r *Repo[T]) Transaction(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB, txRepo IRepo[T]) error) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		txRepo := &Repo[T]{DB: tx}
+		txRepo := NewRepo[T](tx)
 		return fn(ctx, tx, txRepo)
 	})
 }

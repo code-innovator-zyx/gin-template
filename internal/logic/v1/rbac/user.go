@@ -74,7 +74,7 @@ func Login(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		}
 		user, err := svcCtx.UserService.FindOne(c, _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 			return db.Where("username = ? OR email = ?", req.Account, req.Account)
-		}), _interface.WithSelectFields("password"))
+		}))
 		if err != nil {
 			response.Fail(c, 500, err.Error())
 			return
@@ -161,7 +161,7 @@ func GetProfile(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.Fail(c, 500, "获取用户资源失败: "+err.Error())
 			return
 		}
-
+		user.Password = ""
 		// 组装用户完整资料
 		profile := types.UserProfile{
 			User:        user,

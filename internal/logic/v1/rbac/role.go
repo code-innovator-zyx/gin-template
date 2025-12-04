@@ -247,9 +247,9 @@ func AssignRoleResources(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.Fail(c, 500, err.Error())
 			return
 		}
+		// 相关用户的权限缓存要清理
 		err = svcCtx.CacheService.ClearMultipleUsersPermissions(c.Request.Context(), userIds, time.Millisecond*50, func() error {
-			tx := svcCtx.RoleService.DB.WithContext(c.Request.Context())
-			return tx.Model(&role).Association("Resources").Replace(resources)
+			return svcCtx.RoleService.ReplaceAssociation(c.Request.Context(), role, "Resources", resources)
 		})
 		if err != nil {
 			response.Fail(c, 500, err.Error())

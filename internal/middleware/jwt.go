@@ -50,7 +50,7 @@ func JWT(svrCtx *services.ServiceContext) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// 超时了，刷新token
+		// 过期了，刷新token
 		refreshToken, errCookie := c.Cookie(REFRESHTOKEN_KEY)
 		if errCookie != nil {
 			response.Unauthorized(c, "登录已过期，请重新登录")

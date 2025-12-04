@@ -17,12 +17,12 @@ import (
 
 // ResourceService 资源服务
 type ResourceService struct {
-	_interface.Service[*rbac.Resource]
+	_interface.Service[rbac.Resource]
 }
 
 func NewResourceService(db *gorm.DB, cache cache.ICache) *ResourceService {
 	return &ResourceService{
-		Service: *_interface.NewService[*rbac.Resource](db, cache),
+		Service: *_interface.NewService[rbac.Resource](db, cache),
 	}
 }
 func (s *ResourceService) CheckUserPermission(ctx context.Context, userID uint, path string, method string) (bool, error) {
