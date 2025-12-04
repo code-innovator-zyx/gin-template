@@ -20,8 +20,6 @@ import (
  * @Package: 分片内存缓存适配器
  */
 
-var DefaultShardCount = runtime.NumCPU() * 4
-
 //go:linkname stringHash runtime.stringHash
 func stringHash(s string, seed uintptr) uintptr
 
@@ -53,7 +51,7 @@ type shardedMemoryCache struct {
 // NewShardedMemoryCache 创建分片内存缓存实例
 func NewShardedMemoryCache(shardCount int) ICache {
 	if shardCount <= 0 {
-		shardCount = DefaultShardCount
+		shardCount = runtime.NumCPU() * 4
 	}
 
 	// 确保分片数是 2 的幂次方
