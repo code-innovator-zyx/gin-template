@@ -34,10 +34,7 @@ type ServiceContext struct {
 	// 服务缓存
 	CacheService ICacheService
 	// RBAC Services
-	UserService       *rbac2.UserService
-	RoleService       *rbac2.RoleService
-	PermissionService *rbac2.PermissionService
-	ResourceService   *rbac2.ResourceService
+	Rbac *rbac2.Context
 }
 
 func MustInitServiceContext(c *config.AppConfig) *ServiceContext {
@@ -53,16 +50,13 @@ func MustInitServiceContext(c *config.AppConfig) *ServiceContext {
 	cacheInstance := cache2.NewCache(redisClient)
 
 	SvcContext = &ServiceContext{
-		Config:            c,
-		Db:                db,
-		Cache:             cacheInstance,
-		Uploader:          uploader.NewUploader(*c.Upload, c.Server.Port),
-		CacheService:      NewCacheService(cacheInstance),
-		Jwt:               jwt.NewJwtService(*c.Jwt, cacheInstance),
-		UserService:       rbac2.NewUserService(db, cacheInstance),
-		RoleService:       rbac2.NewRoleService(db, cacheInstance),
-		PermissionService: rbac2.NewPermissionService(db, cacheInstance),
-		ResourceService:   rbac2.NewResourceService(db, cacheInstance),
+		Config:       c,
+		Db:           db,
+		Cache:        cacheInstance,
+		Uploader:     uploader.NewUploader(*c.Upload, c.Server.Port),
+		CacheService: NewCacheService(cacheInstance),
+		Jwt:          jwt.NewJwtService(*c.Jwt, cacheInstance),
+		Rbac:         rbac2.NewContext(db, cacheInstance),
 	}
 	return SvcContext
 }

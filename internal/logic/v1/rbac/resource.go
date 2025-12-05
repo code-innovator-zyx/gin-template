@@ -27,7 +27,7 @@ import (
 // @Router /permissions [get]
 func GetPermissions(svcCtx *services.ServiceContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		permissions, err := svcCtx.PermissionService.List(c.Request.Context(), _interface.WithPreloads("Resources"))
+		permissions, err := svcCtx.Rbac.PermissionService.List(c.Request.Context(), _interface.WithPreloads("Resources"))
 		if err != nil {
 			response.InternalServerError(c, "获取权限列表失败")
 			return

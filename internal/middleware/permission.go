@@ -17,9 +17,9 @@ func PermissionMiddleware(svrCtx *services.ServiceContext) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		has, err := svrCtx.CacheService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method, svrCtx.ResourceService.GetUserResources)
+		has, err := svrCtx.CacheService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method, svrCtx.Rbac.ResourceService.GetUserResources)
 		if err != nil {
-			has, err = svrCtx.ResourceService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method)
+			has, err = svrCtx.Rbac.ResourceService.CheckUserPermission(c.Request.Context(), userID.(uint), c.FullPath(), c.Request.Method)
 			if nil != err {
 				logrus.Error("failed check user permission: ", err)
 				response.InternalServerError(c, "权限检查失败")

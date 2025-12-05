@@ -35,7 +35,7 @@ func CreateRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		exist, err := svcCtx.RoleService.Exists(c.Request.Context(), _interface.WithConditions(map[string]interface{}{"name": request.Name}))
+		exist, err := svcCtx.Rbac.RoleService.Exists(c.Request.Context(), _interface.WithConditions(map[string]interface{}{"name": request.Name}))
 		if err != nil {
 			response.Fail(c, 500, err.Error())
 			return
@@ -49,7 +49,7 @@ func CreateRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			Description: request.Description,
 			Status:      request.Status,
 		}
-		if err = svcCtx.RoleService.Create(c.Request.Context(), role); err != nil {
+		if err = svcCtx.Rbac.RoleService.Create(c.Request.Context(), role); err != nil {
 			response.Fail(c, 500, err.Error())
 			return
 		}
@@ -77,7 +77,7 @@ func GetRoles(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		result, err := svcCtx.RoleService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize))
+		result, err := svcCtx.Rbac.RoleService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize))
 		if err != nil {
 			response.Fail(c, 500, "获取角色列表失败")
 			return
@@ -106,7 +106,7 @@ func GetRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, "无效的角色ID")
 			return
 		}
-		role, err := svcCtx.RoleService.FindByID(c.Request.Context(), uint(id), _interface.WithPreloads("Resources"))
+		role, err := svcCtx.Rbac.RoleService.FindByID(c.Request.Context(), uint(id), _interface.WithPreloads("Resources"))
 		if err != nil {
 			response.Fail(c, 500, err.Error())
 			return
@@ -143,14 +143,14 @@ func UpdateRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			return
 		}
 
-		role, err := svcCtx.RoleService.FindByID(c.Request.Context(), uint(id))
+		role, err := svcCtx.Rbac.RoleService.FindByID(c.Request.Context(), uint(id))
 		if err != nil {
 			logrus.Errorf("failed to find role by id %d, %v", id, err)
 			response.Fail(c, 500, err.Error())
 			return
 		}
 		if request.Name != "" && request.Name != role.Name {
-			exist, err := svcCtx.RoleService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+			exist, err := svcCtx.Rbac.RoleService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 				return db.Where("name = ? AND id <> ?", request.Name, id)
 			}))
 			if err != nil {
@@ -163,7 +163,7 @@ func UpdateRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 				return
 			}
 		}
-		err = svcCtx.RoleService.UpdateByID(c.Request.Context(), uint(id), map[string]interface{}{
+		err = svcCtx.Rbac.RoleService.UpdateByID(c.Request.Context(), uint(id), map[string]interface{}{
 			"name":        request.Name,
 			"description": request.Description,
 			"status":      request.Status,
@@ -196,7 +196,7 @@ func DeleteRole(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, "无效的角色ID")
 			return
 		}
-		if err = svcCtx.RoleService.DeleteByID(c.Request.Context(), uint(id)); err != nil {
+		if err = svcCtx.Rbac.RoleService.DeleteByID(c.Request.Context(), uint(id)); err != nil {
 			response.Fail(c, 500, err.Error())
 			return
 		}
@@ -229,19 +229,19 @@ func AssignRoleResources(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		role, err := svcCtx.RoleService.FindByID(c.Request.Context(), uint(id))
+		role, err := svcCtx.Rbac.RoleService.FindByID(c.Request.Context(), uint(id))
 		if err != nil {
 			logrus.Errorf("failed to find role by id %d, %v", id, err)
 			response.Fail(c, 500, err.Error())
 			return
 		}
-		resources, err := svcCtx.ResourceService.FindByIDs(c.Request.Context(), request.ResourceIds)
+		resources, err := svcCtx.Rbac.ResourceService.FindByIDs(c.Request.Context(), request.ResourceIds)
 		if err != nil {
 			logrus.Errorf("failed to find resources by ids %+v, %v", request.ResourceIds, err)
 			response.Fail(c, 500, err.Error())
 			return
 		}
-		userIds, err := svcCtx.RoleService.ListRoleUsers(uint(id))
+		userIds, err := svcCtx.Rbac.RoleService.ListRoleUsers(uint(id))
 		if err != nil {
 			logrus.Errorf("failed to list role users by id %d, %v", id, err)
 			response.Fail(c, 500, err.Error())
@@ -249,7 +249,7 @@ func AssignRoleResources(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		}
 		// 相关用户的权限缓存要清理
 		err = svcCtx.CacheService.ClearMultipleUsersPermissions(c.Request.Context(), userIds, time.Millisecond*50, func() error {
-			return svcCtx.RoleService.ReplaceAssociation(c.Request.Context(), role, "Resources", resources)
+			return svcCtx.Rbac.RoleService.ReplaceAssociation(c.Request.Context(), role, "Resources", resources)
 		})
 		if err != nil {
 			response.Fail(c, 500, err.Error())

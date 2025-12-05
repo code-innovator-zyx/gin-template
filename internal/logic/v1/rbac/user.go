@@ -36,7 +36,7 @@ func Register(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		if err := svcCtx.UserService.CheckAccountExist(c.Request.Context(), req.Username, req.Email); nil != err {
+		if err := svcCtx.Rbac.UserService.CheckAccountExist(c.Request.Context(), req.Username, req.Email); nil != err {
 			response.Forbidden(c, err.Error())
 			return
 		}
@@ -45,7 +45,7 @@ func Register(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			Password: req.Password,
 			Email:    req.Email,
 		}
-		if err := svcCtx.UserService.Create(c, user); err != nil {
+		if err := svcCtx.Rbac.UserService.Create(c, user); err != nil {
 			response.Fail(c, 400, err.Error())
 			return
 		}
@@ -72,7 +72,7 @@ func Login(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		user, err := svcCtx.UserService.FindOne(c, _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		user, err := svcCtx.Rbac.UserService.FindOne(c, _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 			return db.Where("username = ? OR email = ?", req.Account, req.Account)
 		}))
 		if err != nil {
@@ -149,14 +149,14 @@ func GetProfile(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// 获取用户基础信息
-		user, err := svcCtx.UserService.FindByID(ctx, userID, _interface.WithPreloads("Roles"))
+		user, err := svcCtx.Rbac.UserService.FindByID(ctx, userID, _interface.WithPreloads("Roles"))
 		if err != nil {
 			response.Fail(c, 500, "获取用户信息失败: "+err.Error())
 			return
 		}
 
 		// 获取用户可访问的资源列表
-		resources, err := svcCtx.UserService.GetUserPerms(ctx, userID)
+		resources, err := svcCtx.Rbac.UserService.GetUserPerms(ctx, userID)
 		if err != nil {
 			response.Fail(c, 500, "获取用户资源失败: "+err.Error())
 			return
@@ -192,7 +192,7 @@ func DeleteUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			return
 		}
 
-		err = svcCtx.UserService.DeleteByID(c.Request.Context(), uint(userID))
+		err = svcCtx.Rbac.UserService.DeleteByID(c.Request.Context(), uint(userID))
 		if err != nil {
 			response.Fail(c, 500, "删除用户失败: "+err.Error())
 			return
@@ -220,11 +220,11 @@ func CreateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		if err := svcCtx.UserService.CheckAccountExist(c.Request.Context(), request.Username, request.Email); nil != err {
+		if err := svcCtx.Rbac.UserService.CheckAccountExist(c.Request.Context(), request.Username, request.Email); nil != err {
 			response.Fail(c, 500, err.Error())
 			return
 		}
-		roles, err := svcCtx.RoleService.List(c.Request.Context())
+		roles, err := svcCtx.Rbac.RoleService.List(c.Request.Context())
 		if err != nil {
 			response.Fail(c, 500, err.Error())
 			return
@@ -238,7 +238,7 @@ func CreateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			Roles:    roles,
 			Status:   consts.UserStatusActive,
 		}
-		if err = svcCtx.UserService.Create(c.Request.Context(), &user); err != nil {
+		if err = svcCtx.Rbac.UserService.Create(c.Request.Context(), &user); err != nil {
 			response.Fail(c, 500, err.Error())
 			return
 		}
@@ -275,7 +275,7 @@ func UpdateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 		}
 
 		request.Id = uint(userID)
-		exist, err := svcCtx.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		exist, err := svcCtx.Rbac.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 			return db.Where("username = ? AND id <> ?", request.Username, request.Id)
 		}))
 		if err != nil {
@@ -286,7 +286,7 @@ func UpdateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.Fail(c, http.StatusConflict, "用户名已存在")
 			return
 		}
-		exist, err = svcCtx.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
+		exist, err = svcCtx.Rbac.UserService.Exists(c.Request.Context(), _interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 			return db.Where("email = ? AND id <> ?", request.Email, request.Id)
 		}))
 		if err != nil {
@@ -297,7 +297,7 @@ func UpdateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.Fail(c, http.StatusConflict, "邮箱已存在")
 			return
 		}
-		err = svcCtx.UserService.Transaction(c.Request.Context(), func(ctx context.Context, tx *gorm.DB, txRepo _interface.IRepo[rbac.User]) error {
+		err = svcCtx.Rbac.UserService.Transaction(c.Request.Context(), func(ctx context.Context, tx *gorm.DB, txRepo _interface.IRepo[rbac.User]) error {
 			err = txRepo.UpdateByID(ctx, request.Id, map[string]interface{}{
 				"username": request.Username,
 				"email":    request.Email,
@@ -309,7 +309,7 @@ func UpdateUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			var roles []rbac.Role
 			// 获取所有角色列表
 			if len(request.Roles) != 0 {
-				roles, err = svcCtx.RoleService.FindByIDs(ctx, request.Roles)
+				roles, err = svcCtx.Rbac.RoleService.FindByIDs(ctx, request.Roles)
 				if err != nil {
 					return err
 				}
@@ -348,7 +348,7 @@ func ListUser(svcCtx *services.ServiceContext) gin.HandlerFunc {
 			response.BadRequest(c, err.Error())
 			return
 		}
-		pr, err := svcCtx.UserService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize),
+		pr, err := svcCtx.Rbac.UserService.FindPage(c.Request.Context(), _interface.WithPagination(request.Page, request.PageSize),
 			_interface.WithScopes(func(db *gorm.DB) *gorm.DB {
 				if request.Username != "" {
 					db = db.Where("username LIKE ?", request.Username+"%")
