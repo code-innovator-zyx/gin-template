@@ -81,3 +81,18 @@ rbac:
   admin_role:
     name: 超级管理员
     description: 系统超级管理员，拥有所有权限
+
+
+upload:
+  # 本地存储配置 (当 type=local 时使用)
+  local:
+    # 上传目录
+    base_dir: ./uploads
+    # 服务器基础URL（用于生成完整URL）
+    # base_url: http://localhost:8080
+
+  # 通用配置
+  # 允许的图片格式
+  allowed_extensions: [jpg, jpeg, png, gif, webp]
+  # 文件大小限制（MB）
+  max_size_mb: 10
