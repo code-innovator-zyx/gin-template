@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	_interface "gin-admin/pkg/interface"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -22,7 +23,7 @@ type redisCache struct {
 }
 
 // NewRedisCache 创建Redis缓存实例
-func NewRedisCache(client *redis.Client) (ICache, error) {
+func NewRedisCache(client *redis.Client) (_interface.ICache, error) {
 	return &redisCache{client: client}, nil
 }
 
@@ -31,7 +32,7 @@ func (r *redisCache) Get(ctx context.Context, key string, dest interface{}) erro
 	data, err := r.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return ErrKeyNotFound
+			return _interface.ErrKeyNotFound
 		}
 		return err
 	}
@@ -123,7 +124,7 @@ func (r *redisCache) TTL(ctx context.Context, key string) (time.Duration, error)
 }
 
 // Pipeline 创建管道
-func (r *redisCache) Pipeline() Pipeline {
+func (r *redisCache) Pipeline() _interface.Pipeline {
 	return &redisPipeline{pipe: r.client.Pipeline()}
 }
 
@@ -149,28 +150,28 @@ type redisPipeline struct {
 	pipe redis.Pipeliner
 }
 
-func (p *redisPipeline) SAdd(ctx context.Context, key string, members ...interface{}) IntCmd {
+func (p *redisPipeline) SAdd(ctx context.Context, key string, members ...interface{}) _interface.IntCmd {
 	return &redisIntCmd{cmd: p.pipe.SAdd(ctx, key, members...)}
 }
 
-func (p *redisPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) StatusCmd {
+func (p *redisPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) _interface.StatusCmd {
 	return &redisStatusCmd{cmd: p.pipe.Set(ctx, key, value, ttl)}
 }
 
-func (p *redisPipeline) Exists(ctx context.Context, key string) IntCmd {
+func (p *redisPipeline) Exists(ctx context.Context, key string) _interface.IntCmd {
 	return &redisIntCmd{cmd: p.pipe.Exists(ctx, key)}
 }
-func (p *redisPipeline) Del(ctx context.Context, keys ...string) IntCmd {
+func (p *redisPipeline) Del(ctx context.Context, keys ...string) _interface.IntCmd {
 	return &redisIntCmd{cmd: p.pipe.Del(ctx, keys...)}
 }
-func (p *redisPipeline) SRem(ctx context.Context, key string, members ...interface{}) IntCmd {
+func (p *redisPipeline) SRem(ctx context.Context, key string, members ...interface{}) _interface.IntCmd {
 	return &redisIntCmd{cmd: p.pipe.SRem(ctx, key, members)}
 }
-func (p *redisPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
+func (p *redisPipeline) SIsMember(ctx context.Context, key string, member interface{}) _interface.BoolCmd {
 	return &redisBoolCmd{cmd: p.pipe.SIsMember(ctx, key, member)}
 }
 
-func (p *redisPipeline) Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd {
+func (p *redisPipeline) Expire(ctx context.Context, key string, ttl time.Duration) _interface.BoolCmd {
 	return &redisBoolCmd{cmd: p.pipe.Expire(ctx, key, ttl)}
 }
 

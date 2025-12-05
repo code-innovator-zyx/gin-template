@@ -6,6 +6,7 @@ import (
 	"gin-admin/pkg/components/logger"
 	"gin-admin/pkg/components/orm"
 	"gin-admin/pkg/components/redis"
+	"gin-admin/pkg/components/uploader"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,8 +21,9 @@ type AppConfig struct {
 	Jwt    *jwt.Config   `mapstructure:"jwt" validate:"required"`
 	RBAC   *RBACConfig   `mapstructure:"rbac" validate:"required"`
 	// 选填的配置
-	Database *orm.Config   `mapstructure:"database" validate:"omitempty"`
-	Cache    *redis.Config `mapstructure:"cache" validate:"omitempty"`
+	Database *orm.Config      `mapstructure:"database" validate:"omitempty"`
+	Cache    *redis.Config    `mapstructure:"cache" validate:"omitempty"`
+	Upload   *uploader.Config `mapstructure:"upload" validate:"omitempty"`
 }
 
 func (a AppConfig) validate() error {

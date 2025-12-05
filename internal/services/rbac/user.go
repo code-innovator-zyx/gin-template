@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/components/cache"
 	_interface "gin-admin/pkg/interface"
 	"gorm.io/gorm"
 	"maps"
@@ -24,7 +23,7 @@ type UserService struct {
 	_interface.Service[rbac.User]
 }
 
-func NewUserService(db *gorm.DB, cache cache.ICache) *UserService {
+func NewUserService(db *gorm.DB, cache _interface.ICache) *UserService {
 	return &UserService{
 		Service: *_interface.NewService[rbac.User](db, cache),
 	}

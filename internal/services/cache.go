@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/components/cache"
+	_interface "gin-admin/pkg/interface"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"time"
@@ -40,11 +40,11 @@ type ICacheService interface {
 
 // cacheService 缓存服务实现
 type cacheService struct {
-	client cache.ICache
+	client _interface.ICache
 	sg     singleflight.Group // 防止缓存击穿（多个请求同时查询同一个不存在的key）
 }
 
-func NewCacheService(cache cache.ICache) ICacheService {
+func NewCacheService(cache _interface.ICache) ICacheService {
 	return &cacheService{
 		client: cache,
 	}
@@ -85,7 +85,7 @@ const (
 func (s *cacheService) CheckUserPermission(ctx context.Context, userID uint, path, method string, fn func(ctx context.Context, uid uint) ([]rbac.Resource, error)) (bool, error) {
 	if s.client == nil {
 		// 缓存不可用
-		return false, cache.ErrUnreachable
+		return false, _interface.ErrUnreachable
 	}
 
 	cacheKey := fmt.Sprintf("%s%d", cacheKeyPermissionPrefix, userID)

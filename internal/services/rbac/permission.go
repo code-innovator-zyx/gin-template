@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/components/cache"
 	_interface "gin-admin/pkg/interface"
 	"gorm.io/gorm"
 )
@@ -19,7 +18,7 @@ type PermissionService struct {
 	_interface.Service[rbac.Permission]
 }
 
-func NewPermissionService(db *gorm.DB, cache cache.ICache) *PermissionService {
+func NewPermissionService(db *gorm.DB, cache _interface.ICache) *PermissionService {
 	return &PermissionService{
 		Service: *_interface.NewService[rbac.Permission](db, cache),
 	}

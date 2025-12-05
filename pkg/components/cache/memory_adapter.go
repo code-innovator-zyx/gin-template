@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	_interface "gin-admin/pkg/interface"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ type memoryCacheItem struct {
 }
 
 // NewMemoryCache 创建内存缓存实例
-func NewMemoryCache() ICache {
+func NewMemoryCache() _interface.ICache {
 	cache := &memoryCache{
 		data:     make(map[string]*memoryCacheItem),
 		stopChan: make(chan struct{}),
@@ -51,12 +52,12 @@ func (m *memoryCache) Get(ctx context.Context, key string, dest interface{}) err
 	m.mu.RUnlock()
 
 	if !exists {
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 
 	if !item.expireAt.IsZero() && time.Now().After(item.expireAt) {
 		m.Delete(ctx, key)
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 
 	return json.Unmarshal(item.value, dest)
@@ -277,7 +278,7 @@ func (m *memoryCache) Expire(ctx context.Context, key string, ttl time.Duration)
 
 	item, exists := m.data[key]
 	if !exists {
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 
 	item.expireAt = time.Now().Add(ttl)
@@ -291,7 +292,7 @@ func (m *memoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 	m.mu.RUnlock()
 
 	if !exists {
-		return 0, ErrKeyNotFound
+		return 0, _interface.ErrKeyNotFound
 	}
 
 	if item.expireAt.IsZero() {
@@ -307,7 +308,7 @@ func (m *memoryCache) TTL(ctx context.Context, key string) (time.Duration, error
 }
 
 // Pipeline 创建管道
-func (m *memoryCache) Pipeline() Pipeline {
+func (m *memoryCache) Pipeline() _interface.Pipeline {
 	return &memoryPipeline{
 		cmds:    make([]memoryPipelineCmd, 0),
 		results: make([]interface{}, 0),

@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"gin-admin/pkg/components/cache"
+
 	"gorm.io/gorm"
 	"time"
 )
@@ -28,12 +28,12 @@ type IService[T IModel] interface {
 type Service[T IModel] struct {
 	Repo     IRepo[T]
 	DB       *gorm.DB
-	cache    cache.ICache
+	cache    ICache
 	cacheTTL time.Duration // 缓存过期时间
 }
 
 // NewService 创建 Service 实例
-func NewService[T IModel](db *gorm.DB, cache cache.ICache) *Service[T] {
+func NewService[T IModel](db *gorm.DB, cache ICache) *Service[T] {
 	return &Service[T]{
 		Repo:     NewRepo[T](db),
 		cache:    cache,

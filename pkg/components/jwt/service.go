@@ -3,7 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
-	"gin-admin/pkg/components/cache"
+	_interface "gin-admin/pkg/interface"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -36,7 +36,7 @@ type JWTService struct {
 	refreshGroup   singleflight.Group // 防止并发刷新同一个 refresh token
 }
 
-func NewJwtService(cfg Config, cache cache.ICache) *JWTService {
+func NewJwtService(cfg Config, cache _interface.ICache) *JWTService {
 	return &JWTService{
 		config:         cfg,
 		sessionManager: NewCacheSessionManager(cache),

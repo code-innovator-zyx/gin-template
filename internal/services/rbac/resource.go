@@ -3,7 +3,6 @@ package rbac
 import (
 	"context"
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/components/cache"
 	_interface "gin-admin/pkg/interface"
 	"gorm.io/gorm"
 )
@@ -20,7 +19,7 @@ type ResourceService struct {
 	_interface.Service[rbac.Resource]
 }
 
-func NewResourceService(db *gorm.DB, cache cache.ICache) *ResourceService {
+func NewResourceService(db *gorm.DB, cache _interface.ICache) *ResourceService {
 	return &ResourceService{
 		Service: *_interface.NewService[rbac.Resource](db, cache),
 	}

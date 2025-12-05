@@ -7,6 +7,8 @@ import (
 	"gin-admin/pkg/components/jwt"
 	"gin-admin/pkg/components/orm"
 	redis2 "gin-admin/pkg/components/redis"
+	"gin-admin/pkg/components/uploader"
+	_interface "gin-admin/pkg/interface"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
@@ -25,9 +27,10 @@ type ServiceContext struct {
 	// config
 	Config *config.AppConfig
 	// components
-	Db    *gorm.DB
-	Cache cache2.ICache
-	Jwt   jwt.Service
+	Db       *gorm.DB
+	Cache    _interface.ICache
+	Uploader _interface.IUploader
+	Jwt      jwt.Service
 	// 服务缓存
 	CacheService ICacheService
 	// RBAC Services
@@ -53,6 +56,7 @@ func MustInitServiceContext(c *config.AppConfig) *ServiceContext {
 		Config:            c,
 		Db:                db,
 		Cache:             cacheInstance,
+		Uploader:          uploader.NewUploader(*c.Upload, c.Server.Port),
 		CacheService:      NewCacheService(cacheInstance),
 		Jwt:               jwt.NewJwtService(*c.Jwt, cacheInstance),
 		UserService:       rbac2.NewUserService(db, cacheInstance),

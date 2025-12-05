@@ -1,6 +1,7 @@
 package cache
 
 import (
+	_interface "gin-admin/pkg/interface"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
@@ -12,7 +13,7 @@ import (
 * @Package: 缓存工厂 - 根据配置创建不同的缓存实现
  */
 
-func NewCache(client *redis.Client) ICache {
+func NewCache(client *redis.Client) _interface.ICache {
 	if client == nil {
 		logrus.Info("未配置缓存，使用默认内存缓存")
 		return NewShardedMemoryCache(0)

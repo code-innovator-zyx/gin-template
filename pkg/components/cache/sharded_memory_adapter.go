@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	_interface "gin-admin/pkg/interface"
 	"github.com/sirupsen/logrus"
 	"reflect"
 	"runtime"
@@ -49,7 +50,7 @@ type shardedMemoryCache struct {
 }
 
 // NewShardedMemoryCache 创建分片内存缓存实例
-func NewShardedMemoryCache(shardCount int) ICache {
+func NewShardedMemoryCache(shardCount int) _interface.ICache {
 	if shardCount <= 0 {
 		shardCount = runtime.NumCPU() * 4
 	}
@@ -101,13 +102,13 @@ func (c *shardedMemoryCache) Get(ctx context.Context, key string, dest interface
 	item, exists := shard.data[fastHash(key)]
 	shard.mu.RUnlock()
 	if !exists || item.key != key {
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 
 	// 检查过期
 	if ttl := atomic.LoadInt64(&item.expireAt); ttl > 0 && time.Now().UnixNano() > ttl {
 		_ = c.Delete(ctx, key)
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 	v := item.value.Load()
 	// fast-path
@@ -371,7 +372,7 @@ func (c *shardedMemoryCache) Expire(ctx context.Context, key string, ttl time.Du
 	defer shard.mu.Unlock()
 	item, exists := shard.data[fastHash(key)]
 	if !exists || item.key != key {
-		return ErrKeyNotFound
+		return _interface.ErrKeyNotFound
 	}
 
 	atomic.StoreInt64(&item.expireAt, time.Now().Add(ttl).UnixNano())
@@ -386,7 +387,7 @@ func (c *shardedMemoryCache) TTL(ctx context.Context, key string) (time.Duration
 	shard.mu.RUnlock()
 
 	if !exists || item.key != key {
-		return 0, ErrKeyNotFound
+		return 0, _interface.ErrKeyNotFound
 	}
 
 	expireAtUnixNano := atomic.LoadInt64(&item.expireAt)
@@ -403,7 +404,7 @@ func (c *shardedMemoryCache) TTL(ctx context.Context, key string) (time.Duration
 }
 
 // Pipeline 创建管道
-func (c *shardedMemoryCache) Pipeline() Pipeline {
+func (c *shardedMemoryCache) Pipeline() _interface.Pipeline {
 	return &memoryPipeline{
 		sharded: c,
 		cmds:    make([]memoryPipelineCmd, 0),
@@ -521,7 +522,7 @@ type memoryPipeline struct {
 	mu      sync.Mutex
 }
 
-func (p *memoryPipeline) Get(ctx context.Context, key string, dest interface{}) StatusCmd {
+func (p *memoryPipeline) Get(ctx context.Context, key string, dest interface{}) _interface.StatusCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -536,7 +537,7 @@ func (p *memoryPipeline) Get(ctx context.Context, key string, dest interface{}) 
 	return &memoryStatusCmd{pipeline: p, index: idx}
 }
 
-func (p *memoryPipeline) SAdd(ctx context.Context, key string, members ...interface{}) IntCmd {
+func (p *memoryPipeline) SAdd(ctx context.Context, key string, members ...interface{}) _interface.IntCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -551,7 +552,7 @@ func (p *memoryPipeline) SAdd(ctx context.Context, key string, members ...interf
 
 	return &memoryIntCmd{pipeline: p, index: idx}
 }
-func (p *memoryPipeline) Del(ctx context.Context, keys ...string) IntCmd {
+func (p *memoryPipeline) Del(ctx context.Context, keys ...string) _interface.IntCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -564,7 +565,7 @@ func (p *memoryPipeline) Del(ctx context.Context, keys ...string) IntCmd {
 
 	return &memoryIntCmd{pipeline: p, index: idx}
 }
-func (p *memoryPipeline) SRem(ctx context.Context, key string, members ...interface{}) IntCmd {
+func (p *memoryPipeline) SRem(ctx context.Context, key string, members ...interface{}) _interface.IntCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -578,7 +579,7 @@ func (p *memoryPipeline) SRem(ctx context.Context, key string, members ...interf
 
 	return &memoryIntCmd{pipeline: p, index: idx}
 }
-func (p *memoryPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) StatusCmd {
+func (p *memoryPipeline) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) _interface.StatusCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -594,7 +595,7 @@ func (p *memoryPipeline) Set(ctx context.Context, key string, value interface{},
 	return &memoryStatusCmd{pipeline: p, index: idx}
 }
 
-func (p *memoryPipeline) Exists(ctx context.Context, key string) IntCmd {
+func (p *memoryPipeline) Exists(ctx context.Context, key string) _interface.IntCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -608,7 +609,7 @@ func (p *memoryPipeline) Exists(ctx context.Context, key string) IntCmd {
 	return &memoryIntCmd{pipeline: p, index: idx}
 }
 
-func (p *memoryPipeline) SIsMember(ctx context.Context, key string, member interface{}) BoolCmd {
+func (p *memoryPipeline) SIsMember(ctx context.Context, key string, member interface{}) _interface.BoolCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -623,7 +624,7 @@ func (p *memoryPipeline) SIsMember(ctx context.Context, key string, member inter
 	return &memoryBoolCmd{pipeline: p, index: idx}
 }
 
-func (p *memoryPipeline) Expire(ctx context.Context, key string, ttl time.Duration) BoolCmd {
+func (p *memoryPipeline) Expire(ctx context.Context, key string, ttl time.Duration) _interface.BoolCmd {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

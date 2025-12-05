@@ -3,7 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
-	"gin-admin/pkg/components/cache"
+	_interface "gin-admin/pkg/interface"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -20,10 +20,10 @@ type SessionManager interface {
 	RemoveUserSessions(ctx context.Context, userID uint) error
 }
 type CacheSessionManager struct {
-	cache cache.ICache
+	cache _interface.ICache
 }
 
-func NewCacheSessionManager(cache cache.ICache) SessionManager {
+func NewCacheSessionManager(cache _interface.ICache) SessionManager {
 	return &CacheSessionManager{cache: cache}
 }
 

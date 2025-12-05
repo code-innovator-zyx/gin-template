@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"gin-admin/internal/model/rbac"
-	"gin-admin/pkg/components/cache"
 	_interface "gin-admin/pkg/interface"
 	"gorm.io/gorm"
 )
@@ -19,7 +18,7 @@ type RoleService struct {
 	_interface.Service[rbac.Role]
 }
 
-func NewRoleService(db *gorm.DB, cache cache.ICache) *RoleService {
+func NewRoleService(db *gorm.DB, cache _interface.ICache) *RoleService {
 	return &RoleService{
 		Service: *_interface.NewService[rbac.Role](db, cache),
 	}
