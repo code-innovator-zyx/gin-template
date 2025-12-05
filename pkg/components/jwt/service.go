@@ -66,13 +66,16 @@ func (s *JWTService) GenerateTokenPair(ctx context.Context, userID uint, usernam
 	}
 
 	// 保存 session 状态
-	s.sessionManager.SaveSession(ctx, &SessionInfo{
+	err = s.sessionManager.SaveSession(ctx, SessionInfo{
 		SessionID:        tokenOpts.SessionID,
 		UserID:           userID,
 		Username:         username,
 		RefreshTokenHash: Hash(refreshToken),
 		ExpiresAt:        time.Now().Add(s.config.RefreshTokenExpire),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return &TokenPair{
 		AccessToken:  accessToken,
@@ -156,7 +159,6 @@ func (s *JWTService) ParseAccessToken(ctx context.Context, tokenString string) (
 		if claims.TokenType != TokenTypeAccess {
 			return nil, ErrInvalidToken
 		}
-
 		// 验证 Session 是否有效
 		session := s.sessionManager.GetSession(ctx, claims.SessionID)
 		if session == nil || session.Revoked {
@@ -212,7 +214,7 @@ func (s *JWTService) doRefreshToken(ctx context.Context, refreshToken string) (*
 	// 校验 refresh token hash
 	if !SecureCompare(Hash(refreshToken), session.RefreshTokenHash) {
 		// 说明 refresh token 不存在或者被窃取盗用
-		s.sessionManager.RemoveSession(ctx, claims.SessionID)
+		_ = s.sessionManager.RemoveSession(ctx, claims.SessionID)
 		return nil, ErrRefreshTokenStolen
 	}
 

@@ -196,7 +196,6 @@ func (s *Service[T]) FindPage(ctx context.Context, opts ...QueryOption) (*PageRe
 	if err != nil {
 		return nil, err
 	}
-
 	s.setToCache(ctx, cacheKey, result)
 	return result, nil
 }

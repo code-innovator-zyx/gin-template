@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gin-admin/pkg/components/cache"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -12,7 +13,7 @@ import (
 // 1. 提供查看用户在线设备列表
 // 2. 可限制用户在线设备数量
 type SessionManager interface {
-	SaveSession(ctx context.Context, s *SessionInfo) error
+	SaveSession(ctx context.Context, s SessionInfo) error
 	GetSession(ctx context.Context, sessionID interface{}) *SessionInfo
 	RemoveSession(ctx context.Context, sessionID string) error
 	UpdateRefreshHash(ctx context.Context, sessionID, hash string) error
@@ -35,19 +36,17 @@ func (m *CacheSessionManager) userSessionsKey(uid uint) string {
 }
 
 // SaveSession 保存 session
-func (m *CacheSessionManager) SaveSession(ctx context.Context, s *SessionInfo) error {
+func (m *CacheSessionManager) SaveSession(ctx context.Context, s SessionInfo) error {
 	if m.cache == nil {
 		return nil // 没有缓存时直接返回
 	}
 
 	ttl := time.Until(s.ExpiresAt)
 	key := m.sessionKey(s.SessionID)
-
 	pipe := m.cache.Pipeline()
-	pipe.Set(ctx, key, s, ttl) // 直接传递结构体，让 cache.Set 处理序列化
+	pipe.Set(ctx, key, s, ttl)
 	pipe.SAdd(ctx, m.userSessionsKey(s.UserID), s.SessionID)
 	pipe.Expire(ctx, m.userSessionsKey(s.UserID), ttl)
-
 	err := pipe.Exec(ctx)
 	return err
 }
@@ -60,6 +59,7 @@ func (m *CacheSessionManager) GetSession(ctx context.Context, sessionID interfac
 	var s SessionInfo
 	err := m.cache.Get(ctx, m.sessionKey(sessionID), &s)
 	if err != nil {
+		logrus.Errorf("failed to get session from cache :%s", err.Error())
 		return nil
 	}
 	return &s
@@ -92,7 +92,7 @@ func (m *CacheSessionManager) UpdateRefreshHash(ctx context.Context, sessionID, 
 	}
 	s.RefreshTokenHash = hash
 	ttl := time.Until(s.ExpiresAt)
-	return m.cache.Set(ctx, m.sessionKey(sessionID), s, ttl)
+	return m.cache.Set(ctx, m.sessionKey(sessionID), *s, ttl)
 }
 
 // GetUserSessions 获取用户所有会话

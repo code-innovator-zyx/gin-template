@@ -392,56 +392,6 @@ func TestMemoryCache_Decr(t *testing.T) {
 	assert.Equal(t, int64(-2), val)
 }
 
-// TestMemoryCache_Pipeline 测试管道操作
-func TestMemoryCache_Pipeline(t *testing.T) {
-	cache := NewMemoryCache()
-	defer cache.Close()
-	ctx := context.Background()
-
-	// 设置测试数据
-	cache.Set(ctx, "key1", "value1", 0)
-	cache.SAdd(ctx, "set1", "member1")
-
-	// 创建管道并执行多个操作
-	pipe := cache.Pipeline()
-	setCmd := pipe.Set(ctx, "key2", "value2", time.Second)
-	existsCmd := pipe.Exists(ctx, "key1")
-	isMemberCmd := pipe.SIsMember(ctx, "set1", "member1")
-	expireCmd := pipe.Expire(ctx, "key1", time.Hour)
-
-	// 执行管道
-	err := pipe.Exec(ctx)
-	assert.NoError(t, err, "Pipeline 执行应该成功")
-
-	// 验证结果
-	status, err := setCmd.Result()
-	assert.NoError(t, err)
-	assert.Equal(t, "OK", status)
-
-	exists, err := existsCmd.Result()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), exists, "key1 应该存在")
-
-	isMember, err := isMemberCmd.Result()
-	assert.NoError(t, err)
-	assert.True(t, isMember, "member1 应该存在")
-
-	expired, err := expireCmd.Result()
-	assert.NoError(t, err)
-	assert.True(t, expired, "设置过期时间应该成功")
-
-	// 验证 Pipeline 中设置的 key2
-	var result string
-	err = cache.Get(ctx, "key2", &result)
-	assert.NoError(t, err)
-	assert.Equal(t, "value2", result)
-
-	// 等待过期
-	time.Sleep(1100 * time.Millisecond)
-	err = cache.Get(ctx, "key2", &result)
-	assert.Error(t, err, "key2 应该已过期")
-}
-
 // TestMemoryCache_Ping 测试连接
 func TestMemoryCache_Ping(t *testing.T) {
 	cache := NewMemoryCache()

@@ -3,7 +3,6 @@ package _interface
 import (
 	"context"
 	cache2 "gin-admin/pkg/components/cache"
-	"gorm.io/driver/mysql"
 	"testing"
 	"time"
 
@@ -22,14 +21,14 @@ import (
 
 // setupTestService 创建测试 Service
 func setupTestService(t *testing.T) (*Service[TestUser], *gorm.DB, cache2.ICache) {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
 	err = db.AutoMigrate(&TestUser{})
 	require.NoError(t, err)
 
 	// 使用内存缓存
-	cacheInstance := cache2.NewMemoryCache()
+	cacheInstance := cache2.NewShardedMemoryCache(0)
 	require.NoError(t, err)
 	service := NewService[TestUser](db, cacheInstance)
 
@@ -42,13 +41,13 @@ func TestService_FindByID_Cache(t *testing.T) {
 	ctx := context.Background()
 
 	// 创建测试数据
-	user := &TestUser{Username: "testcase4", Email: "cache@example.com", Age: 25}
+	user := &TestUser{Username: "testcase", Email: "cache@example.com", Age: 25}
 	db.Create(user)
 
 	t.Run("第一次查询，缓存未命中", func(t *testing.T) {
 		result, err := service.FindByID(ctx, user.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, "testcase4", result.Username)
+		assert.Equal(t, "testcase", result.Username)
 	})
 
 	t.Run("第二次查询，缓存命中", func(t *testing.T) {
@@ -121,7 +120,7 @@ func TestService_List_Cache(t *testing.T) {
 			"status": 1,
 		}))
 		assert.NoError(t, err)
-		assert.Len(t, list1, 7)
+		assert.Len(t, list1, 2)
 
 		// 添加新数据
 		newUser := &TestUser{Username: "list4", Email: "list4@example.com", Status: 1}
@@ -132,7 +131,7 @@ func TestService_List_Cache(t *testing.T) {
 			"status": 1,
 		}))
 		assert.NoError(t, err)
-		assert.Len(t, list2, 7) // 缓存值
+		assert.Len(t, list2, 2) // 缓存值
 	})
 }
 

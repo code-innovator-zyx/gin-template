@@ -135,15 +135,37 @@ func (c *shardedMemoryCache) Get(ctx context.Context, key string, dest interface
 	}
 	rv = rv.Elem()
 	iv := reflect.ValueOf(v)
+
+	// 直接类型匹配
 	if iv.Type().AssignableTo(rv.Type()) {
 		rv.Set(iv)
 		return nil
 	}
+
+	// 处理指针解引用：存储的是指针，但 dest 是值类型
+	if iv.Kind() == reflect.Ptr && rv.Kind() != reflect.Ptr {
+		if iv.Elem().Type().AssignableTo(rv.Type()) {
+			rv.Set(iv.Elem())
+			return nil
+		}
+	}
+
+	// 处理指针包装：存储的是值，但 dest 是指针类型
+	if iv.Kind() != reflect.Ptr && rv.Kind() == reflect.Ptr {
+		if iv.Type().AssignableTo(rv.Type().Elem()) {
+			newPtr := reflect.New(rv.Type().Elem())
+			newPtr.Elem().Set(iv)
+			rv.Set(newPtr)
+			return nil
+		}
+	}
+
 	// 类型不兼容
+	logrus.Warning(fmt.Sprintf("type mismatch: cannot assign %T to %T", v, dest))
 	return fmt.Errorf("type mismatch: cannot assign %T to %T", v, dest)
 }
 
-// Set 直接存储 interface{}
+// Set 直接存储 interface{} (!!!! 必须存储值类型，避免内部数据被外部修改污染)
 func (c *shardedMemoryCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	shard := c.getShard(key)
 	shard.mu.Lock()
@@ -346,8 +368,8 @@ func (c *shardedMemoryCache) Decr(ctx context.Context, key string) (int64, error
 func (c *shardedMemoryCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
 	shard := c.getShard(key)
 	shard.mu.Lock()
+	defer shard.mu.Unlock()
 	item, exists := shard.data[fastHash(key)]
-	shard.mu.Unlock()
 	if !exists || item.key != key {
 		return ErrKeyNotFound
 	}
@@ -431,11 +453,17 @@ func (c *shardedMemoryCache) cleanupExpired() {
 	}
 }
 
+type delPair struct {
+	hash uint64
+	key  string
+}
+
 func (c *shardedMemoryCache) cleanupShard(shard *memoryShard, maxCleanup int) int {
 	// 1. 读锁收集
 	shard.mu.RLock()
 	now := time.Now().UnixNano()
-	toDelete := make([][2]interface{}, 0, maxCleanup)
+
+	toDelete := make([]delPair, 0, maxCleanup)
 
 	for hash, item := range shard.data {
 		if len(toDelete) >= maxCleanup {
@@ -443,7 +471,7 @@ func (c *shardedMemoryCache) cleanupShard(shard *memoryShard, maxCleanup int) in
 		}
 		expireAtUnixNano := atomic.LoadInt64(&item.expireAt)
 		if expireAtUnixNano > 0 && now > expireAtUnixNano {
-			toDelete = append(toDelete, [2]interface{}{hash, item.key})
+			toDelete = append(toDelete, delPair{hash, item.key})
 		}
 	}
 	shard.mu.RUnlock()
@@ -460,13 +488,11 @@ func (c *shardedMemoryCache) cleanupShard(shard *memoryShard, maxCleanup int) in
 	cleaned := 0
 
 	for _, pair := range toDelete {
-		hash := pair[0].(uint64)
-		key := pair[1].(string)
 
-		if item, exists := shard.data[hash]; exists && item.key == key {
+		if item, exists := shard.data[pair.hash]; exists && item.key == pair.key {
 			expireAt := atomic.LoadInt64(&item.expireAt)
 			if expireAt > 0 && nowAgain > expireAt {
-				delete(shard.data, hash)
+				delete(shard.data, pair.hash)
 				cleaned++
 			}
 		}

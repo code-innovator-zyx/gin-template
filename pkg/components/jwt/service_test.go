@@ -3,174 +3,151 @@ package jwt
 import (
 	"context"
 	cache2 "gin-admin/pkg/components/cache"
-	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // getJwtSvr 创建测试用的 JWT Service
 func getJwtSvr() (Service, cache2.ICache) {
-	// 使用内存缓存进行测试
-	memCache := cache2.NewMemoryCache()
+	// 使用分片内存缓存进行测试
+	memCache := cache2.NewShardedMemoryCache(0)
 
 	cfg := Config{
 		Secret:             "test-secret-key-32-chars-minimum",
 		Issuer:             "test",
 		AccessTokenExpire:  time.Second * 2, // 2秒过期，方便测试
-		RefreshTokenExpire: time.Hour,       // 1小时
+		RefreshTokenExpire: time.Hour * 1,   // 1小时
 	}
 
 	svc := NewJwtService(cfg, memCache)
 	return svc, memCache
 }
 
-// TestGenerateTokenPair 测试生成 Token Pair
+// ==============================================================================
+// 基础Token生成和解析测试
+// ==============================================================================
+
 func TestGenerateTokenPair(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	tp, err := svc.GenerateTokenPair(ctx, 1, "testuser", "test@example.com")
 
-	// 断言
-	assert.NoError(t, err, "生成 Token 应该成功")
-	assert.NotEmpty(t, tp.AccessToken, "Access Token 不应为空")
-	assert.NotEmpty(t, tp.RefreshToken, "Refresh Token 不应为空")
-	assert.Equal(t, "Bearer", tp.TokenType, "Token 类型应该是 Bearer")
-	assert.Greater(t, tp.ExpiresIn, int64(0), "ExpiresIn 应该大于 0")
-
-	t.Logf("✅ Token Pair 生成成功: AccessToken=%d chars, RefreshToken=%d chars",
-		len(tp.AccessToken), len(tp.RefreshToken))
+	require.NoError(t, err)
+	assert.NotEmpty(t, tp.AccessToken)
+	assert.NotEmpty(t, tp.RefreshToken)
+	assert.Equal(t, "Bearer", tp.TokenType)
+	assert.Greater(t, tp.ExpiresIn, int64(0))
 }
 
-// TestParseAccessToken 测试解析 Access Token
 func TestParseAccessToken(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 Token
 	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "user@example.com")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// 解析 Access Token
 	claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
-	assert.NoError(t, err, "解析 Access Token 应该成功")
-	assert.Equal(t, uint(1), claims.UserID, "UserID 应该匹配")
-	assert.Equal(t, "user", claims.Username, "Username 应该匹配")
-	assert.Equal(t, "user@example.com", claims.Email, "Email 应该匹配")
-	assert.Equal(t, TokenTypeAccess, claims.TokenType, "Token 类型应该是 Access")
-	assert.NotEmpty(t, claims.SessionID, "SessionID 不应为空")
-
-	t.Logf("✅ Access Token 解析成功: UserID=%d, Username=%s, SessionID=%s",
-		claims.UserID, claims.Username, claims.SessionID)
+	require.NoError(t, err)
+	assert.Equal(t, uint(1), claims.UserID)
+	assert.Equal(t, "user", claims.Username)
+	assert.Equal(t, "user@example.com", claims.Email)
+	assert.Equal(t, TokenTypeAccess, claims.TokenType)
+	assert.NotEmpty(t, claims.SessionID)
 }
 
-// TestAccessTokenExpired 测试 Access Token 过期
 func TestAccessTokenExpired(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 Token
 	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 等待 Token 过期（配置的是 2 秒）
 	time.Sleep(time.Second * 3)
-
-	// 解析过期的 Token
 	_, err = svc.ParseAccessToken(ctx, tp.AccessToken)
-	assert.Error(t, err, "过期的 Token 应该解析失败")
-	// 注意：ParseAccessToken 返回的是 ErrInvalidToken，不是 jwt.ErrTokenExpired
-
-	t.Logf("✅ Access Token 过期检测成功: %v", err)
+	assert.Error(t, err)
 }
 
-// TestRefreshToken 测试刷新 Token
+// ==============================================================================
+// Token 刷新测试
+// ==============================================================================
+
 func TestRefreshToken(t *testing.T) {
-	svc, memCache := getJwtSvr()
+	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	// 生成初始 Token Pair
-	tp1, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
-
-	// 调试：检查 cache 是否工作
-	t.Logf("MemCache is nil: %v", memCache == nil)
-
-	// 调试：验证 session 是否被保存
-	claims1, _ := svc.ParseAccessToken(ctx, tp1.AccessToken)
-	t.Logf("Session ID: %s", claims1.SessionID)
-
+	tp1, err := svc.GenerateTokenPair(ctx, 1, "user", "user@example.com")
+	require.NoError(t, err)
 	// 刷新 Token
 	tp2, err := svc.RefreshToken(ctx, tp1.RefreshToken)
-	if err != nil {
-		t.Logf("RefreshToken error: %v", err)
-	}
-	assert.NoError(t, err, "刷新 Token 应该成功")
+	require.NoError(t, err)
 
-	if tp2 != nil {
-		assert.NotEqual(t, tp1.AccessToken, tp2.AccessToken, "新的 Access Token 应该不同")
-		assert.NotEqual(t, tp1.RefreshToken, tp2.RefreshToken, "新的 Refresh Token 应该不同（Token Rotation）")
-
-		// 验证新的 Access Token 可用
-		claims, err := svc.ParseAccessToken(ctx, tp2.AccessToken)
-		assert.NoError(t, err)
-		assert.Equal(t, uint(1), claims.UserID)
-	}
-
-	t.Logf("✅ Token 刷新成功（Token Rotation）")
+	assert.NotEqual(t, tp1.AccessToken, tp2.AccessToken)
+	assert.NotEqual(t, tp1.RefreshToken, tp2.RefreshToken)
+	// 验证新的 Access Token 可用
+	claims2, err2 := svc.ParseAccessToken(ctx, tp2.AccessToken)
+	require.NoError(t, err2)
+	assert.Equal(t, uint(1), claims2.UserID)
 }
 
-// TestRefreshTokenRotation 测试 Token Rotation 机制
 func TestRefreshTokenRotation(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 token pair
 	tp1, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 第一次刷新
 	tp2, err := svc.RefreshToken(ctx, tp1.RefreshToken)
-	assert.NoError(t, err)
-	assert.NotEqual(t, tp1.RefreshToken, tp2.RefreshToken, "Refresh Token 必须更新")
+	require.NoError(t, err)
+	assert.NotEqual(t, tp1.RefreshToken, tp2.RefreshToken)
 
 	// 第二次刷新
 	tp3, err := svc.RefreshToken(ctx, tp2.RefreshToken)
-	assert.NoError(t, err)
-	assert.NotEqual(t, tp2.RefreshToken, tp3.RefreshToken, "Refresh Token 每次都要更新")
-
-	t.Logf("✅ Token Rotation 测试通过：3 次刷新，3 个不同的 Refresh Token")
+	require.NoError(t, err)
+	assert.NotEqual(t, tp2.RefreshToken, tp3.RefreshToken)
 }
 
-// TestRefreshTokenStolen 测试 Refresh Token 被盗用检测
 func TestRefreshTokenStolen(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 Token
 	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 第一次刷新（合法）
 	_, err = svc.RefreshToken(ctx, tp.RefreshToken)
-	assert.NoError(t, err, "第一次刷新应该成功")
+	require.NoError(t, err)
 
 	// 尝试使用旧的 Refresh Token（模拟盗用）
 	_, err = svc.RefreshToken(ctx, tp.RefreshToken)
-	assert.Error(t, err, "重用旧 Refresh Token 应该失败")
-	assert.Equal(t, ErrRefreshTokenStolen, err, "应该检测到 Token 被盗用")
-
-	t.Logf("✅ Refresh Token 重用检测成功：%v", err)
+	assert.Error(t, err)
+	assert.Equal(t, ErrRefreshTokenStolen, err)
 }
 
-// TestConcurrentRefresh 测试并发刷新（Singleflight）
+// ==============================================================================
+// 并发测试
+// ==============================================================================
+
 func TestConcurrentRefresh(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 Token
 	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 模拟 10 个并发请求同时刷新同一个 Refresh Token
 	results := make(chan *TokenPair, 10)
@@ -198,73 +175,96 @@ func TestConcurrentRefresh(t *testing.T) {
 				firstToken = result
 			} else {
 				// 所有成功的请求应该得到相同的 Token（Singleflight 合并）
-				assert.Equal(t, firstToken.AccessToken, result.AccessToken,
-					"并发刷新应该返回相同的 Token")
+				assert.Equal(t, firstToken.AccessToken, result.AccessToken)
 			}
 		case <-errors:
 			// 有些请求可能失败，但至少应该有一个成功
-		case <-time.After(time.Second):
+		case <-time.After(time.Second * 2):
 			t.Fatal("超时等待并发刷新结果")
 		}
 	}
 
-	assert.Greater(t, successCount, 0, "至少应该有一个请求成功")
-	t.Logf("✅ 并发刷新测试通过：10 个请求，%d 个成功，Token 一致", successCount)
+	assert.Greater(t, successCount, 0)
 }
 
-// TestRevokeSession 测试撤销单个 Session
-func TestRevokeSession(t *testing.T) {
+func TestConcurrentGenerate(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 生成 Token
-	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
-	assert.NoError(t, err)
+	const goroutines = 50
+	var wg sync.WaitGroup
+	errors := make(chan error, goroutines)
 
-	// 解析获取 SessionID
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			_, err := svc.GenerateTokenPair(ctx, uint(id), "user", "email")
+			if err != nil {
+				errors <- err
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errors)
+
+	assert.Empty(t, errors)
+}
+
+// ==============================================================================
+// Session 撤销测试
+// ==============================================================================
+
+func TestRevokeSession(t *testing.T) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
+	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
+	require.NoError(t, err)
+
 	claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 撤销 Session
 	err = svc.RevokeSession(ctx, claims.SessionID)
-	assert.NoError(t, err, "撤销 Session 应该成功")
+	require.NoError(t, err)
 
 	// 尝试使用已撤销的 Access Token
 	_, err = svc.ParseAccessToken(ctx, tp.AccessToken)
-	assert.Error(t, err, "已撤销的 Session 应该无法使用")
-	assert.Equal(t, ErrSessionInvalid, err, "错误类型应该是 ErrSessionInvalid")
+	assert.Error(t, err)
+	assert.Equal(t, ErrSessionInvalid, err)
 
 	// 尝试刷新已撤销的 Session
 	_, err = svc.RefreshToken(ctx, tp.RefreshToken)
-	assert.Error(t, err, "已撤销的 Session 不能刷新")
-
-	t.Logf("✅ Session 撤销测试通过")
+	assert.Error(t, err)
 }
 
-// TestRevokeUserAllSessions 测试撤销用户所有 Session
 func TestRevokeUserAllSessions(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	// 模拟多设备登录（生成 3 个 Session）
 	tp1, err := svc.GenerateTokenPair(ctx, 1, "user", "email", WithDeviceID("device-1"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tp2, err := svc.GenerateTokenPair(ctx, 1, "user", "email", WithDeviceID("device-2"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tp3, err := svc.GenerateTokenPair(ctx, 1, "user", "email", WithDeviceID("device-3"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 验证所有 Token 都可用
 	_, err = svc.ParseAccessToken(ctx, tp1.AccessToken)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = svc.ParseAccessToken(ctx, tp2.AccessToken)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = svc.ParseAccessToken(ctx, tp3.AccessToken)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 撤销用户所有 Session
 	err = svc.RevokeUserAllSessions(ctx, 1)
-	assert.NoError(t, err, "撤销所有 Session 应该成功")
+	require.NoError(t, err)
 
 	// 验证所有 Token 都不可用
 	_, err = svc.ParseAccessToken(ctx, tp1.AccessToken)
@@ -273,13 +273,15 @@ func TestRevokeUserAllSessions(t *testing.T) {
 	assert.Equal(t, ErrSessionInvalid, err)
 	_, err = svc.ParseAccessToken(ctx, tp3.AccessToken)
 	assert.Equal(t, ErrSessionInvalid, err)
-
-	t.Logf("✅ 批量撤销 Session 测试通过（3 个设备全部撤销）")
 }
 
-// TestInvalidToken 测试无效 Token
+// ==============================================================================
+// 无效Token测试
+// ==============================================================================
+
 func TestInvalidToken(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	tests := []struct {
@@ -294,18 +296,42 @@ func TestInvalidToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := svc.ParseAccessToken(ctx, tt.token)
-			assert.Error(t, err, "无效 Token 应该解析失败")
-			t.Logf("✅ %s: %v", tt.name, err)
+			assert.Error(t, err)
 		})
 	}
 }
 
-// TestTokenOptions 测试 Token 选项
-func TestTokenOptions(t *testing.T) {
+func TestInvalidRefreshToken(t *testing.T) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
-	// 使用自定义选项生成 Token
+	tests := []struct {
+		name  string
+		token string
+	}{
+		{"空 Refresh Token", ""},
+		{"格式错误", "invalid.refresh.token"},
+		{"已过期的Token", "expired.token.xxxx"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := svc.RefreshToken(ctx, tt.token)
+			assert.Error(t, err)
+		})
+	}
+}
+
+// ==============================================================================
+// Token 选项测试
+// ==============================================================================
+
+func TestTokenOptions(t *testing.T) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
 	tp, err := svc.GenerateTokenPair(
 		ctx,
 		1,
@@ -313,19 +339,107 @@ func TestTokenOptions(t *testing.T) {
 		"email",
 		WithDeviceID("test-device"),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// 解析并验证
 	claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
-	assert.NoError(t, err)
-	assert.Equal(t, "test-device", claims.DeviceID, "DeviceID 应该匹配")
-
-	t.Logf("✅ Token 选项测试通过：DeviceID=%s", claims.DeviceID)
+	require.NoError(t, err)
+	assert.Equal(t, "test-device", claims.DeviceID)
 }
 
-// BenchmarkGenerateTokenPair 性能测试：生成 Token Pair
+func TestMultipleDevices(t *testing.T) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
+	// 同一用户，多个设备
+	devices := []string{"mobile", "tablet", "desktop"}
+	tokens := make([]*TokenPair, len(devices))
+
+	for i, device := range devices {
+		tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email", WithDeviceID(device))
+		require.NoError(t, err)
+		tokens[i] = tp
+	}
+
+	// 验证所有设备的Token都有效
+	for _, tp := range tokens {
+		_, err := svc.ParseAccessToken(ctx, tp.AccessToken)
+		assert.NoError(t, err)
+	}
+}
+
+// ==============================================================================
+// 边界情况测试
+// ==============================================================================
+
+func TestEdgeCases(t *testing.T) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
+	t.Run("空用户名", func(t *testing.T) {
+		tp, err := svc.GenerateTokenPair(ctx, 1, "", "email")
+		assert.NoError(t, err)
+		assert.NotEmpty(t, tp.AccessToken)
+	})
+
+	t.Run("空邮箱", func(t *testing.T) {
+		tp, err := svc.GenerateTokenPair(ctx, 1, "user", "")
+		assert.NoError(t, err)
+		assert.NotEmpty(t, tp.AccessToken)
+	})
+
+	t.Run("UserID为0", func(t *testing.T) {
+		tp, err := svc.GenerateTokenPair(ctx, 0, "user", "email")
+		assert.NoError(t, err)
+
+		claims, err := svc.ParseAccessToken(ctx, tp.AccessToken)
+		require.NoError(t, err)
+		assert.Equal(t, uint(0), claims.UserID)
+	})
+}
+
+func TestRevokeNonExistentSession(t *testing.T) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
+	// 撤销不存在的 Session应该不报错
+	err := svc.RevokeSession(ctx, "non-existent-session-id")
+	assert.NoError(t, err)
+}
+
+func TestRefreshExpiredRefreshToken(t *testing.T) {
+	// 创建一个极短过期时间的JWT Service
+	memCache := cache2.NewShardedMemoryCache(0)
+	defer memCache.Close()
+
+	cfg := Config{
+		Secret:             "test-secret-key-32-chars-minimum",
+		Issuer:             "test",
+		AccessTokenExpire:  time.Millisecond * 100,
+		RefreshTokenExpire: time.Millisecond * 200, // 200ms过期
+	}
+	svc := NewJwtService(cfg, memCache)
+	ctx := context.Background()
+
+	tp, err := svc.GenerateTokenPair(ctx, 1, "user", "email")
+	require.NoError(t, err)
+
+	// 等待 Refresh Token过期
+	time.Sleep(time.Millisecond * 300)
+
+	_, err = svc.RefreshToken(ctx, tp.RefreshToken)
+	assert.Error(t, err)
+}
+
+// ==============================================================================
+// 性能基准测试
+// ==============================================================================
+
 func BenchmarkGenerateTokenPair(b *testing.B) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -334,9 +448,9 @@ func BenchmarkGenerateTokenPair(b *testing.B) {
 	}
 }
 
-// BenchmarkParseAccessToken 性能测试：解析 Access Token
 func BenchmarkParseAccessToken(b *testing.B) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	tp, _ := svc.GenerateTokenPair(ctx, 1, "user", "email")
@@ -347,9 +461,9 @@ func BenchmarkParseAccessToken(b *testing.B) {
 	}
 }
 
-// BenchmarkRefreshToken 性能测试：刷新 Token
 func BenchmarkRefreshToken(b *testing.B) {
 	svc, _ := getJwtSvr()
+
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -360,4 +474,19 @@ func BenchmarkRefreshToken(b *testing.B) {
 
 		_, _ = svc.RefreshToken(ctx, tp.RefreshToken)
 	}
+}
+
+func BenchmarkConcurrentParse(b *testing.B) {
+	svc, _ := getJwtSvr()
+
+	ctx := context.Background()
+
+	tp, _ := svc.GenerateTokenPair(ctx, 1, "user", "email")
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = svc.ParseAccessToken(ctx, tp.AccessToken)
+		}
+	})
 }

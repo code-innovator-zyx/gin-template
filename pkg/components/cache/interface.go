@@ -21,6 +21,9 @@ var ErrUnreachable = errors.New("cache: cache unreachable")
 type ICache interface {
 	// 基础操作
 	Get(ctx context.Context, key string, dest interface{}) error
+	// Set 存储缓存值
+	// 警告：如果 value 是指针/切片/map 等引用类型，外部修改会影响缓存！
+	// 传入的须是值类型，不要是指针
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Delete(ctx context.Context, keys ...string) error
 	Exists(ctx context.Context, key string) (bool, error)

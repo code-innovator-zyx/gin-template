@@ -403,14 +403,16 @@ func (r *Repo[T]) Exists(ctx context.Context, opts ...QueryOption) (bool, error)
 	if len(o.Conditions) > 0 {
 		db = db.Where(o.Conditions)
 	}
-	err := db.Select("1").Limit(1).Find(&struct{}{}).Error
+
+	var exists bool
+	err := db.Select("1").Limit(1).Scan(&exists).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
 		return false, err
 	}
-	return true, nil
+	return exists, nil
 }
 
 func (r *Repo[T]) ExistsByID(ctx context.Context, id uint) (bool, error) {

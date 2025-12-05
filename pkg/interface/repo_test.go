@@ -69,7 +69,7 @@ func seedTestData(t *testing.T, db *gorm.DB) {
 // TestRepo_FindByID 测试通过 ID 查询
 func TestRepo_FindByID(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
@@ -90,7 +90,7 @@ func TestRepo_FindByID(t *testing.T) {
 // TestRepo_FindByIDs 测试批量查询
 func TestRepo_FindByIDs(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
@@ -110,7 +110,7 @@ func TestRepo_FindByIDs(t *testing.T) {
 // TestRepo_FindOne 测试单条查询
 func TestRepo_FindOne(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
@@ -135,7 +135,7 @@ func TestRepo_FindOne(t *testing.T) {
 // TestRepo_List 测试列表查询
 func TestRepo_List(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
@@ -169,7 +169,7 @@ func TestRepo_List(t *testing.T) {
 // TestRepo_FindPage 测试分页查询
 func TestRepo_FindPage(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
@@ -250,7 +250,7 @@ func TestRepo_CreateBatch(t *testing.T) {
 // TestRepo_Update 测试更新
 func TestRepo_Update(t *testing.T) {
 	db := setupTestDB(t)
-	//seedTestData(t, db)
+	seedTestData(t, db)
 	repo := NewRepo[TestUser](db)
 	ctx := context.Background()
 
