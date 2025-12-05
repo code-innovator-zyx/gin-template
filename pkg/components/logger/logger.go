@@ -11,7 +11,6 @@ import (
 	"runtime"
 )
 
-
 // Config 日志配置
 type Config struct {
 	ReportCaller bool         `mapstructure:"report_caller" validate:"omitempty"`
@@ -52,7 +51,7 @@ func Init(c Config) {
 		}
 		logrus.SetOutput(io.MultiWriter(os.Stdout, &lumberjack.Logger{
 			Filename:   c.FilePath,
-			MaxSize:    500,
+			MaxSize:    50,
 			MaxAge:     7,
 			MaxBackups: 30,
 			Compress:   true,

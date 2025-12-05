@@ -20,7 +20,7 @@ import (
 
 var SvcContext *ServiceContext
 
-// ServiceContext 服务上下文，包含所有业务 相关依赖(TODO 直接注入到logic)
+// ServiceContext 服务上下文，包含所有业务 相关依赖
 type ServiceContext struct {
 	// config
 	Config *config.AppConfig
